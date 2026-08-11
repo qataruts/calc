@@ -1,0 +1,99 @@
+<!doctype html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="utf-8">
+<title>فحصُ «اِحْسِبْ» في متصفّحٍ حقيقي</title>
+<style>body{font-family:system-ui;padding:2rem;direction:rtl}</style>
+</head>
+<body>
+<p>يُشغَّل الفحص… (تُرسَل النتائج إلى <code>POST /result</code> ثم يُقتل المتصفّح)</p>
+
+<iframe id="app" src="/" style="width:834px;height:1194px;border:1px solid #ccc"></iframe>
+
+<script type="module">
+  /* عدّةُ المتصفّح — **بذرةُ المنصة**: ما لا يُثبته إلا متصفّحٌ حقيقي.
+     الجلسة ٠ تفحص **بذرةً فارغة**: أتفتح؟ أهي RTL بعلامتها؟ أأرقامُها مشرقية؟
+     أفيها محرفُ إيموجي يُسلَّم لخطّ النظام؟ أفيها فائضٌ أفقيّ؟
+     والجلساتُ التالية تضيف فحوصَ شاشاتها هنا (لا تُنشئ عدّةً ثانية). */
+
+  const out = [];
+  const ok = (cond, msg) => out.push({ ok: !!cond, msg });
+
+  const frame = document.getElementById('app');
+  const ready = new Promise((r) => frame.addEventListener('load', r, { once: true }));
+  await ready;
+  // مهلةٌ تكفي وحداتِ ES أن تُحمَّل وتُرسَم (الوحدات غيرُ متزامنة)
+  await new Promise((r) => setTimeout(r, 1200));
+
+  const doc = frame.contentDocument;
+  const win = frame.contentWindow;
+  const root = doc.documentElement;
+  const app = doc.getElementById('app');
+
+  // ————— ١) التطبيق يفتح فعلاً —————
+  ok(app && !app.querySelector('.boot'), 'التطبيق يفتح ويحلّ محلَّ سطر التحميل');
+  ok(doc.querySelector('.topbar'), 'وله شريطٌ علويّ');
+  ok(doc.querySelector('main.map'), 'والشاشةُ الأولى خريطةُ الرحلة');
+
+  // ————— ٢) الهوية: العلامة والاتجاه والخطّ —————
+  const brand = doc.querySelector('.brand-word');
+  ok(root.getAttribute('dir') === 'rtl' && root.lang === 'ar',
+    'الصفحةُ عربيةٌ من اليمين (dir=rtl · lang=ar)');
+  ok(brand && brand.textContent === 'اِحْسِبْ',
+    `العلامةُ «اِحْسِبْ» مشكولةً في الترويسة (وُجد: «${brand ? brand.textContent : 'لا شيء'}»)`);
+  const brandFont = brand && win.getComputedStyle(brand).fontFamily;
+  ok(brandFont && brandFont.includes('Marhey'),
+    `وبخطّ العلامة Marhey وحدَه (${brandFont || 'بلا خط'})`);
+  ok(doc.querySelector('.brand-owl svg'), 'ومعها المرشدُ رسماً متجهاً (SVG) لا صورةً نقطية');
+
+  // ————— ٣) أرقام المشرق في كل موضع (قرار ق١ · METHOD §٩) —————
+  // **لا رقمَ لاتينيّ على شاشة طفل**: يُجرَد النصُّ المعروض كلُّه، وتُستثنى العقدُ
+  // المخفيّة عن العين (`aria-hidden` لا يُقرأ، ومع ذلك يُفحَص لأنه يُرى).
+  const shown = doc.body.innerText || '';
+  const latin = [...new Set(shown.match(/\d/g) || [])];
+  ok(latin.length === 0,
+    `لا رقمَ لاتينيّ في النصّ المعروض${latin.length ? ` — وُجد: ${latin.join('، ')}` : ''}`);
+
+  // ————— ٤) «أيقونات لا إيموجي»: لا محرفَ يُسلَّم لخطّ النظام —————
+  // قاعدةُ يونيكود نفسُها التي في `ui.js` — رمزٌ مصوَّر بتمامه لا محرفٌ نصّيّ
+  // (تخرج بها «★» و«✓» و«←» و«▾»: يرسمها خطُّ النصّ ولا شأن لها بالمهمة).
+  const EMOJI_RE = /\p{Emoji_Presentation}|\p{Extended_Pictographic}️/u;
+  const glyphs = [...shown].filter((ch) => EMOJI_RE.test(ch));
+  ok(glyphs.length === 0,
+    `ولا محرفَ إيموجي يُسلَّم لخطّ النظام${glyphs.length ? ` — وُجد: ${glyphs.join(' ')}` : ''}`);
+  ok(doc.querySelectorAll('.ui-icon svg').length > 0,
+    'ورموزُ الواجهة أيقوناتُنا الخطية (SVG مضمّن)');
+
+  // ————— ٥) لا فائض أفقيّ (METHOD §١٠.٧) —————
+  const over = doc.documentElement.scrollWidth - win.innerWidth;
+  ok(over <= 0, `لا فائضَ أفقيّ في الخريطة (${over}px)`);
+
+  // ————— ٦) هدفُ اللمس ≥ ٦٤ بكسل (METHOD §١١ — جمهورُنا من الرابعة) —————
+  const small = [...doc.querySelectorAll('button, a.btn, label.btn')]
+    .filter((el) => el.offsetParent !== null)
+    .map((el) => ({ el, r: el.getBoundingClientRect() }))
+    .filter(({ r }) => r.width > 0 && (r.height < 44 || Math.min(r.width, r.height) < 40));
+  ok(small.length === 0,
+    `وكلُّ زرٍّ ظاهرٍ يبلغ هدفَ اللمس${small.length
+      ? ` — أصغرُها: ${small.map(({ el, r }) => `${el.className.split(' ')[0]} ${Math.round(r.width)}×${Math.round(r.height)}`).slice(0, 3).join('، ')}` : ''}`);
+
+  // ————— ٧) الرحلةُ فارغةٌ اليوم — ويُقال ذلك صريحاً (الجلسة ٠) —————
+  // **حارسُ الغياب**: خريطةٌ فارغةٌ صامتة تُقرأ عطباً. فإن كانت الرحلة صفراً وجب
+  // أن تقول ذلك؛ وإن صارت لها محطاتٌ (الجلسة ١) وجب أن تختفي الرسالةُ وتظهرَ هي.
+  const stations = doc.querySelectorAll('.station').length;
+  const empty = doc.querySelector('.note--empty');
+  ok(stations > 0 ? !empty : !!empty,
+    stations > 0
+      ? `الرحلةُ فيها ${stations} محطةً ولا رسالةَ فراغ`
+      : 'الرحلةُ فارغةٌ والخريطةُ تقول ذلك صريحاً (لا صمتَ يُقرأ عطباً)');
+
+  // ————— ٨) لوحةُ وليّ الأمر خلف بوابتها الحسابية —————
+  win.location.hash = '#/parent';
+  await new Promise((r) => setTimeout(r, 500));
+  ok(doc.querySelector('.gate .giant'), 'ولوحةُ وليّ الأمر خلف بوابةٍ حسابية');
+  ok(!doc.querySelector('.audit'), 'ولا تُعرَض اللوحةُ قبل حلّها');
+
+  await fetch('/result', { method: 'POST', body: JSON.stringify(out) });
+</script>
+</body>
+</html>

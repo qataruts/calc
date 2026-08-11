@@ -1,0 +1,26 @@
+<!doctype html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="utf-8">
+<title>«اِحْسِبْ» على مقاسات الآيباد</title>
+<style>html,body{margin:0;height:100%}iframe{display:block;width:100%;height:100%;border:0}</style>
+</head>
+<body>
+<iframe id="app" src="/"></iframe>
+<script type="module">
+  /* صفحةُ الجهاز: التطبيقُ يملأ المنظور بمقاس الآيباد الذي فُتحت به النافذة،
+     فيُقاس **الفائضُ الأفقيّ** حيث يقع فعلاً — لا في إطارٍ ذي مقاسٍ آخر.
+     و«بلا فائض أفقي» عهدٌ مطلق (`METHOD.md §١٠.٧`): طفلُ الرابعة لا يسحب ليجد زرّاً. */
+  const frame = document.getElementById('app');
+  await new Promise((r) => frame.addEventListener('load', r, { once: true }));
+  await new Promise((r) => setTimeout(r, 1200));
+  const doc = frame.contentDocument;
+  const win = frame.contentWindow;
+  const overflow = doc.documentElement.scrollWidth - win.innerWidth;
+  await fetch('/result', {
+    method: 'POST',
+    body: JSON.stringify([{ overflow, width: win.innerWidth, height: win.innerHeight }]),
+  });
+</script>
+</body>
+</html>

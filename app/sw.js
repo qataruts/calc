@@ -1,0 +1,305 @@
+// عامل الخدمة — التطبيق يعمل دون إنترنت (عهدُ العائلة: PWA يعمل بلا شبكة).
+//
+// ————— بذرةُ المنصة (منسوخةٌ من «اِقْرَأْ» v20) —————
+// المنطقُ منه بدروسه كلِّها: مخزنُ صوتٍ ثابتُ الاسم يعبر النسخ، وجلبٌ مدفَّعٌ معدودُ
+// الإخفاق لا يُبتلَع، وشفاءٌ عند أول اتصال، وإبلاغُ النوافذ بتقدّم الخزن، ولا يُهدَم
+// مخزونٌ كاملٌ لأجل ناقص. والمبدَّلُ أسماءُ المخازن وقائمةُ القشرة وحدَها.
+//
+// استراتيجيتان لا ثالثة:
+//   • الهيكل (HTML/CSS/JS/الفهارس): اعرض المخزون فوراً وحدِّثه في الخلفية
+//     (stale-while-revalidate) — فتحٌ فوريّ، والتحديث يظهر في الفتحة التالية.
+//   • الصوت (mp3): من المخزون دائماً — **بالرابط الموسوم ببصمة محتواه**.
+//
+// **ولماذا الوسم؟** اسم ملف الصوت sha1 **نصّه** لا محتواه، فاستبدال الصوت تحت
+// المفتاح نفسه (تسجيلٌ أفضل، انتقاءُ أداء) لا يغيّر الرابط — والجهاز الذي خزّن
+// النسخة القديمة يبقى عليها إلى الأبد، فيُسمع النصُّ الواحد بصوتين بحسب تاريخ أول
+// طلبٍ لكل جهاز (بلاغُ المالك في اقرأ، ٥ أغسطس ٢٠٢٦). فيُطلَب
+// `<key>.mp3?v=<بصمة البايتات>` من `audio/versions.json`، وهنا **يُخزَن بالرابط
+// الموسوم ويُنظَّف الوسم الأقدم لذلك الملف وحده** — فتبديل ملفٍّ واحد لا يُسقِط
+// مخزون البقية.
+//
+// عند تغيير أي ملف من ملفات الهيكل: ارفع VERSION فيُمحى مخزون **القشرة** القديم.
+// ويحرس `tools/test_pwa.mjs` أن قائمة SHELL لا تنسى ملفاً موجوداً في `app/` ولا
+// تَعِد بملفٍ غير موجود.
+//
+// **وبنكُ الصوت لم يُولَّد بعدُ** (بندُ الجلسة ص): `audio/manifest.json` غائب اليوم،
+// و`precacheAudio` تحتمل غيابَه بلا خطأ (بيانٌ لم يصل ⇒ لا حكمَ بالتمام ولا كنس).
+// فالمنظومةُ قائمةٌ من اليوم الأول ولا تنتظر شيئاً، ويومَ يُولَّد الصوتُ يعمل الخزن
+// بلا سطرٍ يُعدَّل هنا — وتدخل بياناتُه قائمةَ القشرة حينها.
+
+const VERSION = 'v1';
+const SHELL_CACHE = `ihsib-shell-${VERSION}`;
+const AUDIO_CACHE = 'ihsib-audio';        // ثابتٌ عمداً — لا يحمل VERSION
+const KEEP = [SHELL_CACHE, AUDIO_CACHE];
+
+const SHELL = [
+  './',
+  'index.html',
+  'manifest.webmanifest',
+  'css/app.css',
+  'fonts/NotoNaskhArabic-arabic.woff2',
+  'fonts/NotoNaskhArabic-latin.woff2',
+  'fonts/BalooBhaijaan2-arabic.woff2',
+  'fonts/BalooBhaijaan2-latin.woff2',
+  'fonts/Marhey-arabic.woff2',
+  'js/audio.js',
+  'js/curriculum.js',
+  'js/gate.js',
+  'js/main.js',
+  'js/parent.js',
+  'js/progress.js',
+  'js/review.js',
+  'js/ui.js',
+  'icons/icon-192.png',
+  'icons/icon-512.png',
+  'icons/maskable-512.png',
+  'icons/apple-touch-icon.png',
+];
+
+// ملفات الصوت: مفتاحٌ من ١٢ خانة سُداسيّة عشرية (sha1 نصّه).
+const AUDIO_RE = /\/audio\/[0-9a-f]{12}\.mp3$/;
+
+// مسار الصفحة التعريفية (`app/welcome/` — الجلسة ٩) — ليست من التطبيق: لا في SHELL
+// ولا في المخزون ولا في ردّ التنقّل. مشتقٌّ من النطاق فيصحّ في أي مجلدٍ نُشر فيه.
+const WELCOME = new URL('welcome/', self.registration.scope).pathname;
+
+const json = (path) => fetch(new URL(path, self.registration.scope))
+  .then((r) => (r.ok ? r.json() : null))
+  .catch(() => null);
+
+/** خزن أيقونات الرموز **من فهرسها** لا من قائمة يدوية (مهمة «أيقونات لا إيموجي»).
+ *
+ *  رمزٌ جديد في المنهج غداً يجلبه `tools/fetch_twemoji.py` فيدخل المخزون بلا سطرٍ
+ *  في هذا الملف. وغيابُ الفهرس اليوم (الجلسة ٢ تنشئه) لا يُخفق شيئاً. */
+async function precacheEmoji() {
+  const index = await json('emoji/index.json');
+  const cache = await caches.open(SHELL_CACHE);
+  await Promise.all(Object.keys(index?.files || {}).map((key) =>
+    cache.add(new URL(`emoji/${key}.svg`, self.registration.scope)).catch(() => {})));
+}
+
+/** رابط ملف صوتٍ باسمه على القرص، موسوماً ببصمة محتواه (بلا بصمة: الرابط كما هو). */
+function audioUrl(stem, tags) {
+  const href = new URL(`audio/${stem}.mp3`, self.registration.scope).href;
+  return tags[stem] ? `${href}?v=${tags[stem]}` : href;
+}
+
+/** حجم الدفعة: آلافُ الطلبات المتوازية في `install` قطيعٌ يخنق الشبكة على جهازٍ
+ *  منزليّ ويزاحم أصواتَ الطفل نفسِه وهو يلعب. ستَّ عشرةَ في النفَس تكفي ولا تخنق. */
+const AUDIO_BATCH = 16;
+
+/** ترتيب الأولوية بلا أن يعرف عاملُ الخدمة أين بلغ الطفل (تقدّمُه في تخزين الصفحة،
+ *  ولا طريق من هنا إليه ولا يُراد): **ما سمعه الطفل مخزونٌ سلفاً** (يخزنه `cacheFirst`)
+ *  فيسقط من قائمة الجلب أصلاً؛ والباقي يُرتَّب بأثر المنهج نفسِه في النصّ: المنهج
+ *  يصعد من اسم العدد إلى تعليمة التمرين إلى جملة النمذجة، **وطولُ النصّ هو أثرُ ذلك
+ *  الصعود** — فالأقصر أوّلُ ما يحتاجه، والأطول أبعدُه. فإن انقطع التخزين كان الناقصُ
+ *  أبعدَ ما يحتاج. */
+function audioOrder(generated) {
+  return Object.entries(generated || {})
+    .map(([stem, text]) => ({ stem, far: [...String(text)].length }))
+    .sort((a, b) => (a.far - b.far) || (a.stem < b.stem ? -1 : 1))
+    .map((e) => e.stem);
+}
+
+/** خزن الأصوات كلها من بيانها — بعدها لا يحتاج التطبيق شبكةً البتّة.
+ *  ثم **تُكنَس الأوسمة الغابرة**: كل مخزونٍ ليس في المتوقَّع اليوم (وسمٌ أقدم لملفٍ
+ *  استُبدل، أو رابطٌ بلا وسم خُزن قبل قراءة البصمات) يُحذف — فلا يبقى في الجهاز أثرٌ
+ *  للصوت القديم يُسمَع من طريقٍ آخر.
+ *
+ *  **ولا يُجلَب إلا الناقص**: `cache.add` يجلب من الشبكة دائماً وإن كان الملف مخزوناً،
+ *  فبه كانت الترقيةُ تعيد تنزيل الصوت كلِّه ولو ثبت اسمُ المخزن.
+ *
+ *  **والإخفاق يُعدّ ولا يُبتلَع**: `catch(() => {})` كان يُخفي تجاوزَ حصة التخزين
+ *  فتفشل ملفات ويصمت الصوت خارج الشبكة بلا خبر. فإن أخفق شيءٌ **لا نكنس**: القديمُ
+ *  الصالح خيرٌ من فراغٍ في أذن الطفل. */
+async function precacheAudio() {
+  const cache = await caches.open(AUDIO_CACHE);
+  const [generated, versions] = await Promise.all([
+    json('audio/manifest.json'), json('audio/versions.json'),
+  ]);
+  const tags = { ...(versions || {}) };
+
+  const urls = audioOrder(generated).map((stem) => audioUrl(stem, tags));
+  const have = new Set((await cache.keys()).map((request) => request.url));
+  const missing = urls.filter((url) => !have.has(url));
+
+  let failed = 0;
+  const total = urls.length;
+  let done = total - missing.length;
+  await report({ stored: done, total, busy: missing.length > 0 });
+  for (let i = 0; i < missing.length; i += AUDIO_BATCH) {
+    // واحداً واحداً داخل الدفعة: ملفٌ ناقص لا يُسقِط الدفعة كلها (بخلاف cache.addAll)
+    const batch = await Promise.all(missing.slice(i, i + AUDIO_BATCH)
+      .map((url) => cache.add(url).then(() => true, () => false)));
+    failed += batch.filter((ok) => !ok).length;
+    done += batch.filter(Boolean).length;
+    await report({ stored: done, total, busy: true });   // **بعد كل دفعة**: تقدّمٌ حقيقيّ
+  }
+  await report({ stored: done, total, busy: false, failed });
+  if (failed) console.warn(`[sw] تعذّر خزن ${failed} ملفاً صوتياً من ${missing.length}`);
+
+  if (!generated) return { complete: false, failed, missing: missing.length };
+  if (failed) return { complete: false, failed, missing: missing.length };
+  const wanted = new Set(urls);
+  const stale = (await cache.keys()).filter((request) => !wanted.has(request.url));
+  await Promise.all(stale.map((request) => cache.delete(request)));
+  return { complete: true, failed: 0, missing: 0 };
+}
+
+/** هل المخزونُ الصوتيّ تامٌّ الآن؟ — يُحسب من البيان والمخزن، لا يُؤخذ من ذاكرة
+ *  نسخةٍ سابقة من العامل: العاملُ يُنهى ويُبعَث بين `install` و`activate`، فحالةٌ
+ *  محفوظةٌ في متغيّرٍ لا يُوثَق بها في قرارٍ يُتلف مخزوناً. */
+async function audioComplete() {
+  const [generated, versions] = await Promise.all([
+    json('audio/manifest.json'), json('audio/versions.json'),
+  ]);
+  if (!generated) return false;                 // بيانٌ لم يصل: لا نحكم بالتمام
+  const urls = audioOrder(generated).map((stem) => audioUrl(stem, { ...(versions || {}) }));
+  const cache = await caches.open(AUDIO_CACHE);
+  const have = new Set((await cache.keys()).map((request) => request.url));
+  return urls.every((url) => have.has(url));
+}
+
+/* **شفاءُ المخزون عند أول اتصال** (بلاغُ المالك في اقرأ، ١٣ أغسطس ٢٠٢٦): كان
+   التنزيلُ يقع مرّةً واحدة في `install`؛ فجهازٌ حُذف تطبيقُه وأُعيد تثبيته **وهو
+   مفصولٌ عن الشبكة** لا يخزّن ملفاً واحداً، ولا تعود المحاولةُ إلا بترقيةٍ جديدة —
+   فيصمت الصوتُ ولا يُصلحه إلا صدفة. فصارت المحاولةُ تتكرّر عند كل فتحةٍ للتطبيق،
+   مكبوحةً بمهلة، ولا تجلب إلا الناقص. */
+let syncing = false;
+let healed = false;             // مرّةً في عمر العامل (وكلُّ بعثٍ فرصةٌ جديدة)
+const HEAL_AFTER = 10000;       // عشرُ ثوانٍ: تكفي لتمضي الفتحةُ للطفل، ولا تطول
+                                // حتى يُنهي iOS العاملَ قبل أن يبدأ الشفاء أصلاً
+
+async function syncAudio() {
+  if (syncing) return;
+  syncing = true;
+  try {
+    await precacheAudio();
+  } catch (e) {
+    console.warn('[sw] تعذّرت مزامنة الصوت', e);
+  } finally {
+    syncing = false;
+  }
+}
+
+/** شفاءُ الناقص — **مرّةً في عمر العامل وبعد مهلة**، وثلاثةُ قيودٍ لكلٍّ علّته:
+ *
+ *  ١) **مرّةً لا كلَّ فتحة**: العاملُ يُنهى ويُبعث، فمع كل بعثٍ فرصةٌ جديدة.
+ *  ٢) **بعد مهلة**: الفتحةُ الأولى للطفل أَولى بالشبكة من تنزيلٍ خلفيّ.
+ *  ٣) **ولا يعمل على تامّ**: الجردُ أولاً، فجهازٌ مخزونُه كامل لا يطلب بايتاً. */
+async function healAudio() {
+  if (healed || syncing) return;
+  healed = true;
+  await new Promise((resolve) => setTimeout(resolve, HEAL_AFTER));
+  if (await audioComplete()) return;
+  await syncAudio();
+}
+
+/** **إبلاغُ النوافذ بحال خزن الصوت** (أمرُ المالك في اقرأ، ١٣ أغسطس ٢٠٢٦): كان الخزنُ
+ *  يجري صامتاً في الخلفية، فلا يعرف أحدٌ أتمَّ أم لا — حتى يفاجئه صمتٌ في الطائرة.
+ *  فصار العاملُ يبعث حالَه بعد كل دفعة، وتعرضه لوحةُ وليّ الأمر شريطاً حيّاً. */
+async function report(state) {
+  // بيئةٌ بلا `clients` (فحصٌ مزيَّف أو متصفّحٌ قديم): الخزنُ يمضي والإبلاغُ يسقط
+  // وحدَه — فالبلاغ زينةُ شفافيةٍ لا شرطُ عمل.
+  if (typeof self.clients?.matchAll !== 'function') return;
+  const windows = await self.clients.matchAll({ type: 'window' });
+  for (const client of windows) client.postMessage({ type: 'audio-progress', ...state });
+}
+
+/** طلبٌ صريح من المستعمل: «نزّل الأصوات الآن» — يتجاوز مهلةَ الشفاء ولا ينتظرها. */
+self.addEventListener('message', (event) => {
+  if (event.data?.type !== 'audio-sync') return;
+  event.waitUntil(syncAudio());
+});
+
+self.addEventListener('install', (event) => {
+  event.waitUntil((async () => {
+    const cache = await caches.open(SHELL_CACHE);
+    await Promise.all(SHELL.map((path) =>
+      cache.add(new URL(path, self.registration.scope)).catch(() => {})));
+    await precacheEmoji();
+    await precacheAudio();
+    await self.skipWaiting();
+  })());
+});
+
+self.addEventListener('activate', (event) => {
+  event.waitUntil((async () => {
+    // **ولا يُهدَم مخزونٌ كاملٌ لأجل ناقص** (بلاغُ المالك في اقرأ): مخازنُ الصوت
+    // القديمة تبقى حتى يثبت تمامُ الجديد **بالجرد لا بالظنّ**.
+    const names = await caches.keys();
+    const stale = names.filter((n) => n.startsWith('ihsib-') && !KEEP.includes(n));
+    await Promise.all(stale
+      .filter((n) => !n.startsWith('ihsib-audio'))
+      .map((n) => caches.delete(n)));
+    await self.clients.claim();
+    await syncAudio();
+  })());
+});
+
+async function staleWhileRevalidate(request) {
+  const cache = await caches.open(SHELL_CACHE);
+  const cached = await cache.match(request);
+  const network = fetch(request)
+    .then((response) => {
+      if (response.ok) cache.put(request, response.clone());
+      return response;
+    })
+    .catch(() => null);
+  return cached || (await network) || Response.error();
+}
+
+/**
+ * الصوت: المخزون أولاً **بالرابط الموسوم**.
+ * وسمٌ جديد = مفتاحُ خزنٍ جديد = طلبُ شبكةٍ لهذا الملف وحده، وبعد خزنه يُحذف
+ * وسمُه الأقدم فوراً (فلا نسختان لملفٍ واحد، ولا يعود القديم من باب خلفيّ).
+ * وإن سقطت الشبكة ولم يكن الوسمُ الجديد مخزوناً: نسخةٌ بوسمٍ أقدم خيرٌ من صمتٍ
+ * في أذن الطفل — نُخرجها ولا نخزنها بالوسم الجديد، فتُصحَّح أول اتصال.
+ */
+async function cacheFirst(request) {
+  const cache = await caches.open(AUDIO_CACHE);
+  const cached = await cache.match(request);
+  if (cached) return cached;
+  const response = await fetch(request).catch(() => null);
+  if (response && response.ok) {
+    await cache.put(request, response.clone());
+    await dropOtherTags(cache, request);
+    return response;
+  }
+  return (await cache.match(request, { ignoreSearch: true })) || response || Response.error();
+}
+
+/** حذف ما خُزن لهذا الملف بأوسمةٍ أخرى (أو بلا وسم) — إبقاءُ الجديد وحده. */
+async function dropOtherTags(cache, request) {
+  const siblings = await cache.keys(request, { ignoreSearch: true });
+  await Promise.all(siblings
+    .filter((other) => other.url !== request.url)
+    .map((other) => cache.delete(other)));
+}
+
+self.addEventListener('fetch', (event) => {
+  const { request } = event;
+  if (request.method !== 'GET') return;
+
+  const url = new URL(request.url);
+  if (url.origin !== self.location.origin) return;      // لا مصدر خارجياً في هذا التطبيق أصلاً
+
+  // الصفحة التعريفية خارج القشرة عمداً: لا تُخزَّن، ولا يبتلعها ردُّ التنقّل أدناه —
+  // ولولا هذا السطر لفُتح التطبيقُ مكانَها على كل جهازٍ ثبّته، فلا يبلغ المعلّمُ
+  // الصفحةَ أصلاً. تُترك للشبكة كأنّ لا عاملَ خدمةٍ هنا.
+  if (url.pathname.startsWith(WELCOME)) return;
+
+  if (AUDIO_RE.test(url.pathname)) {
+    event.respondWith(cacheFirst(request));
+    return;
+  }
+  // التنقّل دائماً إلى index.html: التطبيق صفحة واحدة بمسارات hash
+  if (request.mode === 'navigate') {
+    // وكلُّ فتحةٍ فرصةُ شفاء: ما نقص من الصوت يُستكمَل الآن إن كانت هناك شبكة —
+    // مكبوحاً بمهلة، ولا يجلب إلا الناقص، فلا يثقل فتحةً ولا يكرّر تنزيلاً.
+    event.waitUntil(healAudio());
+    event.respondWith(staleWhileRevalidate(new Request(new URL('index.html', self.registration.scope))));
+    return;
+  }
+  event.respondWith(staleWhileRevalidate(request));
+});
