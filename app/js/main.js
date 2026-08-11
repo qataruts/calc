@@ -416,6 +416,20 @@ if (progress.PREVIEW) {
     h('a', { class: 'btn btn--ghost', href: './' }, 'اخرج إلى تجربة الطفل')));
 }
 
+// **والعودةُ من الخلفية بمقياس ١** (منقولُ اقرأ الميدانيّ `read@9220ab1` — الجلسة م٢):
+// iPadOS يسترجع التطبيقَ المثبَّت بعد زيارة تطبيقٍ آخر **مكبَّراً** أحياناً — عيبُ
+// استرجاعٍ معروف في المنصّة لا في شيفرتنا. الميتا تمنع التكبير أصلاً (`maximum-scale=1`
+// في `index.html`)، وإعادةُ إعلانها **نفسِها** عند العودة تُلزم WebKit بإعادة تطبيقها
+// حيث يتلكّأ. وطفلُ الرابعة لا يعرف كيف يردّ شاشةً كُبِّرت، فيبقى فيها حتى يأتيه بالغ.
+const viewportMeta = document.querySelector('meta[name="viewport"]');
+const reassertViewport = () => {
+  if (viewportMeta) viewportMeta.setAttribute('content', viewportMeta.getAttribute('content'));
+};
+window.addEventListener('pageshow', reassertViewport);
+document.addEventListener('visibilitychange', () => {
+  if (document.visibilityState === 'visible') reassertViewport();
+});
+
 window.addEventListener('hashchange', render);
 audio.ready();
 startClock();

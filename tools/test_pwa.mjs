@@ -206,6 +206,45 @@ ok(main.includes("location.protocol.startsWith('http')"),
 ok(/\.catch\(/.test(main.slice(main.indexOf('registerServiceWorker'))),
   'ورفضُ التسجيل لا يُسقِط التطبيق');
 
+// ————— ٦. قفلُ المقياس (منقولُ اقرأ الميدانيّ `read@9220ab1` — الجلسة م٢) —————
+//
+// iPadOS يسترجع التطبيقَ المثبَّت من الخلفية **مكبَّراً** أحياناً (عيبُ منصةٍ معروف)،
+// والنقرُ المزدوج من طفلٍ يكبّر الشاشة — وكمياتُ التطبيق وأرقامُه كبيرةٌ بتصميمه.
+// فالميتا تقفل المقياس، وإعادةُ إعلانها عند العودة تُلزم WebKit بها حيث يتلكّأ،
+// و«لا تكبيرَ بالنقر المزدوج» في اللوح. **ويُحرَس من الجهتين**: القفلُ في التطبيق
+// موجودٌ، **وخارجُه معفى** — صفحاتُ التعريف (الجلسة ٩) صفحاتُ كبارٍ والتكبيرُ فيها حقّ.
+
+console.log('\n— قفلُ المقياس: لا زومَ في شاشة الطفل —');
+
+const viewport = (html.match(/<meta name="viewport" content="([^"]+)"/) || [])[1] || '';
+ok(/maximum-scale=1\b/.test(viewport) && /user-scalable=no/.test(viewport),
+  'ميتا التطبيق تقفل المقياس — فلا يسترجعه iPadOS مكبَّراً ولا يكبّره نقرٌ مزدوج');
+
+// **وعلى `html` لا أينما وقع** (تكييفٌ عن نسخة اقرأ): عندنا `touch-action: manipulation`
+// مكتوبةٌ أصلاً على `button` منذ البذرة، فمطابقةٌ على اللوح كلِّه تمرّ خضراءَ بها
+// **والجذرُ عارٍ** — والنقرُ المزدوج على كمّيةٍ أو خلفيةٍ يكبّر. فيُقرأ نصُّ قاعدة
+// `html` وحدَها: حارسٌ يمرّ بما لا يحرسه ليس حارساً.
+const rootRule = (read('css/app.css').match(/(?:^|\n)html\s*\{([^}]*)\}/) || [])[1] || '';
+ok(/touch-action:\s*manipulation/.test(rootRule),
+  'واللوحُ يُسقِط تكبيرَ النقر المزدوج على الجذر (`html`) — والنقرةُ بلا مهلة انتظاره');
+
+ok(main.includes('meta[name="viewport"]') && main.includes('pageshow')
+  && /visibilitychange[\s\S]{0,200}reassertViewport/.test(main),
+  'والميتا يُعاد إعلانُها عند العودة من الخلفية — علاجُ عيب الاسترجاع في iPadOS');
+
+// **الجهةُ الأخرى نائمةٌ حتى تُولَد** (`docs/SEED.md §٥`): `app/welcome/` من الجلسة ٩،
+// ولا صفحةَ تعريفٍ اليوم تُعفى. والشرطُ مجرودٌ لا مضبوطٌ بيد — يومَ تُكتب أولاها
+// يستيقظ الحارسُ من تلقائه ويطالب بإعفائها.
+const welcome = has('welcome/') ? readdirSync(new URL('welcome/', APP)).filter((f) => f.endsWith('.html')) : [];
+if (!welcome.length) {
+  dormant('وصفحاتُ التعريف خارج القفل (لا `app/welcome/` بعد — الجلسة ٩ تكتبها)');
+} else {
+  for (const page of welcome) {
+    ok(!/user-scalable=no|maximum-scale/.test(read(`welcome/${page}`)),
+      `welcome/${page}: تبقى قابلةً للتكبير — صفحةُ كبارٍ والتكبيرُ فيها حقّ`);
+  }
+}
+
 console.log(fails
   ? `\n${fails} فشل`
   : `\nكل اختبارات العمل دون إنترنت ناجحة${asleep ? ` (و${asleep} نائم بقيدٍ في docs/SEED.md)` : ''}`);
