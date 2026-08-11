@@ -30,7 +30,7 @@
      نتيجة» لا يجوز أن يكون آخرَ ما نعرف. */
   const watchdog = setTimeout(() => {
     report([...out, { ok: false, msg: 'تعلّقت صفحةُ الفحص قبل تمامها (انتظارٌ لم ينتهِ)' }]);
-  }, 220000);
+  }, 280000);
 
   /* ————— «لا نطقَ آليّ»: يُقاس في مسار الطفل نفسِه (الجلسة ص) —————
 
@@ -551,6 +551,19 @@
   const answerOf = (d) => {
     const ask = askOf(d);
     const subject = numOf(d.querySelector('.q-stage'));
+    /* **لوحُ الجسر** (المرحلة ٥): لا جوابَ واحدٌ يُطابَق، بل **ما بقي** من الكلّ —
+       يُقرأ من اللوح نفسِه (`data-need` محسوبٌ من المرسوم)، وتُملأ الخانةُ الأخيرة
+       بما يُتمّه بالضبط. وبطاقةٌ معطَّلة لا تُلمَس (التجاوزُ ممتنعٌ بنيوياً). */
+    const bond = d.querySelector('.q-bond');
+    if (bond) {
+      const need = Number(bond.dataset.need);
+      const left = Number(bond.dataset.slots);
+      const free = cardsOf(d).filter((c) => !c.disabled);
+      const worth = (c) => Number(c.querySelector('.figure')?.dataset.drawn);
+      return left <= 1
+        ? free.find((c) => worth(c) === need)
+        : (free.find((c) => worth(c) < need) || free.find((c) => worth(c) === need));
+    }
     const slots = [...d.querySelectorAll('.fig-slot')];
     if (slots.length) return slots.find((s) => Number(s.dataset.value) === subject);
     const cards = cardsOf(d).filter((c) => !c.disabled);
@@ -721,6 +734,187 @@
   }
   ok(modes.size >= 2,
     `و«السابقُ والتالي» تدور على أوجهها (${[...modes].join(' · ')})`);
+
+  /* ————— ١١ب) المرحلة ٥: ركِّبْ وفكِّكْ — والبوابةُ الأولى (الجلسة ٥) —————
+
+     خمسةُ عهودٍ لا يُثبتها إلا متصفّح:
+       • **لا رمزَ عمليةٍ واحد** على شاشات المرحلة كلِّها (`METHOD.md §٣`) — يُجرَد
+         النصُّ المعروضُ نفسُه، لا نيّةُ الشيفرة.
+       • **الكمّيةُ تنشقّ شقّين بصرياً**: النمذجةُ تَعُدّ كلّاً مقسوماً، ثم تُكشَف
+         قسمتُه شكلين مجموعُهما هو الكلّ.
+       • **التجاوزُ امتناعٌ في البنية**: بطاقةٌ تزيد على ما بقي لا تُلمَس أصلاً.
+       • **الجزءُ يُرَدّ بالإصبع**، والخطأُ يُعَدّ أمامه ولا ينقل.
+       • **خاناتُ الإطار الفارغة هي السؤال** في «أصدقاء العشرة». */
+
+  const bdoc = await open('#/bond/four');
+  ok(bdoc.querySelectorAll('.step').length === 3,
+    `محطةُ «جُسُورُ ٣ وَ٤» تفتح بحلقتها (${[...bdoc.querySelectorAll('.step-name')]
+      .map((s) => s.textContent).join(' ← ') || 'لا خطوات'})`);
+
+  // **الشقّان في النمذجة**: الكلُّ مرسومٌ شقّين، ومجموعُهما هو ما رُسِم
+  const whole = await until(bdoc, (d) => d.querySelector('.q-stage .figure[data-split]'), 12000);
+  const partA = whole ? whole.querySelectorAll('[data-part="a"]').length : 0;
+  const partB = whole ? whole.querySelectorAll('[data-part="b"]').length : 0;
+  ok(whole && partA > 0 && partB > 0 && partA + partB === Number(whole.dataset.drawn),
+    `و**الكمّيةُ تنشقّ شقّين بصرياً**: ${partA} و${partB} من ${whole
+      ? whole.dataset.drawn : '؟'} مرسومة (وشقُّها مقروءٌ من الرسم: ${whole
+      ? whole.dataset.split : '؟'})`);
+
+  // والشقّان يُكشَفان **بعد** العدّ — كحلقة تقديم الرمز سواءً بسواء
+  const splitBox = bdoc.querySelector('.q-reveal');
+  const hiddenFirst = splitBox && splitBox.hidden;
+  const shownSplit = await until(bdoc, (d) => {
+    const box = d.querySelector('.q-reveal');
+    return box && !box.hidden ? [...box.querySelectorAll('.figure')] : null;
+  }, 22000);
+  const bothParts = (shownSplit || []).reduce((n, f) => n + Number(f.dataset.drawn), 0);
+  ok(hiddenFirst && shownSplit && shownSplit.length === 2
+    && bothParts === Number(whole.dataset.drawn),
+  `ويُكشَف الجزآن **بعد العدّ** ومجموعُهما هو الكلّ (${(shownSplit || [])
+    .map((f) => f.dataset.drawn).join(' و')} من ${whole ? whole.dataset.drawn : '؟'})`);
+
+  (await onward(bdoc))?.click();
+  const bondBoard = await until(bdoc, (d) => d.querySelector('.q-bond'), 12000);
+  const bondCards = cardsOf(bdoc);
+  const slotEls = [...bdoc.querySelectorAll('.q-slot')];
+  ok(!!bondBoard && slotEls.length === 2
+    && !!bdoc.querySelector('.q-bond-whole .figure--numeral')
+    && bondCards.length >= 2 && bondCards.every((c) => c.querySelector('.figure [data-mark]')),
+  `ولوحُ الجسر: الكلُّ بطاقةُ رمزٍ وخانتان و${bondCards.length} بطاقةَ **كمٍّ تُعَدّ** `
+    + '(الجسرُ يُبنى بصرياً — `METHOD.md §٢.٥`)');
+
+  // **لا رمزَ عمليةٍ واحد** على الشاشة — لا في سؤالٍ ولا في لوحٍ ولا بين البطاقتين
+  const SIGNS = /[+\-−×÷=]/g;
+  const bondText = shownIn(bdoc.querySelector('main.screen-card'));
+  const signs = [...new Set(bondText.match(SIGNS) || [])];
+  ok(signs.length === 0,
+    'و**لا رمزَ عمليةٍ واحد على شاشتها** (المرحلة ٥ كلُّها قبل + و−)'
+    + (signs.length ? ` — وُجد: ${signs.join('، ')}` : ''));
+
+  // **التجاوزُ امتناعٌ في البنية**: بعد وضع جزءٍ، ما يزيد على ما بقي لا يُلمَس
+  const needBefore = Number(bondBoard.dataset.need);
+  const worth = (c) => Number(c.querySelector('.figure')?.dataset.drawn);
+  const smallest = bondCards.filter((c) => !c.disabled)
+    .reduce((a, b) => (worth(a) <= worth(b) ? a : b));
+  smallest.click();
+  await new Promise((r) => setTimeout(r, 350));
+  const remains = Number(bondBoard.dataset.need);
+  const spill = cardsOf(bdoc).filter((c) => worth(c) > remains && !c.disabled);
+  ok(remains === needBefore - worth(smallest) && spill.length === 0,
+    `وبعد وضع جزءٍ يبقى ${remains} من ${needBefore}، و**كلُّ بطاقةٍ تزيد عليه معطَّلة** `
+    + `(${spill.length} بطاقةً تتجاوز ولم تُعطَّل)`);
+
+  // **الجزءُ يُرَدّ بالإصبع** (نظيرُ «أعطني ن»): نقرةٌ على الخانة تُفرغها
+  const filledSlot = slotEls.find((s) => s.classList.contains('is-full'));
+  filledSlot?.click();
+  await new Promise((r) => setTimeout(r, 300));
+  ok(Number(bondBoard.dataset.need) === needBefore
+    && !bdoc.querySelector('.q-slot.is-full'),
+  'و**ما وُضع يُرَدّ بلمسةٍ على خانته** — فلا يُحبَس الطفلُ في اختيارٍ لم يقصده');
+
+  // **الخطأُ لا ينقل**: زوجٌ لا يبلغ الكلَّ تُكشَف له كمّيةُ الكلّ فتُعَدّ أمامه
+  const bondBead = beadNow(bdoc);
+  const wrongPair = cardsOf(bdoc).filter((c) => !c.disabled)
+    .sort((a, b) => worth(a) - worth(b));
+  wrongPair[0]?.click();
+  await new Promise((r) => setTimeout(r, 300));
+  const mate = cardsOf(bdoc).filter((c) => !c.disabled)
+    .find((c) => worth(c) !== Number(bondBoard.dataset.need));
+  mate?.click();
+  const lit = await until(bdoc, (d) => {
+    const box = d.querySelector('.q-check');
+    return box && !box.hidden && d.querySelectorAll('.q-check .is-counted').length
+      ? d.querySelectorAll('.q-check .is-counted').length : null;
+  }, 14000);
+  ok((lit > 0 || !mate) && beadNow(bdoc) === bondBead,
+    `والخطأُ لا ينقل — **تُكشَف كمّيةُ الكلّ فتُعَدّ أمامه** (${lit || 0} عنصراً مُعلَّماً)`);
+
+  const bondDone = await play(bdoc, 90);
+  const bondStars = bdoc.querySelectorAll('.big-stars .on').length;
+  ok(!!bondDone && bondStars > 0,
+    `ومحطةُ الجسر تُجتاز كاملةً لمساً حتى الاحتفال (${bondStars} نجمة)`);
+
+  /* ————— ١١ج) 🚪 بوابةُ الكمّ: من أضعف ما في يده، ولا رسوب —————
+
+     **وتُساق من داخل الجلسة نفسِها**: البوابةُ تبني من سجلّ ليتنر، والسجلُّ يمتلئ بما
+     لعبه الطفل في هذه الصفحة — فلو فُتحت بصفحةٍ جديدة لَبدأت من فراغ (وضعُ المعاينة
+     لا يكتب على القرص). فيُنتقَل إليها **بالمِرساة** لا بتحميلٍ جديد. */
+
+  const bondWin = bdoc.defaultView;
+  bondWin.location.hash = '#/gate/quantity';
+  await new Promise((r) => setTimeout(r, 1200));
+  const gateDots = bdoc.querySelectorAll('.dots .dot').length;
+  ok(!!bdoc.querySelector('.gate-head'),
+    'بوابةُ «عُبُورُ الكَمّ» **تُرسَم فعلاً** بجلسةٍ من سجلّ ما لعبه الطفل'
+    + (bdoc.querySelector('.gate-head') ? '' : ' — لم تُرسَم (وما على الشاشة ما كان قبلها)'));
+  /* **وتمارينُها ممّا في يده**: الحصيلةُ هنا محطةٌ واحدة لعبها الطفلُ في هذه الصفحة،
+     فدون العشرة بحقّ — و«عشرةٌ» تُثبَت على **سجلٍّ كاملٍ مصنوع** في `tools/test_gate.mjs`
+     (طفلٌ أتمّ المراحل الأربع). والمقيسُ هنا أنّها **تُبنى ممّا في يده وتُلعَب**. */
+  ok(gateDots > 0 && gateDots <= 10 && !!bdoc.querySelector('.station-body .qcard'),
+    `وتمارينُها مبنيّةٌ من مهاراته المسجَّلة (${gateDots} تمريناً، وأوّلُها معروضٌ ببطاقاته)`);
+
+  for (let i = 0; i < 60 && !bdoc.querySelector('.celebrate'); i++) {
+    (answerOf(bdoc) || bdoc.querySelector('.station-body .next'))?.click();
+    await new Promise((r) => setTimeout(r, 460));
+  }
+  const verdict = bdoc.querySelector('.celebrate');
+  const opened = verdict && !verdict.classList.contains('celebrate--again');
+  ok(!!verdict,
+    `وتُجتاز البوابةُ لمساً إلى حكمها (${opened ? 'فُتِحَت' : 'لَيْسَ بَعْدُ'})`);
+  // **ولا رسوب**: دونها لا لفظَ رسوبٍ ولا حدَّ للإعادة، ومعها نجومٌ وفتحٌ
+  const verdictText = shownIn(verdict);
+  ok(!/رسوب|فشل|خطأ/.test(verdictText),
+    'ولا لفظَ رسوبٍ في حكمها مهما كانت النتيجة (عهدُ «لا عقاب»)');
+  ok(opened
+    ? bdoc.querySelectorAll('.big-stars .on').length > 0
+    : Boolean([...bdoc.querySelectorAll('.celebrate button')]
+      .find((b) => b.textContent.includes('أعِد'))),
+  opened
+    ? `وبالعبور نجومٌ تُكتب (${bdoc.querySelectorAll('.big-stars .on').length})`
+    : 'ودونها إعادةٌ فورية بلا حدٍّ ولا عقاب');
+
+  /* ————— «اِصْنَعِ الخَمْسَةَ بِطَرِيقَتَيْن» (٥·٣): الطريقتان في جولةٍ واحدة —————
+
+     نصُّ `METHOD.md §٣`، ولا يقع بالنيّة: بعد الطريقة الأولى **تُعطَّل قيمتاها** فلا
+     سبيلَ إلى إعادتها — امتناعٌ في البنية كأخيه في التجاوز. */
+  const wdoc = await open('#/bond/make-five');
+  (await onward(wdoc))?.click();
+  await until(wdoc, (d) => d.querySelector('.q-bond'), 12000);
+  const firstWay = [];
+  for (let i = 0; i < 4 && wdoc.querySelectorAll('.q-slot.is-full').length < 2; i++) {
+    const card = answerOf(wdoc);
+    if (card) firstWay.push(Number(card.querySelector('.figure').dataset.drawn));
+    card?.click();
+    await new Promise((r) => setTimeout(r, 420));
+  }
+  const again = await until(wdoc,
+    (d) => (askOf(d).includes('أُخْرَى') ? askOf(d) : null), 8000);
+  const barred = cardsOf(wdoc).filter((c) => firstWay
+    .includes(Number(c.querySelector('.figure').dataset.drawn)));
+  ok(!!again && barred.length > 0 && barred.every((c) => c.disabled),
+    `و«اِصْنَعْهُ بِطَرِيقَةٍ أُخْرَى» بعد الأولى (${firstWay.join(' و')})، `
+    + `**وقيمتاها معطَّلتان** فلا تُعاد الطريقةُ نفسُها (${barred.length} بطاقة)`);
+
+  // ————— «أَصْدِقَاءُ العَشَرَة»: الخاناتُ الفارغة هي السؤال —————
+  const fdoc = await open('#/bond/ten');
+  (await onward(fdoc))?.click();
+  const tenFrame = await until(fdoc, (d) => d.querySelector('.q-bond--frame .figure'), 14000);
+  const cellCount = tenFrame ? tenFrame.querySelectorAll('[data-cell]').length : 0;
+  const inFrame = tenFrame ? Number(tenFrame.dataset.drawn) : 0;
+  const askNeed = Number(fdoc.querySelector('.q-bond').dataset.need);
+  ok(cellCount > inFrame && askNeed === cellCount - inFrame,
+    `و«أصدقاء العشرة» إطارٌ فيه ${inFrame} من ${cellCount} خانة، **والمطلوبُ ما بقي منها** `
+    + `(${askNeed}) — مقروءاً من الرسم لا من عددٍ مكتوب`);
+
+  const restCards = cardsOf(fdoc);
+  const badRest = restCards.find((c) => worth(c) !== askNeed);
+  const restBead = beadNow(fdoc);
+  badRest?.click();
+  const litCells = await until(fdoc,
+    (d) => d.querySelectorAll('.q-bond--frame [data-cell].is-counted').length || null, 14000);
+  ok(litCells > 0 && beadNow(fdoc) === restBead,
+    `وخطؤه يُعَدّ عليه: **تُضاء الخاناتُ الفارغةُ واحدةً واحدة** (${litCells || 0} خانة)`);
+
 
   /* ————— ١٢) **تعاقبُ الصوت**: صوتٌ واحدٌ في الجوّ، والانتقالُ بعد تمامه —————
 

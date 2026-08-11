@@ -61,6 +61,8 @@ const SAY_CATEGORY = {
   reveal: 'modeling',        // «وَهَذَا رَمْزُهَا» — كشفٌ يُشاهَد لا فعلٌ يُطلَب
   revealPair: 'modeling',
   revealSpot: 'modeling',
+  revealSplit: 'modeling',   // «وَتَنْشَقُّ إِلَى هَذَيْنِ الْجُزْأَيْنْ» — شقُّ الكمّية يُشاهَد
+  revealRest: 'modeling',    // «وَهَذَا مَا بَقِيَ لَهَا» — وكذلك ما بقي للإطار
   bravo: 'celebration',
   great: 'celebration',
 };

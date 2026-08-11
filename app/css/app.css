@@ -929,6 +929,25 @@ button {
 .fig-cell { fill: none; stroke: var(--line); stroke-width: 3; }
 .fig-frame { fill: none; stroke: var(--ink-soft); stroke-width: 4; }
 
+/* **الشقّان** (المرحلة ٥): الكمّيةُ الواحدة تُرى جزأين — والفرقُ **لونٌ ومعه حَلْقة**
+   لا لونٌ وحدَه (عمى الألوان، `DESIGN.md §٢`). ومَن يقسم هو مَن يرسم (`render.js`)،
+   فهذه كسوةُ ما قسم لا قِسمةٌ ثانية. */
+.fig-dot[data-part="b"] {
+  fill: var(--accent-numeral);
+  stroke: color-mix(in srgb, var(--ink) 55%, transparent);
+  stroke-width: 3;
+}
+
+.fig-mark[data-part="b"] {
+  border-radius: 50%;
+  box-shadow: 0 0 0 3px var(--accent-numeral);
+}
+
+/* الخانةُ الفارغة تُعَدّ أمام الطفل («كم بقي؟») — فتُضاء كما يُضاء العنصرُ المعدود،
+   وتُعلَّم في «جرِّب معي» فتُرى **مكاناً ينتظر** لا فراغاً. */
+.fig-cell.is-counted { fill: color-mix(in srgb, var(--ok) 26%, transparent); stroke: var(--ok); }
+.fig-cell.is-open { stroke: var(--accent, var(--accent-bond)); stroke-dasharray: 7 5; }
+
 /* ————— بطاقةُ الرمز وخطُّ الأعداد (الجلسة ٤ — المرحلتان ٣–٤) —————
 
    **الرقمُ المفرد كبيرٌ في صندوقه** (`DESIGN.md §٣`) وبخطّ النسخ (`--font-num`): رسمُ
@@ -1274,6 +1293,76 @@ button {
 .q-rack { display: flex; flex-wrap: wrap; justify-content: center; gap: .75rem; }
 .q-rack .qcard[disabled] { opacity: .45; }
 
+/* ————— لوحُ الجسر: جزء-جزء-كلّ (الجلسة ٥ — المرحلة ٥) —————
+
+   **الكلُّ فوق وجزآه تحته** — صورةُ الجسر التي يبنيها الطفل بيده. ولا سهمَ بينهما ولا
+   علامة: المرحلةُ كلُّها **بلا رمز عملية** (`METHOD.md §٣`)، والوصلُ خطٌّ يُرى لا رمزٌ
+   يُقرأ. */
+
+.q-bond {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: .35rem;
+  margin: .25rem 0 1rem;
+}
+
+.q-bond-whole > .figure { --unit: .78px; }
+.q-bond-frame > .figure { --unit: 1.1px; }
+
+/* الوصلةُ: خطٌّ ينزل من الكلّ إلى جزأيه */
+.q-parts {
+  display: flex;
+  gap: 1.4rem;
+  padding-top: 1.1rem;
+  position: relative;
+}
+
+.q-parts::before {
+  content: '';
+  position: absolute;
+  inset-inline: 25%;
+  top: 0;
+  height: .9rem;
+  border: 4px solid color-mix(in srgb, var(--accent) 45%, var(--mix));
+  border-bottom: 0;
+  border-radius: 10px 10px 0 0;
+}
+
+/* الخانةُ: مكانٌ ينتظر جزأه — **وزرٌّ حقيقيّ** يُرَدّ به ما وُضع */
+.q-slot {
+  display: grid;
+  place-items: center;
+  min-width: 6.2rem;
+  min-height: 6.2rem;
+  padding: .4rem;
+  border-radius: 20px;
+  background: color-mix(in srgb, var(--accent) 6%, var(--mix));
+  border: 4px dashed color-mix(in srgb, var(--accent) 40%, var(--mix));
+  transition: border-color .2s ease, background .2s ease, transform .15s ease;
+}
+
+.q-slot.is-full {
+  border-style: solid;
+  background: var(--card);
+  box-shadow: var(--shadow);
+}
+
+.q-slot:not([disabled]):active { transform: scale(.96); }
+.q-slot.good { border-color: var(--ok); background: color-mix(in srgb, var(--ok) 14%, var(--mix)); }
+.q-slot .figure { --unit: .5px; }
+
+/* **وبطاقاتُ الأجزاء أصغرُ قليلاً**: أربعٌ منها فوقها الكلُّ وخانتاه — فلو أخذت مقاسَ
+   بطاقة الاختيار المعتاد لَنزل بعضُها تحت حافّة الآيباد، والطفلُ لا يسحب ليجد جوابَه. */
+.q-bond ~ .q-choices .figure { --unit: .42px; }
+.q-bond ~ .q-aid .figure--objects,
+.q-bond ~ .q-aid .figure--scatter { --unit: .34px; }
+.q-reveal .figure--objects,
+.q-reveal .figure--scatter { --unit: .48px; }
+
+/* سطرُ الإرشاد الصغير تحت اللوح — تذكيرٌ بأنّ ما وُضع يُرَدّ */
+.note--tip { justify-content: center; font-size: .95rem; opacity: .85; }
+
 /* ————— طبقةُ اللمس: زرٌّ حقيقيّ فوق كل عنصرٍ مرسوم —————
 
    موضعُه من `spotStyle` في المصيِّر نفسِه، فلا يُحسَب موضعُ العنصر مرّتين. وهو
@@ -1315,6 +1404,17 @@ button {
   transform: scale(1.08);
 }
 
+/* **والعدُّ لا يمحو الشقّ** (المرحلة ٥): الكمّيةُ المنشقّة تُعَدّ كلُّها في النمذجة، فلو
+   صبغ العدُّ عناصرَها بلونٍ واحد لَذهب الشقُّ في اللحظة التي يُكشَف فيها جزآها. فيبقى
+   لونُ الشقّ، ويُعلَّم المعدودُ **بحلقةٍ ومعها حجم**. */
+.fig-dot[data-part="a"].is-counted { fill: var(--accent, var(--accent-quantity)); }
+.fig-dot[data-part="b"].is-counted { fill: var(--accent-numeral); }
+.fig-dot[data-part].is-counted { stroke: var(--ok); stroke-width: 5; }
+
+.fig-mark[data-part="b"].is-counted {
+  box-shadow: 0 0 0 3px var(--accent-numeral), 0 0 0 7px var(--ok);
+}
+
 /* ————— الشاشات الضيقة ————— */
 
 @media (max-width: 26rem) {
@@ -1329,4 +1429,8 @@ button {
   .q-rows .figure { --unit: .5px; }
   .q-reveal .figure { --unit: .55px; }
   .qcard--numeral .figure { --unit: .3px; }
+  .q-bond-whole > .figure { --unit: .5px; }
+  .q-bond-frame > .figure { --unit: .78px; }
+  .q-slot .figure { --unit: .36px; }
+  .q-parts { gap: .9rem; }
 }

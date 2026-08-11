@@ -118,6 +118,36 @@ function frameErrors(name, figure, want) {
   return errors;
 }
 
+// ————— ٢ب) الشقّ: **الكمّيةُ تنشقّ شقّين** (المرحلة ٥ — الجلسة ٥) —————
+//
+// «جزء-جزء-كلّ يُبنى بصرياً» (`METHOD.md §٢.٥`)، والشقُّ من المصيِّر لا من الشاشة —
+// فيُقاس كما يُقاس العدد: **كم عنصراً في كل شقّ، وبأيّ ترتيب**. والترتيبُ شرطٌ لا
+// زينة: العدُّ أمام الطفل يمشي على ترتيب الرسم (`countAloud`)، والإطارُ يُملأ من
+// اليمين — فشقٌّ يخالف ترتيبَ الرسم يُري الطفلَ جزأين لا يطابقان ما يُعَدّ.
+
+function splitErrors(name, figure, want, split) {
+  const errors = [];
+  const marks = figure.marks || [];
+  const parts = marks.map((m) => m.part);
+  if (parts.some((p) => p !== 'a' && p !== 'b')) {
+    return [`${name}: عنصرٌ بلا شقٍّ مُعلَن (${parts.join('،') || 'لا عناصر'})`];
+  }
+  const first = parts.filter((p) => p === 'a').length;
+  if (first !== split) {
+    errors.push(`${name}: الشقُّ الأول ${first} عنصراً والمقصود ${split} `
+      + '— **المرسومُ ليس هو المقسوم**');
+  }
+  if (parts.length - first !== want - split) {
+    errors.push(`${name}: الشقُّ الثاني ${parts.length - first} والمقصود ${want - split}`);
+  }
+  const turn = parts.indexOf('b');
+  if (turn >= 0 && parts.slice(turn).some((p) => p === 'a')) {
+    errors.push(`${name}: الشقّان مختلطان في ترتيب الرسم — والعدُّ أمام الطفل يمشي `
+      + 'عليه، فيُرى شقٌّ لا يطابق ما يُعَدّ');
+  }
+  return errors;
+}
+
 // ————— ٣) النرد: التوزيعُ القياسيّ —————
 //
 // **جدولٌ مكتوبٌ هنا مستقلاً** عن جدول المصيِّر: مقابلةُ نسخةٍ بنسختها لا تُثبت شيئاً،
@@ -341,6 +371,7 @@ function stationErrors(painted) {
 function sweep() {
   const errors = [];
   let figures = 0;
+  let splits = 0;
   const painted = render.displays();
 
   for (const display of painted) {
@@ -367,6 +398,24 @@ function sweep() {
         }
         shapes.push(JSON.stringify(figure.marks));
       }
+      // **والشقُّ يُقاس على كل مَشَقٍّ ممكن** (٠..العدد): الكمّيةُ تنشقّ ولا يتبدّل
+      // موضعُ عنصرٍ واحد بشقّها — فما يُعَدّ هو ما يُرى مقسوماً.
+      if (kind === 'quantity') {
+        for (let at = 0; at <= n; at++) {
+          const figure = render.plan(display, n, { seed: SEEDS[1], split: at });
+          splits++;
+          const name = `${label(display, n, SEEDS[1])} · شقٌّ عند ${at}`;
+          errors.push(...splitErrors(name, figure, n, at));
+          errors.push(...figureErrors(name, figure, n));
+          if (figure.frames.length) errors.push(...frameErrors(name, figure, n));
+          const plain = render.plan(display, n, { seed: SEEDS[1] });
+          if (JSON.stringify(figure.marks.map(({ part, ...m }) => m))
+            !== JSON.stringify(plain.marks)) {
+            errors.push(`${name}: الشقُّ حرّك مواضعَ العناصر — والقسمةُ كسوةٌ لا رسمٌ ثانٍ`);
+          }
+        }
+      }
+
       const distinct = new Set(shapes).size;
       const jitters = display === 'scatter' || display === 'objects';
       if (jitters && n >= 2 && distinct < 2) {
@@ -393,7 +442,20 @@ function sweep() {
   if (!throws(() => render.plan('objects', 3, { glyph: 'x' }))) {
     errors.push('[صدق الصورة] قَبِل رمزاً خارج عناصر عالم الطفل');
   }
-  return { errors, figures };
+  // **ولا يُشَقّ ما ليس كمّاً، ولا جزءٌ يجاوز كلَّه** — والطلبُ خطأُ برمجةٍ يصرخ
+  for (const display of painted) {
+    const { max } = render.rangeOf(display);
+    const quantity = render.kindOf(display) === 'quantity';
+    for (const bad of [-1, max + 1, 1.5]) {
+      if (!throws(() => render.plan(display, max, { split: bad }))) {
+        errors.push(`[${display}] قَبِل شقّاً عند ${bad} وهو خارج الكمّية ${max}`);
+      }
+    }
+    if (!quantity && !throws(() => render.plan(display, max, { split: 1 }))) {
+      errors.push(`[${display}] قَبِل شقّاً وهو لا يُعَدّ عناصرَ — لا يُقسَم ما ليس كمّاً`);
+    }
+  }
+  return { errors, figures, splits };
 }
 
 const throws = (fn) => { try { fn(); return false; } catch { return true; } };
@@ -412,14 +474,15 @@ function check() {
   const dormant = (msg) => { asleep++; console.log('  ⏸', `${msg} — نائم، يستيقظ ذاتياً`); };
 
   const painted = render.displays();
-  const { errors, figures } = sweep();
+  const { errors, figures, splits } = sweep();
   const covered = painted.map((d) => render.rangeOf(d));
 
   const byKind = (kind) => painted.filter((d) => render.kindOf(d) === kind);
   door('١) المرسومُ هو المقصود — كمّاً يُعَدّ ورمزاً يُقرأ وخطّاً يمتدّ',
     errors,
-    `${figures} شكلاً (${painted.length} نمطاً × مداه × ${SEEDS.length} بذور): `
-    + `${byKind('quantity').length} نمطَ كمّيةٍ رسم عددَه بلا تراكبٍ ولا خروجٍ عن صندوقه، `
+    `${figures} شكلاً و${splits} شقّاً (${painted.length} نمطاً × مداه × ${SEEDS.length} بذور): `
+    + `${byKind('quantity').length} نمطَ كمّيةٍ رسم عددَه بلا تراكبٍ ولا خروجٍ عن صندوقه `
+    + `وانشقّ شقّين بترتيب رسمه، `
     + `و${byKind('numeral').length} بطاقةَ رمزٍ كتبت رقمَها المشرقيّ، `
     + `و${byKind('line').length} خطّاً علاماتُه مدىً وواحدةً متساويةَ التباعد من اليمين`);
 
@@ -523,6 +586,28 @@ function selfTest() {
     f.marks = f.cells.slice(10, 23).map((c) => ({ ...c, r: R }));
   }), 13), 'الملء من اليمين'),
   'وإطاران بدأ ملؤهما من الأيسر يُمسَكان (الحزمةُ التامّة تُرى أولاً)');
+
+  console.log('\n— ٢ب) الشقّ: يُمسَك ما لم يُقسَم كما قيل —');
+  const split = render.plan('ten-frame', 7, { split: 5 });
+  const spread = render.plan('scatter', 7, { seed: 3, split: 3 });
+  ok(!splitErrors('ش', split, 7, 5).length && !splitErrors('ش', spread, 7, 3).length,
+    'سبعةٌ تنشقّ خمسةً واثنين — في الإطار وفي المبعثر');
+  ok(found(splitErrors('ش', broke(split, (f) => { f.marks[4].part = 'b'; }), 7, 5),
+    'ليس هو المقسوم'),
+  '**وشقٌّ رسم أربعةً والمقصودُ خمسة يُمسَك** (المرسومُ ليس هو المقسوم)');
+  ok(found(splitErrors('ش', broke(split, (f) => {
+    f.marks[1].part = 'b'; f.marks[6].part = 'a';
+  }), 7, 5), 'مختلطان'),
+  'وشقّان مختلطان في ترتيب الرسم يُمسَكان (العدُّ أمام الطفل يمشي على الترتيب)');
+  ok(found(splitErrors('ش', broke(split, (f) => { delete f.marks[0].part; }), 7, 5),
+    'بلا شقٍّ مُعلَن'),
+  'وعنصرٌ بلا شقٍّ يُمسَك');
+  ok(throws(() => render.plan('numeral', 7, { split: 3 }))
+    && throws(() => render.plan('line', 7, { split: 3 })),
+  '**ولا يُشَقّ ما ليس كمّاً**: بطاقةُ رمزٍ وخطُّ أعدادٍ يرميان الطلب');
+  ok(throws(() => render.plan('ten-frame', 7, { split: 8 }))
+    && throws(() => render.plan('ten-frame', 7, { split: -1 })),
+  'وجزءٌ يجاوز كلَّه يُرمى ولا يُقرَّب');
 
   console.log('\n— ٣) النرد: يُمسَك ما ليس بالتوزيع القياسيّ —');
   ok(found(diceErrors('ش', broke(die, (f) => { f.marks[0].x += 4; }), 5), 'خارج شبكة النرد'),

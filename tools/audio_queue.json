@@ -340,5 +340,45 @@
     "status": "done",
     "doneAt": "2026-08-11",
     "model": "gemini-3.1-flash-tts-preview"
+  },
+  {
+    "text": "وَتَنْشَقُّ إِلَى هَذَيْنِ الْجُزْأَيْنْ",
+    "category": "modeling",
+    "requestedBy": "session-audio",
+    "priority": 30,
+    "status": "pending",
+    "doneAt": null
+  },
+  {
+    "text": "وَهَذَا مَا بَقِيَ لَهَا",
+    "category": "modeling",
+    "requestedBy": "session-audio",
+    "priority": 30,
+    "status": "pending",
+    "doneAt": null
+  },
+  {
+    "text": "اِصْنَعْهُ بِجُزْأَيْنْ",
+    "category": "instruction",
+    "requestedBy": "session-audio",
+    "priority": 20,
+    "status": "pending",
+    "doneAt": null
+  },
+  {
+    "text": "وَالْآنَ بِطَرِيقَةٍ أُخْرَى",
+    "category": "instruction",
+    "requestedBy": "session-audio",
+    "priority": 20,
+    "status": "pending",
+    "doneAt": null
+  },
+  {
+    "text": "كَمْ بَقِيَ لِتَمْتَلِئَ الْعَشَرَةْ؟",
+    "category": "instruction",
+    "requestedBy": "session-audio",
+    "priority": 20,
+    "status": "pending",
+    "doneAt": null
   }
 ]

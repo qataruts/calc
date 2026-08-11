@@ -104,8 +104,17 @@ export function buildSession({
 //   `right(el)` — أثرُ الصواب ثم التمرين التالي
 //   `next()` · `rnd` · `alive()` — «أما زالت هذه الجولة هي الجارية؟»
 
+/**
+ * **ومُصيِّرُ التمرين افتراضُه المحقون** (إصلاحُ الجلسة ٥ — `SEED.md §٩`): كانت
+ * `renderSession` تطلبه من مُناديها، فمرّرته «مراجعةُ اليوم» **ونسيته البوابة** —
+ * فكانت البوابةُ ترتمي `TypeError` أوّلَ ما تجد في يد الطفل مهارةً تُسأل عنها، ويبقى
+ * على شاشته ما كان. ولم يظهر ذلك قطّ لأنّ البوابةَ لا تُرسَم إلا بجلسةٍ غيرِ فارغة.
+ * فصار الافتراضُ **المُصيِّرَ المحقون نفسَه** (`viewFor`): مَن أراد غيرَه مرّره، ومَن
+ * سكت أصاب — ولا يبقى بابٌ يُنسى.
+ */
 export function renderSession({
-  make, view, verdict, pill, accent = ACCENT, leaveAsk, header = null,
+  make, view = (item, api) => viewFor(item, api), verdict,
+  pill, accent = ACCENT, leaveAsk, header = null,
 }) {
   let items = make();
   if (!items.length) return null;   // لا حصيلة بعدُ: `main.js` يعيده إلى الخريطة
@@ -266,7 +275,6 @@ export function renderReview() {
 
   return renderSession({
     make,
-    view: viewFor,
     pill: 'مراجعة اليوم',
     leaveAsk: 'تريد الخروج قبل إتمام المراجعة؟',
     verdict: ({ right, errors, items }) => {

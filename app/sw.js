@@ -36,7 +36,7 @@
 // (`touch-action` على الجذر) و`main.js` (إعادةُ إعلان الميتا) — **والعلّةُ نفسُها**:
 // قفلُ الزوم في ميتا مخزونةٍ قديمة لا يُقفل شيئاً، وجهازُ المالك يبقى يُكبَّر بعد
 // أن أُصلح. **رفعةٌ واحدة للحزمة كلِّها** (بندُ م٢·٤) لا رفعةٌ لكل ملفّ.
-const VERSION = 'v7';
+const VERSION = 'v8';
 const SHELL_CACHE = `ihsib-shell-${VERSION}`;
 const AUDIO_CACHE = 'ihsib-audio';        // ثابتٌ عمداً — لا يحمل VERSION
 const KEEP = [SHELL_CACHE, AUDIO_CACHE];
@@ -52,6 +52,7 @@ const SHELL = [
   'fonts/BalooBhaijaan2-latin.woff2',
   'fonts/Marhey-arabic.woff2',
   'js/audio.js',
+  'js/bonds.js',
   'js/compare.js',
   'js/counting.js',
   'js/curriculum.js',

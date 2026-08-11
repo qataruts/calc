@@ -93,6 +93,10 @@ export const SAY = {
   reveal: 'وَهَذَا رَمْزُهَا',
   revealPair: 'وَهَذَانِ رَمْزَاهُمَا',
   revealSpot: 'وَهَذَا مَوْضِعُهُ عَلَى الْخَطّ',
+  // **كشفُ الشقّ** (المرحلة ٥): الكمّيةُ تُعَدّ ثم يُرى شقّاها — وهي جملةُ عرضٍ
+  // تُشاهَد كأخواتها فوقها، فموضعُها هذا الجدولُ لا وحدةُ التمارين.
+  revealSplit: 'وَتَنْشَقُّ إِلَى هَذَيْنِ الْجُزْأَيْنْ',
+  revealRest: 'وَهَذَا مَا بَقِيَ لَهَا',
   bravo: 'أَحْسَنْتْ',
   great: 'رَائِعْ',
 };
@@ -231,8 +235,8 @@ export const seeder = (rnd) => () => Math.floor(rnd() * 0xffffffff);
  * شكلُ كميةٍ جاهزٌ للشاشة: **العددُ يُقرأ من المصيِّر لا من الطلب**.
  * `drawn` هو ما رُسِم فعلاً (`[data-mark]` في `render.js`)، وعليه تقوم أجوبةُ التمارين.
  */
-export function figureOf({ display, count, seed, glyph, upTo }) {
-  const { el, drawn, plan } = paint(display, count, { seed, glyph });
+export function figureOf({ display, count, seed, glyph, upTo, split }) {
+  const { el, drawn, plan } = paint(display, count, { seed, glyph, split });
   return {
     el,
     drawn,
@@ -242,6 +246,9 @@ export function figureOf({ display, count, seed, glyph, upTo }) {
     marks: [...el.querySelectorAll('[data-mark]')],
     // علاماتُ خطّ الأعداد — تُقرأ من الرسم نفسِه ليُعَدَّ عليها أمام الطفل
     ticks: [...el.querySelectorAll('[data-tick]')],
+    // **خاناتُ الإطار كلُّها** — والفارغةُ منها جزءٌ من المعنى («كم بقي للعشرة؟»،
+    // المرحلة ٥): تُقرأ من الرسم فيُعَدّ عليها أمام الطفل، ومنها سَعةُ الإطار.
+    cells: [...el.querySelectorAll('[data-cell]')],
   };
 }
 
@@ -353,6 +360,31 @@ export async function countAlongLine(fig, upTo, alive = () => true) {
 /** إزالةُ أثر العدّ عن علامات الخطّ. */
 export const clearLine = (fig) => {
   for (const tick of fig.ticks) tick.classList.remove('is-counted');
+};
+
+/**
+ * **يَعُدّ خاناتِ الإطار الفارغةَ أمام الطفل** — معالجةُ الخطأ في «كم بقي للعشرة؟»
+ * (`METHOD.md §٣` — ٥·٥ و٥·٦): الخانةُ الفارغة **مكانٌ يُرى** لا عدمٌ يُتخيَّل، فتُضاء
+ * واحدةً بعد واحدة باسمها فيرى الطفلُ الجوابَ **عدّاً** لا تلقيناً (`METHOD.md §٤`).
+ *
+ * ويبدأ العدُّ من الواحد على أوّل خانةٍ فارغة: المقيسُ **ما بقي** لا ما امتلأ.
+ */
+export async function countCells(fig, alive = () => true) {
+  const empty = fig.cells.slice(fig.drawn);
+  for (const cell of empty) cell.classList.remove('is-counted');
+  for (const [i, cell] of empty.entries()) {
+    if (!alive()) return false;
+    cell.classList.add('is-counted');
+    await say(NUMBER_NAME[i + 1]);
+    if (!alive()) return false;
+    await wait(BEAT);
+  }
+  return alive();
+}
+
+/** إزالةُ أثر العدّ عن خانات الإطار. */
+export const clearCells = (fig) => {
+  for (const cell of fig.cells) cell.classList.remove('is-counted');
 };
 
 /**
@@ -636,24 +668,40 @@ export function stationScreen({ nodeId, title, accent, make, view, score, save }
 // تسجّل أنواعَها في هذا السجلّ — فما دخل الرحلةَ دخل المراجعةَ والبواباتِ معه، ولا
 // يفترق التمرينُ الذي يُدرَّس عن التمرين الذي يُراجَع.
 
-const EXERCISES = new Map();   // نوعُ التمرين ← { build, view }
+// **ونوعُ التمرين ليس مالكاً وحيداً** (الجلسة ٥): مفتاحُ ليتنر ثلاثةٌ (مفهوم × مدى ×
+// نوع تمرين)، و**النوعُ وحدَه قد يشترك فيه مفهومان** بنصّ `METHOD.md §٦`: `equal|5|make`
+// (اجعلهما سواء — المرحلة ٢) و`bond|10|make` (أصدقاء العشرة — المرحلة ٥). فلو كان
+// السجلُّ نوعاً ← وحدةً واحدة **لمحت الثانيةُ الأولى** بلا صوتٍ ولا فشل: تسقط تمارينُ
+// «اجعلهما سواء» من المراجعة والبوابة معاً، ولوحةُ وليّ الأمر تحسبها مقيسة.
+//
+// فالسجلُّ نوعٌ ← **قائمةُ مالكين**، ويُسأل كلٌّ عن المهارة بدوره: مَن كانت محطتُها من
+// أنواعه بناها، ومَن سواه ردّ `null` (وهو ما تفعله `single` في كل وحدة أصلاً). وأوّلُ
+// بانٍ يجيب هو صاحبُها — والجوابُ يحمل **مالكَه** (`by`) فيرسمه مُصيِّرُه هو لا مُصيِّرُ
+// شريكه في الاسم.
+
+const EXERCISES = new Map();   // نوعُ التمرين ← [{ build, view }]
 
 /**
  * تسجيلُ نوع تمرينٍ في المراجعة.
  * @param {string} kind  الحقلُ الثالث من مفتاح ليتنر (`METHOD.md §٦`)
  * @param {{build: Function, view: Function}} spec
- *   `build(skill, rnd)` يبني جولةً من محطةِ تلك المهارة، و`view(round, hooks)` يرسمها.
+ *   `build(skill, rnd)` يبني جولةً من محطةِ تلك المهارة **أو `null` إن لم تكن له**،
+ *   و`view(round, hooks)` يرسمها.
  */
 export function registerExercise(kind, spec) {
-  EXERCISES.set(kind, spec);
+  EXERCISES.set(kind, [...(EXERCISES.get(kind) || []), spec]);
 }
+
+/** مالكو نوع تمرينٍ بترتيب تسجيلهم — للعدّة والتشخيص. */
+export const exerciseOwners = (kind) => (EXERCISES.get(kind) || []).length;
 
 /** تمرينُ مهارةٍ مستحقّة — يقرؤه محرّكُ المراجعة والبوابات معاً. */
 function itemFor(skill, rnd = Math.random) {
-  const spec = EXERCISES.get(skill.kind);
-  if (!spec) return null;
-  const round = spec.build(skill, rnd);
-  return round ? { ...round, id: `${round.kind}|${round.sig}` } : null;
+  for (const [by, spec] of (EXERCISES.get(skill.kind) || []).entries()) {
+    const round = spec.build(skill, rnd);
+    if (round) return { ...round, by, id: `${round.kind}|${round.sig}` };
+  }
+  return null;
 }
 
 /**
@@ -675,7 +723,9 @@ function fillersOf(rnd = Math.random) {
 
 /** مُصيِّرُ تمرين المراجعة — التمرينُ نفسُه الذي في المحطة، بعقد المحرّك. */
 function viewFor(item, api) {
-  const spec = EXERCISES.get(item.kind);
+  // **ويرسمه مالكُه**: `by` هو الذي بناه (أعلاه) — فلا يرسم صاحبُ «اجعلهما سواء»
+  // جولةَ جسرٍ لأنّ اسمَ نوعهما واحد.
+  const spec = (EXERCISES.get(item.kind) || [])[item.by ?? 0];
   if (!spec) return h('p', { class: 'hint' }, 'لا تمرين بعد.');
   return spec.view(item, {
     measured: true,

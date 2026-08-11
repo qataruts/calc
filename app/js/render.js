@@ -296,13 +296,30 @@ export function rangeOf(display) {
 
 // ————— الخطة: هندسةٌ خالصة تُقرأ في node —————
 
+// ————— الشقُّ: **الكمّيةُ تنشقّ شقّين** (المرحلة ٥ — `METHOD.md §٣`) —————
+//
+// «جزء-جزء-كلّ يُبنى **بصرياً** قبل رمزَي + و−»: فالكمّيةُ الواحدة تُرى شقّين — هذه
+// الأربعةُ **خمسةٌ إلا واحداً** — ولا يقع ذلك بسطرٍ في شاشة: مَن رسم العناصر يقول
+// أيُّها من الشقّ الأول. **وعلّةُ كونه هنا لا في الشاشة**: لو لوّنت الشاشةُ عناصرَ
+// بعينها لصار للكمّية مالكان — واحدٌ يرسمها وواحدٌ يقسمها — فيفترقان يومَ يتبدّل
+// ترتيبُ الرسم، ويرى الطفلُ شقّاً لا يطابق ما يُعَدّ. والشقُّ **يتبع ترتيبَ الرسم
+// نفسَه** (الإطارُ من اليمين، والمبعثرُ بترتيب قرعته)، فيُقرأ من الـDOM كما يُقرأ العدد.
+//
+// ولا شقَّ إلا لِما يُعَدّ: بطاقةُ رمزٍ أو خطُّ أعدادٍ لا ينشقّان — والطلبُ خطأُ برمجةٍ
+// يصرخ ولا يُتجاهَل صامتاً.
+
+function splitMarks(marks, split) {
+  return marks.map((m, i) => ({ ...m, part: i < split ? 'a' : 'b' }));
+}
+
 /**
  * خطةُ شكلٍ: مواضعُ العناصر أعداداً، بلا DOM ولا متصفّح.
  *
  * @param {string} display نمطُ العرض من `displays()`
  * @param {number} count   العدد المقصود — **وخارجَ مدى النمط يُرمى لا يُقرَّب**:
  *   كميةٌ لا يستطيع النمطُ رسمَها خطأُ برمجةٍ يجب أن يصرخ، لا أن يُرسَم أقربُ منها.
- * @param {{seed?: number, glyph?: string}} opts البذرة (الحتمية) ورمزُ العنصر.
+ * @param {{seed?: number, glyph?: string, split?: number}} opts البذرة (الحتمية)
+ *   ورمزُ العنصر، و**الشقُّ**: كم عنصراً من الأول للشقّ الأول (المرحلة ٥).
  */
 export function plan(display, count, opts = {}) {
   const painter = PAINTERS[display];
@@ -315,6 +332,15 @@ export function plan(display, count, opts = {}) {
   if (opts.glyph && !OBJECTS.some((o) => o.glyph === opts.glyph)) {
     throw new RangeError('رمزٌ خارج عناصر عالم الطفل — «صدق الصورة» عقدٌ لا ذوق');
   }
+  const split = opts.split ?? null;
+  if (split !== null) {
+    if (painter.kind !== 'quantity') {
+      throw new RangeError(`«${display}» لا ينشقّ — الشقُّ لكمّيةٍ تُعَدّ عناصرُها وحدَها`);
+    }
+    if (!Number.isInteger(split) || split < 0 || split > count) {
+      throw new RangeError(`الشقُّ ${split} خارج الكمّية ${count} — والجزءُ لا يجاوز كلَّه`);
+    }
+  }
 
   const view = VIEWS[display];
   const rnd = seeded((opts.seed ?? 0) >>> 0);
@@ -322,12 +348,14 @@ export function plan(display, count, opts = {}) {
     ? (opts.glyph || OBJECTS[Math.floor(rnd() * OBJECTS.length)].glyph)
     : null;
 
-  return {
-    display, count, view, r: R, glyph, kind: painter.kind,
+  const figure = {
+    display, count, view, r: R, glyph, kind: painter.kind, split,
     seed: (opts.seed ?? 0) >>> 0,
     cells: [], frames: [], ticks: [], slots: [], labels: [], text: null,
     ...painter.plan(count, rnd, view),
   };
+  if (split !== null) figure.marks = splitMarks(figure.marks, split);
+  return figure;
 }
 
 // ————— الرسم: من الخطة إلى DOM، والعددُ يُعَدّ من الرسم —————
@@ -342,8 +370,8 @@ function svgFigure(figure, inner) {
   return el;
 }
 
-const dot = (m) => `<circle data-mark cx="${m.x.toFixed(2)}" cy="${m.y.toFixed(2)}"`
-  + ` r="${m.r}" class="fig-dot"/>`;
+const dot = (m) => `<circle data-mark${m.part ? ` data-part="${m.part}"` : ''}`
+  + ` cx="${m.x.toFixed(2)}" cy="${m.y.toFixed(2)}" r="${m.r}" class="fig-dot"/>`;
 
 function paintDots(figure) {
   const cells = figure.cells.map((c) => `<rect data-cell class="fig-cell"`
@@ -394,6 +422,7 @@ function paintObjects(figure) {
   for (const m of figure.marks) {
     const mark = faceEl(figure.glyph, 'fig-mark');
     mark.dataset.mark = '';
+    if (m.part) mark.dataset.part = m.part;
     for (const [key, value] of Object.entries(spotStyle(m, figure.view))) {
       mark.style.setProperty(key, value);
     }
@@ -449,6 +478,8 @@ export function paint(display, count, opts = {}) {
   el.dataset.kind = painter.kind;
   el.dataset.count = String(count);
   el.dataset.drawn = String(drawn);
+  // **والشقُّ يُقرأ من الرسم كما يُقرأ العدد**: عددُ ما وُسِم بالشقّ الأول، لا ما طُلب
+  if (figure.split !== null) el.dataset.split = String(el.querySelectorAll('[data-part="a"]').length);
   return { el, drawn, plan: figure };
 }
 
