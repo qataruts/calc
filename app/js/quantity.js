@@ -19,7 +19,7 @@ import * as progress from './progress.js';
 import { registerScreen } from './registry.js';
 import { h, icon, pick, shuffle, seeded, shake, pop, QUANTITY_ACCENT } from './ui.js';
 import {
-  AFTER_RIGHT_MS, BEAT, FLASH_MS, SAY, say, span, nearOptions, seeder, skillOf,
+  BEAT, FLASH_MS, SAY, say, praiseThen, span, nearOptions, seeder, skillOf,
   stationById, stationForSkill, figureBox, quantityCard, countAloud, clearCount,
   usedOf, registerExercise, stationScreen,
 } from './station.js';
@@ -309,13 +309,15 @@ function chooseView(round, hooks) {
           // **يُرفَع الغطاءُ عند الصواب**: يرى الكميةَ التي قدّرها فيصدّق تقديرَه —
           // وهي تغذيةٌ راجعة على الحسّ نفسِه لا مكافأةٌ زائدة.
           show();
-          say(SAY.bravo);
-          setTimeout(hooks.done, AFTER_RIGHT_MS);
+          await praiseThen(hooks);
           return;
         }
         btn.classList.add('bad');
         shake(btn);
-        say(SAY.together);
+        // **ولا نقرةَ ثانيةً تفتح تصحيحاً ثانياً** فوق الأول: القفلُ من لحظة الحكم
+        locked = true;
+        await say(SAY.together);
+        if (!hooks.alive()) return;
         await new Promise((r) => setTimeout(r, BEAT / 2));
         if (hooks.alive()) await correction(btn);
       },
@@ -330,8 +332,12 @@ function chooseView(round, hooks) {
     }, icon('repeat'), ' أَعِدِ الْعَرْض'));
   }
 
-  say(round.ask);
-  flash();
+  /* **السؤالُ يُسمَع تامّاً ثم تُخطَف الكميّة**: لولا الانتظارُ لَجرت الخطفةُ فوق
+     السؤال، فاختلف زمنُ العرض من جولةٍ إلى جولة بطول جملةٍ لا يملكها الطفل. */
+  (async () => {
+    await say(round.ask);
+    if (hooks.alive()) flash();
+  })();
 
   return h('div', {},
     h('h2', {}, round.ask),
@@ -376,14 +382,14 @@ function moreView(round, hooks) {
       locked = true;
       el.classList.add('good');
       pop(el);
-      say(SAY.bravo);
-      setTimeout(hooks.done, AFTER_RIGHT_MS);
+      await praiseThen(hooks);
       return;
     }
     el.classList.add('bad');
     shake(el);
-    say(SAY.together);
     locked = true;
+    await say(SAY.together);
+    if (!hooks.alive()) return;
     await new Promise((r) => setTimeout(r, BEAT / 2));
     if (!hooks.alive()) return;
     await countAloud(sides.map((s) => s.fig), hooks.alive);

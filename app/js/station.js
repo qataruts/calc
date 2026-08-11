@@ -104,8 +104,26 @@ export const SAY = {
  */
 export const SPOKEN = [...Object.values(NUMBER_NAME), ...Object.values(SAY)];
 
-/** نطقٌ لا يوقف الشاشة: الصوتُ زينةُ الدرس لا شرطُ تقدّمه (بلاغُ صمت الآيباد). */
-export const say = (text) => { if (text) audio.play(text); };
+/**
+ * **قولٌ يُنتظَر**: يقف النصُّ في قناة الصوت (`audio.js`) ويُرجِع وعدَه — يتمّ بتمام
+ * الكلام. فمن أراد أن يتكلّم ويمضي ناداها ومضى، **ومن أراد أن ينتقل انتظرها**.
+ *
+ * **بلاغُ الميدان ١** (`docs/FIELD.md §١`): كانت تُطلِق وتبتلع الوعد، فكان كلُّ تعاقبٍ
+ * معلَّقاً بمهلاتٍ ثابتة — يدهس الملفَّ الأطولَ من مهلته، ويمضي بالشاشة فوق كلامٍ لم
+ * يتمّ. والوعدُ هنا هو الإصلاح كلُّه: الطابورُ يمنع التراكب، وانتظارُه يمنع الدهس.
+ */
+export const say = (text) => (text ? audio.play(text) : Promise.resolve(false));
+
+/**
+ * **الانتقالُ بعد تمام الكلام** (م١·٢): تُقال كلمةُ الصواب **وتُنتظَر**، ثم يُرى الأثرُ
+ * لحظةً، ثم يُنتقَل — فلا جولةَ تبدأ وكلمةُ سابقتها في الجوّ. وهي ختامُ كل تمرينٍ
+ * أصاب فيه الطفل، فموضعُها الحلقةُ لا كلُّ شاشةٍ على حدة.
+ */
+export async function praiseThen(hooks, text = SAY.bravo) {
+  await say(text);
+  await wait(AFTER_RIGHT_MS);
+  if (hooks.alive()) hooks.done();
+}
 
 // ————— المنهجُ يقول المدى: المهارةُ والمحطة —————
 
@@ -324,7 +342,9 @@ export async function countAlongLine(fig, upTo, alive = () => true) {
     if (value > upTo) break;
     if (!alive()) return false;
     tick.classList.add('is-counted');
-    if (value > 0) say(NUMBER_NAME[value]);
+    // **العلامةُ تُضاء ثم يُنتظَر اسمُها ثم الفاصل** — فلا يسبق العدُّ المرئيُّ الصوتَ
+    if (value > 0) await say(NUMBER_NAME[value]);
+    if (!alive()) return false;
     await wait(BEAT);
   }
   return alive();
@@ -356,7 +376,10 @@ export async function countAloud(figures, alive = () => true) {
     for (const [i, mark] of fig.marks.entries()) {
       if (!alive()) return false;
       mark.classList.add('is-counted');
-      say(NUMBER_NAME[i + 1]);
+      // **العنصرُ يُعلَّم ثم يُنتظَر اسمُه ثم الفاصل** (`BEAT` فاصلٌ **بين** الجمل لا
+      // بديلٌ عن انتظارها): فيقع الاسمُ على معدوده تماماً، ولا يدهس اسمٌ اسماً.
+      await say(NUMBER_NAME[i + 1]);
+      if (!alive()) return false;
       await wait(BEAT);
     }
     if (!alive()) return false;
@@ -449,8 +472,13 @@ export function stationScreen({ nodeId, title, accent, make, view, score, save }
     };
   };
 
-  function paint() {
-    audio.stop();
+  /**
+   * @param {boolean} silence أيُفرَغ طابورُ الصوت قبل الرسم؟ نعم في كل انتقالٍ يقطعه
+   *   الطفلُ بنقرته (م١·٣) — **ولا** حين يكون الانتقالُ نفسُه قد صفَّ جملتَه أولاً
+   *   (إعلانُ الخطوة أدناه): وإلّا أفرغ الرسمُ ما صفَّه المُعلِن قبله بسطر.
+   */
+  function paint(silence = true) {
+    if (silence) audio.stop();
     state.token++;
     paintSteps();
     paintBeads();
@@ -470,8 +498,14 @@ export function stationScreen({ nodeId, title, accent, make, view, score, save }
     if (state.phase < phases.length - 1) {
       state.phase++;
       state.index = 0;
+      /* **إعلانُ الخطوة ثم سؤالُها، في قناةٍ واحدة**: يُسكَت ما مضى **مرّةً**، ثم
+         يُصَفّ الإعلان، ثم يرسم `paint` بلا إسكاتٍ ثانٍ — فيقف سؤالُ الشاشة خلفه في
+         الطابور. وهذا **موضعُ «الصوتين المتكرّرين»** الذي بلّغ عنه الميدان: كان
+         الإعلانُ والسؤالُ يُطلَقان في اللحظة نفسِها، وكلٌّ يُسكت ما قبله **قبل أن
+         يبدأ** — فلا يُسكت أحدُهما الآخر، ثم يعملان معاً. */
+      audio.stop();
       say(phases[state.phase].key === 'solo' ? SAY.alone : SAY.withMe);
-      paint();
+      paint(false);
       return;
     }
     finish();
@@ -502,13 +536,16 @@ export function stationScreen({ nodeId, title, accent, make, view, score, save }
       foot.replaceChildren();
       shown.replaceChildren();
       shown.hidden = true;
-      say(SAY.watch);
+      // **الدعوةُ تُسمَع تامّةً قبل أن يبدأ العدّ** — أوّلُ ما يسمعه الطفلُ عند الفتح
+      await say(SAY.watch);
+      if (!api.alive()) return;
       await wait(BEAT);
       if (!(await countAloud(figures, api.alive))) return;
       if (model.reveal) {
         shown.replaceChildren(...model.reveal.figures.map((spec) => figureBox(spec).box));
         shown.hidden = false;
-        say(model.reveal.say);
+        await say(model.reveal.say);
+        if (!api.alive()) return;
         await wait(BEAT);
         if (!api.alive()) return;
       }

@@ -31,7 +31,7 @@ import * as progress from './progress.js';
 import { registerScreen } from './registry.js';
 import { h, icon, pick, shuffle, seeded, shake, pop, arNum, NUMERAL_ACCENT } from './ui.js';
 import {
-  AFTER_RIGHT_MS, BEAT, NUMBER_NAME, SAY, say, span, nearOptions, seeder, skillOf,
+  BEAT, NUMBER_NAME, SAY, say, praiseThen, span, nearOptions, seeder, skillOf,
   stationById, stationForSkill, figureBox, numeralCard, countAloud, clearCount,
   countAlongLine, clearLine, slotLayer, usedOf, registerExercise, stationScreen,
 } from './station.js';
@@ -159,17 +159,17 @@ function compareView(round, hooks) {
       locked = true;
       choice.btn.classList.add('good');
       pop(choice.btn);
-      say(SAY.bravo);
-      setTimeout(hooks.done, AFTER_RIGHT_MS);
+      await praiseThen(hooks);
       return;
     }
     choice.btn.classList.add('bad');
     shake(choice.btn);
-    say(SAY.together);
     locked = true;
     /* **الرجوعُ إلى الكمّ**: يُكشَف الإطاران متحاذيين صفّاً تحت صفّ — فيُرى الفارقُ
        خانةً بخانة — ثم يُعَدّان أمامه. وهو تعديلُ `METHOD.md §٤` المعتمد. */
     check.hidden = false;
+    await say(SAY.together);
+    if (!hooks.alive()) return;
     await new Promise((r) => setTimeout(r, BEAT / 2));
     if (!hooks.alive()) return;
     if (!(await countAloud(frames, hooks.alive))) return;
@@ -222,14 +222,14 @@ function lineView(round, hooks) {
       locked = true;
       btn.classList.add('good');
       pop(btn);
-      say(SAY.bravo);
-      setTimeout(hooks.done, AFTER_RIGHT_MS);
+      await praiseThen(hooks);
       return;
     }
     btn.classList.add('bad');
     shake(btn);
-    say(SAY.together);
     locked = true;
+    await say(SAY.together);
+    if (!hooks.alive()) return;
     await new Promise((r) => setTimeout(r, BEAT / 2));
     if (!hooks.alive()) return;
     // **يُعَدّ على الخطّ نفسِه** من الصفر إلى موضعه — يرى الصوابَ عدّاً لا تلقيناً
@@ -241,16 +241,16 @@ function lineView(round, hooks) {
     locked = false;
   });
 
-  say(round.ask);
   /* **العونُ المرئيّ في «جرِّب معي»** (`METHOD.md §٤`): يُعَدّ على الخطّ من الصفر
-     مرّةً واحدة قبل السؤال — نمذجةٌ بعونٍ، وهي **غيرُ مقيسة** في ليتنر. */
-  if (round.aided) {
-    (async () => {
-      if (!(await countAlongLine(rail, card.drawn, hooks.alive))) return;
-      await new Promise((r) => setTimeout(r, BEAT));
-      if (hooks.alive()) clearLine(rail);
-    })();
-  }
+     مرّةً واحدة **بعد أن يتمّ السؤال** — نمذجةٌ بعونٍ، وهي **غيرُ مقيسة** في ليتنر.
+     ولولا الانتظارُ لَسبق العدُّ المرئيُّ صوتَه بطول السؤال. */
+  (async () => {
+    await say(round.ask);
+    if (!round.aided || !hooks.alive()) return;
+    if (!(await countAlongLine(rail, card.drawn, hooks.alive))) return;
+    await new Promise((r) => setTimeout(r, BEAT));
+    if (hooks.alive()) clearLine(rail);
+  })();
 
   return h('div', {},
     h('h2', {}, round.ask),
@@ -317,22 +317,25 @@ function orderView(round, hooks) {
       pop(cell.btn);
       placed++;
       tray.append(h('li', { class: 'q-slot num' }, arNum(cell.drawn)));
-      say(SAY.bravo);
+      // بطاقةٌ في موضعها: كلمةُ صوابٍ تُصَفّ — وآخرُها **تُنتظَر** ثم يُنتقَل
       if (placed === cells.length) {
         locked = true;
-        setTimeout(hooks.done, AFTER_RIGHT_MS);
+        await praiseThen(hooks);
+      } else {
+        say(SAY.bravo);
       }
       return;
     }
     cell.btn.classList.add('bad');
     shake(cell.btn);
-    say(SAY.together);
     locked = true;
     /* **تُرى الكمياتُ الباقيةُ متحاذية** (صفٌّ تحت صفّ) فيُقارِن بنفسه، **وتُعَدّ التي
        لمس** وحدَها — فلا تلقينَ للصواب، وإنما رجوعٌ من الرمز إلى ما يعنيه. */
     const left = new Set(remaining().map((c) => c.drawn));
     check.replaceChildren(...frames.filter((f) => left.has(f.value)).map((f) => f.fig.box));
     check.hidden = false;
+    await say(SAY.together);
+    if (!hooks.alive()) return;
     await new Promise((r) => setTimeout(r, BEAT / 2));
     if (!hooks.alive()) return;
     const mine = frames.find((f) => f.value === cell.drawn);
@@ -423,14 +426,14 @@ function neighborView(round, hooks) {
       locked = true;
       cell.btn.classList.add('good');
       pop(cell.btn);
-      say(SAY.bravo);
-      setTimeout(hooks.done, AFTER_RIGHT_MS);
+      await praiseThen(hooks);
       return;
     }
     cell.btn.classList.add('bad');
     shake(cell.btn);
-    say(SAY.together);
     locked = true;
+    await say(SAY.together);
+    if (!hooks.alive()) return;
     await new Promise((r) => setTimeout(r, BEAT / 2));
     if (!hooks.alive()) return;
     if (rail) {

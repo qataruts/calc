@@ -25,6 +25,11 @@
 //      و**لا معدودٌ مقرونٌ بعدد** (ق٢ — «ثلاث تفاحات» ممنوعةٌ نصّاً).
 //   ٥) **الشكلُ الكامل**: كلُّ حرفٍ يحمل حركتَه (قاعدةُ اقرأ الدائمة) — وإلّا احتمل
 //      النصُّ قراءتين فأخطأ المولّد وهو لا يدري.
+//   ٦) **القناةُ واحدة** (بلاغُ الميدان ١ · الجلسة م١): لا وحدةَ تشغّل صوتاً بيدها —
+//      `new Audio` والنطقُ الآليّ في `audio.js` وحدَه، وما سواه ينادي `audio.play`
+//      فيقف في الطابور. **ويُقاس عملاً لا نصّاً**: تُستدعى القناةُ في node بعنصرٍ
+//      وهميّ، فيُثبَت أنّ الثاني لا يبدأ قبل أن يتمّ الأول، وأنّ الإسكات يُفرغ
+//      الطابور. (فحصُ النصّ يمنع البابَ الخلفيّ، وفحصُ العمل يمنع نقضَ القناة نفسِها.)
 //
 // **والبابُ الثالث يقرأ اشتقاقَ `queue_texts.mjs` نفسِه** (`--wanted-json`) لا نسخةً
 // ثانيةً عنه: الحارسُ يحكم والأداةُ تُصلح، **والاشتقاقُ واحدٌ لهما** — ومصدران لحقيقةٍ
@@ -130,6 +135,25 @@ const COUNTED = new RegExp(
   '(?:^|\\s)(?:وَ)?(?:ثَلَاث|أَرْبَع|خَمْس|سِتّ|سَبْع|ثَمَان|تِسْع|عَشْر|عَشَر)'
   + '[\\u064B-\\u0652\\u0670\\u0629\\u0627\\u064A\\u0648]*\\s+[\\u0621-\\u064A]', 'u');
 export const hasCountedNoun = (text) => COUNTED.test(String(text));
+
+/**
+ * **القناةُ واحدة**: ما يشغّل صوتاً بيده خارج `audio.js`.
+ *
+ * علّتُه من الميدان (`docs/FIELD.md §١`): صوتان يعملان معاً. ومهما أُحكِم الطابورُ
+ * في القناة، فسطرٌ واحدٌ يشغّل عنصراً من خارجها يعيد العيبَ كما كان — **والامتناعُ
+ * يُحرَس في المصدر لا يُترَك للانتباه**. (`say` تمرّ: هي بابُ القناة نفسِه.)
+ */
+export function outsideChannel(src) {
+  const rules = [
+    [/\bnew\s+Audio\s*\(/g, 'new Audio'],
+    [/\bspeechSynthesis\b/g, 'speechSynthesis'],
+    [/\bSpeechSynthesisUtterance\b/g, 'SpeechSynthesisUtterance'],
+    [/\.play\s*\(\s*\)/g, 'عنصرٌ يُشغَّل بيده (‎.play()‎)'],
+  ];
+  const hits = [];
+  for (const [re, what] of rules) if (re.test(String(src))) hits.push(what);
+  return hits;
+}
 
 // ————— جردُ الشجرة —————
 
@@ -250,10 +274,76 @@ async function main() {
     + (unvowelled.length ? ` — عارٍ في: ${unvowelled.slice(0, 3)
       .map(([t, b]) => `«${t}» (${b.join('، ')})`).join(' · ')}` : ''));
 
+  console.log('\n— القناةُ واحدة: لا صوتَ خارجها، ولا اثنان فيها معاً —');
+  const stray = files.filter((f) => !ENGINE.has(f))
+    .map((f) => [f, outsideChannel(read(new URL(f, APP)))])
+    .filter(([, hits]) => hits.length);
+  ok(stray.length === 0,
+    `${files.length - ENGINE.size} وحدةً تنطق عبر \`audio.play\` وحدَها (لا عنصرَ صوتٍ بيدها)`
+    + (stray.length ? ` — **خارج القناة: ${stray
+      .map(([f, hits]) => `${f} (${hits.join('، ')})`).join(' · ')}**` : ''));
+  await channelGate();
+
   console.log(fails
     ? `\n${fails} فشل`
-    : `\nكلُّ نصٍّ منطوقٍ مُعلَنٌ ومصفوفٌ ومشكول${asleep ? ` (و${asleep} نائم بقيدٍ في docs/SEED.md)` : ''}`);
+    : `\nكلُّ نصٍّ منطوقٍ مُعلَنٌ ومصفوفٌ ومشكول، وقناتُه واحدة${asleep ? ` (و${asleep} نائم بقيدٍ في docs/SEED.md)` : ''}`);
   return fails ? 1 : 0;
+}
+
+/**
+ * **القناةُ تُقاس عملاً**: تُشغَّل في node بعنصرِ صوتٍ وهميّ يسجّل لحظتَي بدئه وتمامه،
+ * فيُثبَت ما لا يُثبته نصُّ المصدر — أنّ الثاني **لا يبدأ قبل أن يتمّ الأول**، وأنّ
+ * `say` تُرجع وعدَ القناة (لا تبتلعه)، وأنّ الإسكات **يُفرغ الطابور** ولا يعطّله.
+ *
+ * وهو أخو حارس المتصفّح في `browser_test.html`: ذاك يقيس التعاقبَ في مسار الطفل
+ * الحيّ، وهذا يقيس القناةَ نفسَها معزولةً — فينكشف العطبُ في أيّهما وقع.
+ */
+async function channelGate() {
+  const plays = [];
+  globalThis.window = globalThis.window || {};
+  globalThis.Audio = class {
+    constructor(src) { this.src = src; this.on = {}; }
+    addEventListener(type, fn) { this.on[type] = fn; }
+    removeAttribute() { this.src = ''; }
+    load() {}
+    pause() { this.close(); }
+    close() {
+      if (this.row && this.row.t1 === Infinity) {
+        this.row.t1 = performance.now();
+        clearTimeout(this.timer);
+      }
+    }
+    play() {
+      this.row = { t0: performance.now(), t1: Infinity };
+      plays.push(this.row);
+      this.timer = setTimeout(() => { this.close(); this.on.ended?.(); }, 30);
+      return Promise.resolve();
+    }
+  };
+
+  const audio = await import(new URL('audio.js', APP));
+  const station = await import(new URL('station.js', APP));
+
+  // نداءان في اللحظة نفسِها — وهو عينُ ما وقع في الميدان (إعلانُ الخطوة وسؤالُ الشاشة)
+  const first = audio.play('أَلِفْ');
+  const second = station.say('بَاءْ');
+  ok(typeof second?.then === 'function', '`say` تُرجِع وعدَ القناة ولا تبتلعه');
+  await Promise.all([first, second]);
+  const overlap = plays.length === 2 && plays[1].t0 < plays[0].t1;
+  ok(plays.length === 2 && !overlap,
+    `ونداءان في اللحظة نفسِها يُسمَعان **بالتتابع لا معاً** (${plays.length} تشغيلاً`
+    + `${plays.length === 2 ? `، فاصلُهما ${Math.round(plays[1].t0 - plays[0].t1)}ms` : ''})`);
+  ok(plays.every((r) => Number.isFinite(r.t1)),
+    'وكلُّ تشغيلٍ يتمّ (لا وعدَ يبقى معلّقاً فيجمّد القناة)');
+
+  const before = plays.length;
+  const dropped = [audio.play('جِيمْ'), audio.play('دَالْ')];
+  audio.stop();                       // نقرةُ الطفل الناقلة: إسكاتٌ وإفراغ
+  await Promise.all(dropped);
+  ok(plays.length === before, `والإسكاتُ **يُفرغ الطابور**: ما صُفّ قبله لا يُشغَّل بعده `
+    + `(${plays.length - before} تشغيلاً بعد الإسكات)`);
+  await audio.play('هَاءْ');
+  ok(plays.length === before + 1, 'والقناةُ تعمل بعد الإسكات (إفراغٌ لا تعطيل)');
 }
 
 // ————— فحصُ الفاحص: **مُجرَّبٌ سالباً** —————
@@ -301,6 +391,15 @@ function selfTest() {
   check(hasCountedNoun('خَمْسَةُ أَقْلَامْ'), 'ومعه صيغةُ المذكّر');
   check(!hasCountedNoun('خَمْسَةْ'), 'والعددُ المجرد يمرّ');
   check(!hasCountedNoun('كَمْ صَارَتْ كُلُّهَا؟'), 'وسؤالُ العدديّة يمرّ');
+
+  console.log('\n— القناةُ واحدة: ما شغّل صوتاً بيده يُمسَك —');
+  check(outsideChannel('say(SAY.watch); await audio.play(t);').length === 0,
+    'وحدةٌ تنطق عبر القناة تمرّ');
+  check(outsideChannel('const el = new Audio(src); el.play();').length === 2,
+    '**وعنصرُ صوتٍ يُنشَأ ويُشغَّل خارجها يُمسَك** (وهو ما يعيد التراكب مهما أُحكم الطابور)');
+  check(outsideChannel('window.speechSynthesis.cancel();').length === 1,
+    'ونطقٌ آليّ من خارج المحرّك يُمسَك');
+  check(outsideChannel('new SpeechSynthesisUtterance(t)').length === 1, 'ومعه لسانُه');
 
   console.log(bad ? `\n${bad} فشل` : '\n✓ الفاحص يمسك المخالفات كلها');
   return bad ? 1 : 0;

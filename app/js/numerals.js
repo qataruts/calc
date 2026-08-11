@@ -34,7 +34,7 @@ import { registerScreen } from './registry.js';
 import { rangeOf } from './render.js';
 import { h, pick, shuffle, seeded, shake, pop, NUMERAL_ACCENT } from './ui.js';
 import {
-  AFTER_RIGHT_MS, BEAT, NUMBER_NAME, SAY, say, span, nearOptions, seeder, rangesOf,
+  BEAT, NUMBER_NAME, SAY, say, praiseThen, span, nearOptions, seeder, rangesOf,
   stationById, stationForSkill, figureBox, quantityCard, numeralCard, countAloud,
   clearCount, usedOf, registerExercise, stationScreen,
 } from './station.js';
@@ -241,7 +241,9 @@ function matchView(round, hooks) {
   /** **الخطأ يُعَدّ ولا يُلقَّن** — والمعدودُ كمّيةٌ حاضرة: المعروضةُ ذهاباً، والمَلْموسةُ إياباً. */
   async function correction(card, chosen) {
     locked = true;
-    if (!round.toNumeral) say(NUMBER_NAME[round.range]);   // الرمزُ المعروض سؤالٌ لا جواب
+    // الرمزُ المعروض سؤالٌ لا جواب — فلا يُسمّى إلا حين تكون الكميّةُ هي المعروضة
+    if (!round.toNumeral) await say(NUMBER_NAME[round.range]);
+    if (!hooks.alive()) return;
     await new Promise((r) => setTimeout(r, BEAT / 2));
     if (!hooks.alive()) return;
     const counted = round.toNumeral ? subject : chosen;
@@ -261,13 +263,14 @@ function matchView(round, hooks) {
         locked = true;
         cell.btn.classList.add('good');
         pop(cell.btn);
-        say(SAY.bravo);
-        setTimeout(hooks.done, AFTER_RIGHT_MS);
+        await praiseThen(hooks);
         return;
       }
       cell.btn.classList.add('bad');
       shake(cell.btn);
-      say(SAY.together);
+      locked = true;                 // ولا نقرةَ ثانيةً تفتح تصحيحاً فوق تصحيح
+      await say(SAY.together);
+      if (!hooks.alive()) return;
       await new Promise((r) => setTimeout(r, BEAT / 2));
       if (hooks.alive()) await correction(cell.btn, cell);
     };

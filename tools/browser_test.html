@@ -44,9 +44,48 @@
      يقيّد كلَّ لجوءٍ إلى النطق الآليّ. والحكمُ في آخر الصفحة. */
   const played = [];      // مفاتيحُ ملفاتٍ شُغِّلت من البنك
   const spoken = [];      // ما لجأ إلى النطق الآليّ — يجب أن يبقى فارغاً
+
+  /* ————— **حارسُ التعاقب** (بلاغُ الميدان ١ · الجلسة م١) —————
+
+     الحرّاسُ كانوا **يعدّون التشغيلات ولا يقيسون التعاقب**: ٦٥ فحصاً أخضر وأذنُ
+     المالك تسمع صوتين معاً وثالثاً مقطوشاً. فصار العنصرُ الوهميّ يسجّل **لحظتَي بدء
+     كل تشغيلٍ وتمامه**، ومنهما يُحكَم: لا لحظةَ فيها صوتان يعملان معاً، ولا جملةً
+     تُقطَع قبل تمامها إلا بإسكاتٍ مقصود، ولا خطوةً تتقدّم وجملتُها في الجوّ.
+
+     **ومدّتُه تُرفَع في مواضع القياس**: بمدّةٍ أقصرَ من مهلات الشاشة يمرّ العطبُ
+     الأصليّ (كان يدهس بعد ٦٢٠ مللي، وينقل بعد ٧٨٠) — فالحارسُ الذي لا يُحمرّه
+     العطبُ الذي وُلد منه ليس حارساً. */
+  let audioMs = 60;       // مدّةُ الملفّ الوهميّ — تُرفَع في فحص التعاقب
+  let docSeq = 0;         // **مستندٌ لكل سَوقة**: الطفلُ لا يرى إلا واحداً
+  const timeline = [];    // {key, doc, t0, t1} — لحظاتُ كل تشغيلٍ بالمللي
+  /** إغلاقُ ما بقي مفتوحاً (مستندٌ يُغادَر فتموت مؤقّتاته) — فلا فجوةٌ تُقرأ تراكباً. */
+  const closeOpen = () => {
+    for (const row of timeline) if (row.t1 === Infinity) row.t1 = performance.now();
+  };
+  /**
+   * أزواجُ التشغيل المتقاطعة في مدىً من الزمن — «صوتان معاً» بحرفه.
+   *
+   * **والمقابلةُ داخلَ المستند الواحد**: إسنادُ `src` إلى الإطار لا يقتل المستندَ
+   * القديم لحظتَه — يبقى حيّاً حتى يستقرّ الجديد، فتتقاطع مؤقّتاتُه مع أوّل جملةٍ في
+   * الوارد. وذلك **صفحتان في اختبار، لا صوتان في أذن طفل** (لا يرى إلا مستنداً
+   * واحداً)، فلا تُقابَل جملةُ مغادِرٍ بجملة قادم. وما داخل المستند يُقابَل كلُّه.
+   */
+  const overlaps = (from = 0) => {
+    const bad = [];
+    for (const doc of new Set(timeline.map((r) => r.doc))) {
+      const rows = timeline.filter((r) => r.doc === doc && r.t0 >= from)
+        .sort((a, b) => a.t0 - b.t0);
+      for (let i = 1; i < rows.length; i++) {
+        if (rows[i].t0 < rows[i - 1].t1 - 1) bad.push(`${rows[i - 1].key}+${rows[i].key}`);
+      }
+    }
+    return bad;
+  };
+
   const hookAudio = (w) => {
     if (!w || w.__audioHooked) return;
     w.__audioHooked = true;
+    const doc = ++docSeq;
     w.Audio = class extends w.EventTarget {
       constructor(src = '') { super(); this.preload = ''; this.currentTime = 0; this.src = src; }
       set src(v) {
@@ -56,10 +95,20 @@
       get src() { return this._src; }
       play() {
         if (this.__key) played.push(this.__key);
-        setTimeout(() => this.dispatchEvent(new w.Event('ended')), 5);
+        this.__row = { key: this.__key, doc, t0: performance.now(), t1: Infinity };
+        timeline.push(this.__row);
+        this.__timer = setTimeout(() => {
+          this.__close();
+          this.dispatchEvent(new w.Event('ended'));
+        }, audioMs);
         return Promise.resolve();
       }
-      pause() {}
+      /** الإسكاتُ يُنهي المدى فعلاً (لا يبقى مفتوحاً فيُقرأ تراكباً على ما بعده). */
+      __close() {
+        clearTimeout(this.__timer);
+        if (this.__row && this.__row.t1 === Infinity) this.__row.t1 = performance.now();
+      }
+      pause() { this.__close(); }
       load() {}
       removeAttribute() { this.src = ''; }
     };
@@ -322,6 +371,7 @@
      المهلةُ صامتة. فيُزاد وسمٌ في الاستعلام: تحميلٌ كاملٌ في كل مرة. */
   let visit = 0;
   const open = async (hash) => {
+    closeOpen();           // مستندٌ يُغادَر: ما كان يعمل فيه انتهى بمغادرته
     frame.src = `/?preview=1&v=${++visit}${hash}`;
     await new Promise((r) => frame.addEventListener('load', r, { once: true }));
     hookAudio(frame.contentWindow);
@@ -672,6 +722,76 @@
   ok(modes.size >= 2,
     `و«السابقُ والتالي» تدور على أوجهها (${[...modes].join(' · ')})`);
 
+  /* ————— ١٢) **تعاقبُ الصوت**: صوتٌ واحدٌ في الجوّ، والانتقالُ بعد تمامه —————
+
+     ما بلّغ عنه الميدان (`docs/FIELD.md §١`) ثلاثةُ أعراضٍ لعلّةٍ واحدة، وهنا تُقاس
+     الثلاثةُ على **أوّل محطةٍ في الرحلة** — وهي عينُ ما فتح عليه المالك:
+       أ) **الجملةُ تُسمَع تامّةً** ولا تدهسها التي بعدها («انظر وا… اثنان»).
+       ب) **لا لحظةَ فيها صوتان معاً** («صوتان متكرران في الصفحة التالية»).
+       ج) **الخطوةُ لا تتقدّم قبل تمام آخر جملةٍ فيها** («لا ينتظر الصوت فينتقل»).
+
+     **ومدّةُ الملفّ الوهميّ ترتفع هنا** فوق مهلتَي الشاشة (`BEAT` ٦٢٠ و`AFTER_RIGHT_MS`
+     ٧٨٠): بذلك يصير العطبُ الأصليُّ **مرئياً للحارس** — ولولا ذلك لَمرَّ. */
+
+  const SPEECH_MS = 900;
+  audioMs = SPEECH_MS;
+  /* **ويبدأ القياسُ قبل فتح الشاشة**: الجملةُ الأولى تُقال ساعةَ تُرسَم — فمن قاس بعد
+     أن استقرّت الشاشةُ فاتته **أوّلُ ما يسمعه الطفل**، وهو موضعُ البلاغ بعينه. */
+  const seqFrom = performance.now();
+  const qdoc = await open('#/subitize/two');
+
+  // أ) خطوةُ «شاهِدْ»: الدعوةُ ثم أسماءُ العدّ — كلٌّ تامّةٌ لا مقطوشة
+  const nextBtn = await until(qdoc, (d) => d.querySelector('.station-body .next'), 22000);
+  /* **ويُمهَل بعد ظهور «تابِعْ»**: خطوةٌ لا تنتظر صوتَها تبلغ زرَّها والكلامُ خلفها
+     ما زال يتساقط — فلو قِيس عند الزرّ وحدَه لَقِيس صمتٌ لم يقع بعد. */
+  await new Promise((r) => setTimeout(r, SPEECH_MS * 2));
+  const watchRows = timeline.filter((r) => r.t0 >= seqFrom && Number.isFinite(r.t1));
+  const cut = watchRows.filter((r) => r.t1 - r.t0 < SPEECH_MS * 0.9);
+  // (عددُ الجمل من بيانات المحطة — دعوةٌ ثم اسمٌ لكل عنصرٍ مرسوم، فلا يُكتَب هنا رقمُه)
+  ok(watchRows.length >= 2 && cut.length === 0,
+    `خطوةُ «شاهِدْ» تُسمِع كلَّ جملةٍ **تامّة** (${watchRows.length} جملةً، `
+    + `أقصرُها ${watchRows.length ? Math.round(Math.min(...watchRows.map((r) => r.t1 - r.t0))) : 0}ms `
+    + `من ${SPEECH_MS})${cut.length ? ` — **مقطوشٌ: ${cut.map((r) => r.key).join('، ')}**` : ''}`);
+  ok(overlaps(seqFrom).length === 0,
+    `ولا لحظةَ فيها صوتان يعملان معاً${overlaps(seqFrom).length
+      ? ` — **تراكب: ${overlaps(seqFrom).join('، ')}**` : ''}`);
+
+  /* ب) الانتقالُ من خطوةٍ إلى خطوة: إعلانُ الخطوة ثم سؤالُ الشاشة — **وهذا موضعُ
+        «الصوتين المتكرّرين»**: كانا يُطلَقان في اللحظة نفسِها فيعملان معاً. */
+  const stepFrom = performance.now();
+  nextBtn?.click();
+  await until(qdoc, (d) => (d.querySelectorAll('.qcard').length ? true : null), 12000);
+  await new Promise((r) => setTimeout(r, SPEECH_MS * 2.2));
+  const stepRows = timeline.filter((r) => r.t0 >= stepFrom);
+  ok(stepRows.length >= 2 && overlaps(stepFrom).length === 0,
+    `وعند الانتقال إلى «جَرِّبْ مَعِي» يُسمَع الإعلانُ ثم السؤال **بالتتابع** `
+    + `(${stepRows.length} جملةً)${overlaps(stepFrom).length
+      ? ` — **معاً: ${overlaps(stepFrom).join('، ')}**` : ''}`);
+
+  /* ج) الجولةُ لا تتقدّم وكلمةُ الصواب في الجوّ: يُنقَر الجوابُ الصحيح، فتُقاس لحظةُ
+        انتقال الخرزة وتُقابَل بلحظة تمام «أَحْسَنْتْ». (بالمهلة الثابتة وحدَها كان
+        الانتقالُ بعد ٧٨٠ مللي — أي **قبل** تمام جملةٍ طولُها ٩٠٠.) */
+  const bead0 = beadNow(qdoc);
+  const rowsBefore = timeline.length;
+  const cardsNow = [...qdoc.querySelectorAll('.qcard')];
+  const stageNow = qdoc.querySelector('.q-stage');
+  cardsNow.find((c) => drawnOf(c) === drawnOf(stageNow))?.click();
+  let moved = 0;
+  for (let waited = 0; waited < 12000 && !moved; waited += 25) {
+    await new Promise((r) => setTimeout(r, 25));
+    if (beadNow(qdoc) !== bead0 || qdoc.querySelector('.celebrate')) moved = performance.now();
+  }
+  const praise = timeline.slice(rowsBefore)[0];
+  /* **وتمامُها شرطان**: أن يقع الانتقالُ بعد نهايتها، **وأن تكون نهايتُها تماماً لا
+     قطعاً** — فالانتقالُ نفسُه يُسكت القناة، فلو مضى مبكّراً لَقطع الكلمةَ وسجّل
+     «نهايةً» في اللحظة نفسِها فمرّ الشرطُ الأول وحدَه. */
+  const full = praise && Number.isFinite(praise.t1) && praise.t1 - praise.t0 >= SPEECH_MS * 0.9;
+  ok(moved && full && moved >= praise.t1,
+    `و**الجولةُ لا تتقدّم قبل تمام كلمة الصواب**: سُمعت ${praise
+      ? Math.round(praise.t1 - praise.t0) : '؟'}ms من ${SPEECH_MS}، والانتقالُ بعد تمامها بـ`
+    + `${moved && praise ? Math.round(moved - praise.t1) : '؟'}ms`);
+  audioMs = 60;
+
   // ————— ج) الصوت في مسار الطفل: من البنك لا من نطقٍ آليّ —————
   const heard = [...new Set(played)];
   ok(heard.length > 0, `الصوتُ يُشغَّل من البنك في مسار الطفل (${played.length} تشغيلاً، `
@@ -679,6 +799,16 @@
   const unknown = heard.filter((key) => !(key in bank));
   ok(unknown.length === 0,
     `وكلُّ ما شُغِّل له ملفٌّ في الفهرس${unknown.length ? ` — بلا ملف: ${unknown.slice(0, 5).join('، ')}` : ''}`);
+  /* **وعلى الرحلة كلِّها**: ما مضى من هذه الصفحة ساق ثماني محطاتٍ لمساً — بخطواتها
+     وجولاتها وأخطائها وعدّها أمام الطفل. فيُقابَل التشغيلُ بالتشغيل في **كل ما وقع**:
+     لا لحظةَ واحدة فيها صوتان معاً. (الحارسُ الذي يعدّ التشغيلات كان أخضرَ والعيبُ
+     صارخ — وهذا يقيس ما سمعته الأذن.) */
+  closeOpen();
+  const clashes = overlaps(0);
+  ok(clashes.length === 0,
+    `ولا لحظةَ في الرحلة كلِّها يعمل فيها صوتان معاً (${timeline.length} تشغيلاً مقيساً)`
+    + (clashes.length ? ` — **تراكب: ${[...new Set(clashes)].slice(0, 5).join('، ')}**` : ''));
+
   const stray = spoken.filter((t) => !pendingAudio.has(t));
   ok(stray.length === 0,
     `ولا لجوءَ إلى النطق الآليّ إلا لنصٍّ ينتظر التصريف (المنتظِر في القائمة: `

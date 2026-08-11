@@ -24,7 +24,7 @@ import * as progress from './progress.js';
 import { registerScreen } from './registry.js';
 import { h, icon, pick, shuffle, seeded, shake, pop, QUANTITY_ACCENT } from './ui.js';
 import {
-  AFTER_RIGHT_MS, BEAT, NUMBER_NAME, SAY, say, span, nearOptions, seeder, skillOf,
+  AFTER_RIGHT_MS, BEAT, NUMBER_NAME, SAY, say, praiseThen, span, nearOptions, seeder, skillOf,
   stationById, stationForSkill, figureBox, quantityCard, touchLayer, countAloud,
   clearCount, usedOf, registerExercise, stationScreen,
 } from './station.js';
@@ -236,13 +236,17 @@ const score = (round, correct) => SCORE[round.kind]?.(round, correct);
 function countBoard(spec, { onFinish, alive }) {
   const fig = figureBox(spec, 'q-touch');
   let counted = 0;
-  const { taps } = touchLayer(fig, (index, btn) => {
+  const { taps } = touchLayer(fig, async (index, btn) => {
     counted++;
     btn.disabled = true;                       // **التناظرُ الفرديّ بنيويّ لا مراقَب**
     btn.classList.add('is-counted');
     fig.marks[index]?.classList.add('is-counted');
-    say(NUMBER_NAME[counted]);
-    if (counted === fig.marks.length && alive()) setTimeout(onFinish, BEAT);
+    const last = counted === fig.marks.length;
+    // **إصبعُ الطفل تسبق الصوت وهو حقُّها**: كلُّ لمسةٍ تنطق اسمَها في القناة، فإن
+    // تعجّل وقف الاسمُ في الطابور ولم يدهس سابقَه — **ولا يُسأل «كم صارت؟» إلا بعد
+    // أن يتمّ اسمُ آخر عنصر**، فلا يقع السؤالُ فوق عدّه.
+    await say(NUMBER_NAME[counted]);
+    if (last && alive()) setTimeout(onFinish, BEAT);
   });
   return { fig, taps, reset: () => {
     counted = 0;
@@ -280,25 +284,27 @@ function touchView(round, hooks) {
             locked = true;
             btn.classList.add('good');
             pop(btn);
-            say(SAY.bravo);
             /* **لا أهميةَ للترتيب** (٢·٦): تُبعثَر الكميةُ نفسُها وتُعَدُّ ثانيةً —
-               والجوابُ هو هو، فيراه الطفلُ بيده لا يُخبَر به. */
-            setTimeout(() => {
-              if (!hooks.alive()) return;
-              if (round.shuffled && !restaged) {
-                restaged = true;
-                locked = false;
-                stageFigure(round.shuffled, ASK.again);
-              } else {
-                hooks.done();
-              }
-            }, AFTER_RIGHT_MS);
+               والجوابُ هو هو، فيراه الطفلُ بيده لا يُخبَر به. **والبعثرةُ انتقالٌ**،
+               فتنتظر تمامَ كلمة الصواب كما ينتظره الانتقال إلى الجولة التالية. */
+            await say(SAY.bravo);
+            if (!hooks.alive()) return;
+            await new Promise((r) => setTimeout(r, AFTER_RIGHT_MS));
+            if (!hooks.alive()) return;
+            if (round.shuffled && !restaged) {
+              restaged = true;
+              locked = false;
+              stageFigure(round.shuffled, ASK.again);
+            } else {
+              hooks.done();
+            }
             return;
           }
           btn.classList.add('bad');
           shake(btn);
-          say(SAY.together);
           locked = true;
+          await say(SAY.together);
+          if (!hooks.alive()) return;
           await new Promise((r) => setTimeout(r, BEAT / 2));
           if (!hooks.alive()) return;
           await countAloud([board.fig], hooks.alive);
@@ -356,13 +362,13 @@ function giveView(round, hooks) {
       locked = true;
       done.classList.add('good');
       pop(done);
-      say(SAY.bravo);
-      setTimeout(hooks.done, AFTER_RIGHT_MS);
+      await praiseThen(hooks);
       return;
     }
     shake(done);
-    say(SAY.together);
     locked = true;
+    await say(SAY.together);
+    if (!hooks.alive()) return;
     await new Promise((r) => setTimeout(r, BEAT / 2));
     if (!hooks.alive()) return;
     await countAloud([model], hooks.alive);   // يرى المطلوبَ عدّاً، ثم يُصحّح بيده
@@ -429,13 +435,13 @@ function equalView(round, hooks) {
       locked = true;
       done.classList.add('good');
       pop(done);
-      say(SAY.bravo);
-      setTimeout(hooks.done, AFTER_RIGHT_MS);
+      await praiseThen(hooks);
       return;
     }
     shake(done);
-    say(SAY.together);
     locked = true;
+    await say(SAY.together);
+    if (!hooks.alive()) return;
     await new Promise((r) => setTimeout(r, BEAT / 2));
     if (!hooks.alive()) return;
     await countAloud([figs.left.fig, figs.right.fig], hooks.alive);
