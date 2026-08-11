@@ -36,6 +36,8 @@ APP = ROOT / "app"
 TOOLS = Path(__file__).resolve().parent
 QUEUE_FILE = TOOLS / "audio_queue.json"
 CHROME = "/Applications/Google Chrome.app/Contents/MacOS/Google Chrome"
+# بصمةُ صفحاتنا في تقرير النتيجة — تُقرأ في `do_POST` وتُفحَص في `--self-test`
+REPORT_FROM = "ihsib"
 
 PAGES = {
     "/__test.html": TOOLS / "browser_test.html",
@@ -99,8 +101,15 @@ def make_server(port: int, results: list):
 
         def do_POST(self):
             raw = self.rfile.read(int(self.headers.get("Content-Length", 0)))
+            # **ولا تُقرَأ نتيجةٌ إلا من صفحتنا** (`REPORT_FROM`): «اِحْسِبْ» و«اِقْرَأْ»
+            # في مساحة عملٍ واحدة وعدّتُهما من بذرةٍ واحدة، فإن سبق أحدُهما إلى المنفذ
+            # أرسل متصفّحُ الآخر تقريرَه **إلى خادمنا** فقرأناه تقريرَنا — أخضرَ كاذباً
+            # أو أحمرَ بلا سبب. فالبصمةُ تُغلق البابَ بنيوياً: غريبٌ يُهمَل، وتنتهي
+            # المهلةُ بجملة «لم تصل نتيجة» الصادقة بدل تقريرِ جارٍ يُقرأ تقريرَنا.
             try:
-                results[:] = json.loads(raw.decode("utf-8"))
+                body = json.loads(raw.decode("utf-8"))
+                if isinstance(body, dict) and body.get("from") == REPORT_FROM:
+                    results[:] = body.get("rows") or []
             except json.JSONDecodeError:
                 pass
             self.send_response(204)
@@ -124,7 +133,14 @@ def make_server(port: int, results: list):
                 return
             super().handle_error(request, client_address)
 
-    return Quiet(("127.0.0.1", port), Handler)
+    try:
+        return Quiet(("127.0.0.1", port), Handler)
+    except OSError as e:
+        # **والمنفذُ المشغول يُقال ولا يُصمَت عنه**: كان الخادمُ يرتمي أثرَ مكدَّسٍ في
+        # `stderr`، والسائقُ (`guards.mjs`) يقرأ حصيلتَه من `stdout` — فيظهر الحارسُ
+        # **أحمرَ بلا سببٍ مقروء** ويُظنّ عطباً في الشيفرة وهو منفذٌ يشغله جارٌ لحظةً.
+        sys.exit(f"تعذّر فتحُ خادم الفحص على المنفذ {port}: {e}\n"
+                 f"  — منفذٌ مشغولٌ الآن (فحصٌ آخر يعمل؟). جرّب: --port {port + 1}")
 
 
 def run_chrome(url: str, profile: Path, extra: list, show: bool):
@@ -283,6 +299,11 @@ def self_test() -> int:
         text = page.read_text(encoding="utf-8")
         checks.append(("fetch('/result'" in text,
                        f"  و`{route}` تُرسِل نتيجتَها إلى `/result` (وإلا انتهت المهلةُ صامتة)"))
+        # **وتبصمها باسمنا**: بلا البصمة يُهمِلها خادمُنا فتنتهي المهلةُ بلا نتيجة —
+        # وهو أهونُ من قراءة تقرير جارٍ، لكنّه يُكشَف هنا قبل أن يُشغَّل متصفّح.
+        checks.append((f"from: '{REPORT_FROM}'" in text,
+                       f"  وتبصم تقريرَها باسمنا (`from: '{REPORT_FROM}'`) "
+                       "— فلا يُقرأ تقريرُ جارٍ على المنفذ نفسِه"))
         checks.append(('src="/"' in text,
                        f"  و`{route}` تسوق التطبيقَ نفسَه من الخادم لا نسخةً منه"))
         # **وتُحلَّل**: خطأُ صياغةٍ واحد في نصّ الصفحة يمنع تشغيلَ **كل** فحوصها بلا
@@ -326,11 +347,13 @@ def self_test() -> int:
 
 def main() -> int:
     ap = argparse.ArgumentParser(description="اختبارات الواجهة في متصفّح حقيقي")
-    ap.add_argument("--port", type=int, default=8790)
-    # **والمهلةُ تتبع ما يُساق**: صفحةُ الفحص تسوق المحطاتِ والبوابةَ لمساً بأصواتها،
-    # فكلُّ جلسةٍ تزيد شاشاتٍ تزيدها ثوانيَ. وتبقى فوق مهلة الصفحة الحارسة (٢٤٠ث) كي
-    # يصل التقريرُ الناقص بدل أن يُقتَل المتصفّح صامتاً (٢٨٠ث في `browser_test.html`).
-    ap.add_argument("--timeout", type=int, default=320, help="ثوانٍ قبل الاستسلام")
+    # **ومنفذُنا غيرُ منفذ اقرأ**: العدّتان من بذرةٍ واحدة والتطبيقان في مساحة عملٍ
+    # واحدة، فمنفذٌ مشترك يجعل تشغيلَ أحدهما يُفشِل الآخر بلا ذنب.
+    ap.add_argument("--port", type=int, default=8791)
+    # **والمهلةُ تتبع ما يُساق**: صفحةُ الفحص تسوق المحطاتِ والبوابتين لمساً بأصواتها،
+    # فكلُّ جلسةٍ تزيد شاشاتٍ تزيدها ثوانيَ. وتبقى فوق مهلة الصفحة الحارسة كي يصل
+    # التقريرُ الناقص بدل أن يُقتَل المتصفّح صامتاً (٣٨٠ث في `browser_test.html`).
+    ap.add_argument("--timeout", type=int, default=420, help="ثوانٍ قبل الاستسلام")
     ap.add_argument("--shots", metavar="PNG", help="لقطة للمراجعة البصرية بدل الاختبارات")
     # **المراجعةُ البصرية تحتاج الشاشةَ بعينها**: لقطةُ الجذر تُري الخريطةَ وحدَها،
     # وشاشاتُ المحطات خلف مسارها — فتُساق بمسارها كما يسوقها الطفل (`?preview=1`

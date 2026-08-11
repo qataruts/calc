@@ -1363,6 +1363,113 @@ button {
 /* سطرُ الإرشاد الصغير تحت اللوح — تذكيرٌ بأنّ ما وُضع يُرَدّ */
 .note--tip { justify-content: center; font-size: .95rem; opacity: .85; }
 
+/* ————— لوحُ العملية: الجملةُ فوق وكمّيتُها تحتها (الجلسة ٦ — المرحلة ٦) —————
+
+   **الرمزُ والكمّيةُ في عمودٍ واحد** (`METHOD.md §٣`): سطرُ الجملة أعلى، وتحته الكمّيةُ
+   التي يعنيها — فيقع بصرُ الطفل عليهما معاً، والأعلى تسميةٌ للأسفل (كما كان الرمزُ
+   فوق كمّه في المرحلة ٣). ولا علامةَ في اللوح إلا التي أذنت بها جبهةُ المحطة، فمحطةُ
+   «آلة الجمع» بلا سطرِ جملةٍ أصلاً — كمّيتان تلتقيان وكفى. */
+
+.q-solve {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: .6rem;
+  margin: .25rem 0 1rem;
+}
+
+.q-sentence {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: center;
+  gap: .5rem;
+}
+
+/* **ورمزُ الجملة ليس بطاقةَ اختيار**: البطاقةُ صندوقٌ يُلمَس، والجملةُ **خبرٌ يُقرأ** —
+   فلو تشابها لَجرّب الطفلُ لمسَ ما ليس زرّاً. فتُنزَع كسوةُ البطاقة عن رمز الجملة ويبقى
+   الرقمُ وحدَه بمقاسٍ أكبر، وتبقى الحدودُ للجواب. */
+.q-term > .figure { --unit: .52px; }
+.q-term > .figure--numeral { background: none; box-shadow: none; }
+.q-term .fig-numeral { font-size: calc(130 * var(--unit)); }
+
+/* علامةُ العملية: بمقاس الرمز لا أصغر — هي كلمةٌ في الجملة لا زخرفة */
+.q-sign {
+  font-size: 2.6rem;
+  line-height: 1;
+  color: color-mix(in srgb, var(--accent) 78%, var(--ink));
+}
+
+/* خانةُ السؤال: مكانٌ ينتظر جوابَه — وتمتلئ بما أصاب فتتمّ الجملةُ أمامه */
+.q-ask {
+  display: grid;
+  place-items: center;
+  min-width: 4.2rem;
+  min-height: 4.2rem;
+  border-radius: 18px;
+  background: color-mix(in srgb, var(--accent) 6%, var(--mix));
+  border: 4px dashed color-mix(in srgb, var(--accent) 40%, var(--mix));
+  font-size: 2.2rem;
+  color: color-mix(in srgb, var(--accent) 70%, var(--ink-soft));
+}
+
+.q-ask.is-full {
+  border-style: solid;
+  background: color-mix(in srgb, var(--ok) 14%, var(--mix));
+  color: var(--ok-text);
+}
+
+/* كمّيةُ الحقيقة: ما تعنيه الجملةُ مرسوماً — وفي «وحدك» تُكشَف بالنقر */
+.q-fact { display: flex; justify-content: center; }
+.q-fact-body { display: flex; flex-direction: column; align-items: center; gap: .5rem; }
+.q-fact-fig > .figure { --unit: .95px; }
+
+/* **كميتان تلتقيان** (٦·١): المجموعتان أعلى وحصيلتُهما أسفل — **صورةُ الجسر نفسُها**
+   التي بناها في المرحلة ٥ مقلوبةً (جزءٌ وجزءٌ فوق، وكلٌّ تحت)، وبها يصير الجمعُ
+   تركيبَ معلومٍ لا طقساً رمزياً. وتبقى المجموعتان مرئيّتين بعد الالتقاء، فلا يفوت
+   الدرسُ طفلاً نظر بعد لحظة. */
+.q-meet { display: flex; align-items: center; justify-content: center; gap: .8rem; }
+.q-fact-part > .figure { --unit: .42px; }
+/* **ولوحُ الآلة ثلاثةُ أشكالٍ في عمود**، فتُضبط حصيلتُه على أضيق آيباد: بطاقاتُ
+   الجواب تبقى تحت البصر ولا يسحب الطفلُ ليجدها (درسُ الجلسة ٥). */
+.q-solve--add .q-meet + .q-fact-fig > .figure { --unit: .66px; }
+
+/* وصلةُ الالتقاء: خطٌّ يهبط من المجموعتين إلى حصيلتهما (نظيرُ وصلة الجسر) */
+.q-solve--add .q-meet + .q-fact-fig {
+  position: relative;
+  margin-top: 1.1rem;
+}
+
+.q-solve--add .q-meet + .q-fact-fig::before {
+  content: '';
+  position: absolute;
+  inset-inline: 30%;
+  top: -1.1rem;
+  height: .9rem;
+  border: 4px solid color-mix(in srgb, var(--accent) 45%, var(--mix));
+  border-top: 0;
+  border-radius: 0 0 10px 10px;
+}
+
+/* زرُّ العون: بلا حدٍّ ولا احتساب (نظيرُ «أعِدِ العرض» في الخطف) */
+.q-peek { min-height: var(--tap); }
+.q-peek .ui-icon { width: 1.3em; height: 1.3em; }
+
+/* **ما غادر يُشطَب ويبقى مكانُه** (٦·٣): الإزالةُ تُرى، فالباقي يُعَدّ بما بقي مرسوماً */
+.fig-dot.is-gone {
+  fill: none;
+  stroke: var(--ink-soft);
+  stroke-width: 4;
+  stroke-dasharray: 6 5;
+  opacity: .5;
+}
+
+.fig-mark.is-gone { opacity: .3; filter: grayscale(1); }
+
+/* وحين يُعَدّ النازلُ عليه: يُضاء المغادرُ في لحظة اسمه */
+.fig-dot.is-gone.is-counted { stroke: var(--accent); opacity: 1; }
+.fig-mark.is-gone.is-counted { opacity: .62; box-shadow: 0 0 0 3px var(--accent); }
+
 /* ————— طبقةُ اللمس: زرٌّ حقيقيّ فوق كل عنصرٍ مرسوم —————
 
    موضعُه من `spotStyle` في المصيِّر نفسِه، فلا يُحسَب موضعُ العنصر مرّتين. وهو
@@ -1433,4 +1540,8 @@ button {
   .q-bond-frame > .figure { --unit: .78px; }
   .q-slot .figure { --unit: .36px; }
   .q-parts { gap: .9rem; }
+  .q-term > .figure { --unit: .34px; }
+  .q-fact-fig > .figure { --unit: .62px; }
+  .q-fact-part > .figure { --unit: .38px; }
+  .q-sign { font-size: 1.9rem; }
 }

@@ -30,6 +30,11 @@
     // أسفلَهما — أطولُ ما رُسم في الرحلة، وأولى ما يفيض على أضيق آيباد.
     '/?preview=1&v=8#/bond/seven',        // لوحُ الجسر ببطاقاته
     '/?preview=1&v=9#/bond/ten',          // إطارُ «أصدقاء العشرة» وبطاقاتُه
+    // **والجلسةُ ٦ تزيد لوحَ العملية**: جملةٌ رمزيةٌ في سطرٍ واحد وتحتها كمّيتُها
+    // وتحتهما بطاقاتُ الجواب — وأعرضُها صفُّ الفرق (إطارا عشرةٍ أحدهما تحت الآخر).
+    '/?preview=1&v=10#/add/machine',      // المجموعتان تلتقيان
+    '/?preview=1&v=11#/add/ten',          // الجملةُ وإطارُ العشرة تحتها
+    '/?preview=1&v=12#/diff/ten',         // صفّا الفرق المتحاذيان
   ];
 
   let worst = { overflow: -1e9 };
@@ -48,7 +53,7 @@
     if (row.overflow > worst.overflow) worst = row;
   }
 
-  await fetch('/result', { method: 'POST', body: JSON.stringify([worst]) });
+  await fetch('/result', { method: 'POST', body: JSON.stringify({ from: 'ihsib', rows: [worst] }) });
 </script>
 </body>
 </html>

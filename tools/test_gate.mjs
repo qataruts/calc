@@ -14,13 +14,17 @@
 // جلستَها من الضعيفتين؟ فإن بنت من المستحقّ عادت الجلسةُ فارغةً أو من التنويع، وسقط
 // هذا الحارس.
 //
-// وخمسةُ أبواب:
+// وستّةُ أبواب:
 //   ١) **المادّة**: من أضعف المهارات لا من المستحقّ — والأضعفُ **أوّلُ** الجلسة.
 //   ٢) **المقدار**: عشرةُ تمارين (`GATE_SIZE`)، وتُبنى **من جديد** كل محاولة.
 //   ٣) **العبور**: ≥٨٠٪ من المحاولات، ولا عبورَ بجلسةٍ فارغة.
 //   ٤) **لا رسوب**: دون العتبة تبقى التاليةُ مقفلة — والإعادةُ فورية بلا حدّ ولا عقاب.
 //   ٥) **لكلِّ مهارةٍ تمرينُ مفهومها**: نوعُ التمرين يشترك فيه مفهومان (`equal|5|make`
 //      و`bond|10|make` — `METHOD.md §٦`)، فلا يبتلع أحدُهما تمارينَ الآخر.
+//   ٦) **ومدى كلِّ بوابةٍ مدَاها هي** (الجلسة ٦): `METHOD.md §٣` يذكر لكلٍّ ممّ تسأل،
+//      وبوابةُ العمليات «من أضعف مهارات **المرحلتين ٥–٦**» — فيُصنَع سجلٌّ **أضعفُ ما
+//      فيه خارج مداها** ويُسأل: أتبني منه أم من أضعف ما في مداها؟ ولو سقط المدى لَعبر
+//      الطفلُ بابَ العمليات وهو يُمتحَن في التقدير الفوريّ، وذلك أخضرُ كاذبٌ صامت.
 //
 // ————— النومُ الذاتيّ (`docs/SEED.md §٥`) —————
 //
@@ -67,18 +71,34 @@ const dormant = (msg) => { asleep++; console.log('  ⏸', `${msg} — نائم،
 // وهو الحالُ الذي يفضح `dueSkills()` لو بُنيت البوابةُ منها.
 
 const gateOne = curriculum.GATES[0];
+const gateTwo = curriculum.GATES[1];
+// **يُتعلَّم إلى بوابة العمليات** كي يُقاس مدَياهما معاً: الأولى من المراحل ١–٤،
+// والثانية من ٥–٦ — والفرقُ بينهما لا يظهر إلا في سجلٍّ فيه الطرفان.
 const before = curriculum.STAGES.slice(0, curriculum.STAGES
-  .findIndex((s) => s.id === gateOne.after) + 1);
+  .findIndex((s) => s.id === gateTwo.after) + 1);
 const learned = before.flatMap((stage) => stage.stations);
-const WEAK = ['numeral|7|match', 'count|10|give'];
+
+/** أضعفُ ما في يده — و**كلُّه خارج مدى بوابة العمليات** (المراحل ١–٤). */
+const WEAK = ['count|10|give', 'numeral|7|match'];
+/**
+ * وأضعفُ ما **داخل** مداها (المرحلتان ٥–٦) — وهو دون الأولَين ضعفاً.
+ *
+ * **ومفتاحٌ لا تدرّسه إلا محطةٌ واحدة** (`sub|5|solve` — ٦·٣): مفتاحٌ تشترك فيه محطاتٌ
+ * (`sub|10|solve` في ٦·٥ و٦·٧ و٦·٨) تتضاعف زلّاتُه بعدد محطاته فيسبق المقصود، فيقيس
+ * الحارسُ تعدادَ المحطات لا المدى.
+ */
+const WEAK_OPS = ['sub|5|solve'];
 
 for (const station of learned) {
   progress.setStars(`${station.type}:${station.part}`, 3);
   for (const key of station.skills || []) {
     const [concept, range, kind] = key.split('|');
-    const weak = WEAK.includes(key);
-    // الضعيفةُ: زلّتان ثم إصابة (صندوقٌ أول، وموعدٌ غداً) · والقويّة: ثلاثُ إصابات
-    for (const correct of (weak ? [false, false, true] : [true, true, true])) {
+    // ثلاثُ درجاتٍ من الضعف: خارجُ المدى أضعفُها (ثلاثُ زلّات)، فداخلُه (زلّتان)،
+    // فالقويّةُ (بلا زلّة) — والترتيبُ بينها هو ما يقيسه بابُ المدى.
+    const tries = WEAK.includes(key) ? [false, false, false, true]
+      : WEAK_OPS.includes(key) ? [false, false, true]
+        : [true, true, true];
+    for (const correct of tries) {
       progress.recordAttempt(concept, Number(range), kind, correct);
     }
   }
@@ -91,7 +111,7 @@ const key = (s) => `${s.concept}|${s.range}|${s.kind}`;
 
 console.log('\n— السجلُّ المصنوع: أضعفُ ما في يده ليس ما حان موعدُه —');
 ok(skills.length >= 10,
-  `طفلٌ أتمّ ${learned.length} محطةً قبل «${gateOne.title}» و${skills.length} مهارةً مسجَّلة`);
+  `طفلٌ أتمّ ${learned.length} محطةً حتى «${gateTwo.title}» و${skills.length} مهارةً مسجَّلة`);
 ok(due.length === 0,
   `ولا مهارةَ واحدة **مستحقّةٌ اليوم** (كلُّها انتهت بإصابة، فموعدُها غداً فصاعداً)`
   + (due.length ? ` — مستحقّ: ${due.length}` : ''));
@@ -106,7 +126,7 @@ const builders = screenFiles.filter((f) => /registerExercise\s*\(/.test(src(f)))
 if (!builders.length) {
   dormant('لا وحدةَ تمارينَ تسجّل بانياً بعد (`registerExercise` — الجلسة ٣ تكتب أولاها)');
 } else {
-  const items = gate.gateItems(seeded(11));
+  const items = gate.gateItems(gateOne.id, seeded(11));
   ok(items.length === gate.GATE_SIZE,
     `جلسةُ البوابة ${items.length} تمريناً (${gate.GATE_SIZE} بنصّ \`METHOD.md §٥\`)`);
   // **الأضعفُ أولاً**: صدرُ الجلسة هو صدرُ قائمة الضعف نفسُه، مفهوماً ومدىً ونوعاً
@@ -118,11 +138,38 @@ if (!builders.length) {
     'وكلُّ تمرينٍ يحمل مفتاحَ مهارته (فيُسجَّل الخطأ على المطلوب لا على ما لمس)');
 
   console.log('\n— ٢) تُبنى من جديد كل محاولة (لا نمطَ يُحفَظ فيُستظهَر) —');
-  const same = gate.gateItems(seeded(11)).map((i) => i.id).join('|');
-  const other = gate.gateItems(seeded(29)).map((i) => i.id).join('|');
+  const same = gate.gateItems(gateOne.id, seeded(11)).map((i) => i.id).join('|');
+  const other = gate.gateItems(gateOne.id, seeded(29)).map((i) => i.id).join('|');
   ok(same === items.map((i) => i.id).join('|'),
     'البذرةُ نفسُها تبني الجلسةَ نفسَها (فتُقاس ولا تُخمَّن)');
   ok(other !== same, 'ومحاولةٌ أخرى تبني تمارينَ غيرَها — لا يُستظهَر نمطٌ بالإعادة');
+
+  /* ————— ٦) مدى البوابة: لكلٍّ ممّ تسأل (`METHOD.md §٣`) —————
+
+     السجلُّ المصنوع أعلاه **أضعفُ ما فيه خارج مدى بوابة العمليات**: `count|10|give`
+     بثلاث زلّات (المرحلة ٢)، ثم `sub|10|solve` بزلّتين (المرحلة ٦). فلو بنت البوابةُ
+     من أضعف ما في يده مطلقاً لَتصدّرت جلستَها مهارةُ عدٍّ من المرحلة الثانية، ومضى
+     الطفلُ إلى ما بعد العشرة وعملياتُه متزعزعة — وهي عينُ العلّة التي وُجدت لها. */
+  console.log('\n— ٦) ولكلِّ بوابةٍ مدَاها المعلَن (الأولى ١–٤ · والعمليات ٥–٦) —');
+  const scopeTwo = new Set(curriculum.gateSkills(gateTwo.id));
+  const scopeOne = new Set(curriculum.gateSkills(gateOne.id));
+  ok(scopeTwo.size > 0 && [...scopeTwo].every((k) => !scopeOne.has(k)),
+    `مدَياهما منفصلان: «${gateOne.title}» ${scopeOne.size} مفتاحاً و«${gateTwo.title}» `
+    + `${scopeTwo.size} مفتاحاً، ولا مفتاحَ مشترك`);
+
+  const weakestKey = key(weakest[0]);
+  ok(!scopeTwo.has(weakestKey) && WEAK.includes(weakestKey),
+    `**وأضعفُ ما في يده خارج مدى العمليات**: «${weakestKey}» — فبها يُقاس المدى`);
+
+  const opsItems = gate.gateItems(gateTwo.id, seeded(11));
+  const opsHead = opsItems.length ? key(opsItems[0]) : 'لا تمرين';
+  ok(opsHead === WEAK_OPS[0],
+    `**وبوابةُ العمليات تبدأ بأضعف ما في مدَاها**: «${opsHead}» `
+    + `(والمنتظَر «${WEAK_OPS[0]}»)`);
+  const outside = opsItems.slice(0, WEAK.length + 1).map(key).filter((k) => !scopeTwo.has(k));
+  ok(outside.length === 0,
+    'ولا يتصدّرها ما خرج عن مدَاها ولو كان أضعفَ ما في يده'
+    + (outside.length ? ` — دخيل: ${outside.join('، ')}` : ''));
 
   console.log('\n— ٥) لكلِّ مهارةٍ تمرينُ مفهومها (نوعُ التمرين يشترك فيه مفهومان) —');
   // `equal|5|make` (اجعلهما سواء) و`bond|10|make` (أصدقاء العشرة): اسمُ النوع واحد،
@@ -157,9 +204,23 @@ if (!builders.length) {
       ok(got.every(([concept, item]) => item && item.concept === concept),
         `[${kind}] كلُّ مفهومٍ يُنتج تمرينَ نفسِه (${got
           .map(([c, i]) => `${c} ← ${i ? i.concept : 'لا تمرين'}`).join('، ')})`);
-      ok(new Set(got.map(([, i]) => i && i.by)).size === concepts.size,
-        `و[${kind}] لكلٍّ مالكُه فيرسمه مُصيِّرُه هو (${got
-          .map(([c, i]) => `${c}:${i ? i.by : '؟'}`).join('، ')})`);
+
+      /* **ومالكُ الجواب هو الذي يرسمه**: `by` فهرسُ الوحدة التي بنت التمرين — فيجب أن
+         **يتساوى لمفهومين سكنا وحدةً واحدة ويختلف لمن افترقا**، لا أن يختلف دائماً.
+         (كانت المقابلةُ «عددُ المالكين = عددُ المفاهيم» فصحّت للمرحلة ٥ — `equal` في
+         `counting.js` و`bond` في `bonds.js` — وسقطت للمرحلة ٦: `add` و`sub` و`diff`
+         ثلاثةُ مفاهيم بثلاث شاشات **في وحدةٍ واحدة**، ومُصيِّرُها واحدٌ يوزّع بوجه
+         الجولة. والمقيسُ الصحيح **مطابقةُ المالك للملفّ في الحالين**.) */
+      const fileOf = (concept) => screenFiles.find((f) => new RegExp(
+        `registerScreen\\(\\s*['"\`]${typeOf(concept)}['"\`]`).test(src(f))) || `؟${concept}`;
+      const pairs = got.flatMap(([ca, ia], i) =>
+        got.slice(i + 1).map(([cb, ib]) => [ca, ia, cb, ib]));
+      const split = pairs.filter(([ca, ia, cb, ib]) =>
+        (fileOf(ca) === fileOf(cb)) !== (ia && ib && ia.by === ib.by));
+      ok(split.length === 0,
+        `و[${kind}] لكلٍّ مالكُه فيرسمه مُصيِّرُه هو — مالكٌ واحدٌ لمفاهيم الوحدة الواحدة `
+        + `(${got.map(([c, i]) => `${c}:${i ? i.by : '؟'}@${fileOf(c)}`).join('، ')})`
+        + (split.length ? ` — **افترق: ${split.map(([a, , b]) => `${a}/${b}`).join('، ')}**` : ''));
     }
   }
 }

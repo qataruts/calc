@@ -200,8 +200,12 @@ export const usedOf = (round) => {
         .map((f) => f.count),
       ...(round.numerals || []),
     ])],
-    ops: [],
-    signs: [],
+    // **والعمليةُ ورمزُها من إعلان الجولة** (المرحلة ٦): الجولةُ تعلن ما تفعل (`ops`)
+    // وما تعرض من علاماتٍ (`signs`) — **والعلامةُ مقروءةٌ من جبهة محطتها** لا مكتوبةً
+    // في شاشة، فمحطةُ ٦·١ «آلةُ الجمع بلا رمز» تفعل ولا تعلن علامةً، ويسقط في
+    // `check_range.py` كلُّ رمزٍ خرج عن جبهته.
+    ops: [...new Set(round.ops || [])],
+    signs: [...new Set(round.signs || [])],
     displays: [...new Set(figures.map((f) => f.display))],
   };
 };
@@ -241,6 +245,10 @@ export function figureOf({ display, count, seed, glyph, upTo, split }) {
     el,
     drawn,
     plan,
+    // **والشقُّ يُقرأ من الرسم كما يُقرأ العدد** (`data-split` في `render.js`): عددُ ما
+    // وُسِم بالشقّ الأول **فعلاً** — وعليه يقوم جوابُ الطرح («كم بقي؟» = ما لم يُزَل)،
+    // فلا تدّعي شاشةٌ بقيّةً لم تبقَ على الشاشة.
+    split: el.dataset.split === undefined ? null : Number(el.dataset.split),
     // حدُّ العدّ على خطّ الأعداد إن كان الشكلُ خطّاً (`countAloud`)
     upTo,
     marks: [...el.querySelectorAll('[data-mark]')],
@@ -420,6 +428,33 @@ export async function countAloud(figures, alive = () => true) {
   return true;
 }
 
+/**
+ * **يَعُدّ عناصرَ بعينها من شكلٍ مرسوم، ولكلٍّ اسمُه** — قلبُ «يُعَدّ أمامه» في
+ * العمليات (`METHOD.md §٣` المرحلة ٦).
+ *
+ * وعلّةُ كونها **واحدة**: عدُّ المرحلة ٦ ثلاثةُ أوجهٍ في المنهج — **تصاعديٌّ من الأكبر**
+ * (٦·٤: «سبعة… ثمانية، تسعة»)، و**تنازليٌّ** في الطرح (٦·٥)، و**عدُّ الفرق** في
+ * المقارنة (٦·٦) — وهي في الفعل مشيٌ واحدٌ على عناصرَ مرسومة يختلف فيه **أيُّها يُمشى
+ * عليه** و**أيُّ اسمٍ يُنطَق عند كلٍّ**. فلا ثلاثُ آلياتٍ تفترق يوماً في الانتظار
+ * والإسكات، وإنما اثنان يُمرَّران.
+ *
+ * @param {Element[]} marks عناصرُ الرسم بترتيب العدّ — **من الـDOM لا من عددٍ مطلوب**
+ * @param {(i: number) => number} name العددُ الذي يُنطَق عند العنصر رقم `i`
+ * @param {() => boolean} alive «أما زالت هذه الجولة هي الجارية؟»
+ * @param {string} cls الصنفُ الذي يُعلَّم به المعدود
+ */
+export async function countMarks(marks, name, alive = () => true, cls = 'is-counted') {
+  for (const [i, mark] of marks.entries()) {
+    if (!alive()) return false;
+    mark.classList.add(cls);
+    // **العنصرُ يُعلَّم ثم يُنتظَر اسمُه ثم الفاصل** — كعدّ الكميات سواءً بسواء
+    await say(NUMBER_NAME[name(i)]);
+    if (!alive()) return false;
+    await wait(BEAT);
+  }
+  return alive();
+}
+
 /** إزالةُ أثر العدّ (قبل إعادة العرض). */
 export const clearCount = (fig) => {
   for (const mark of fig.marks) mark.classList.remove('is-counted');
@@ -572,7 +607,10 @@ export function stationScreen({ nodeId, title, accent, make, view, score, save }
       await say(SAY.watch);
       if (!api.alive()) return;
       await wait(BEAT);
-      if (!(await countAloud(figures, api.alive))) return;
+      /* **وعدُّ النمذجة درسُ المحطة نفسِه**: الأصلُ أن تُعَدّ الكميةُ عنصراً عنصراً من
+         الواحد، ومحطةٌ درسُها **عدٌّ آخر** (تنازليٌّ في الطرح، وعدُّ الفرق في المقارنة —
+         `METHOD.md §٣` المرحلة ٦) تمرّر عدَّها هي. فلا تُنمذَج بعدٍّ ليس درسَها. */
+      if (!(await (model.count || countAloud)(figures, api.alive))) return;
       if (model.reveal) {
         shown.replaceChildren(...model.reveal.figures.map((spec) => figureBox(spec).box));
         shown.hidden = false;

@@ -36,7 +36,10 @@
 // (`touch-action` على الجذر) و`main.js` (إعادةُ إعلان الميتا) — **والعلّةُ نفسُها**:
 // قفلُ الزوم في ميتا مخزونةٍ قديمة لا يُقفل شيئاً، وجهازُ المالك يبقى يُكبَّر بعد
 // أن أُصلح. **رفعةٌ واحدة للحزمة كلِّها** (بندُ م٢·٤) لا رفعةٌ لكل ملفّ.
-const VERSION = 'v8';
+//
+// **وإلى `v9` في الجلسة ٦**: دخلت `js/ops.js` (المرحلة ٦) وتحرّكت `station.js`
+// و`curriculum.js` و`gate.js` و`app.css` — والقشرةُ المخزونةُ لا تعرف الملفَّ الجديد.
+const VERSION = 'v9';
 const SHELL_CACHE = `ihsib-shell-${VERSION}`;
 const AUDIO_CACHE = 'ihsib-audio';        // ثابتٌ عمداً — لا يحمل VERSION
 const KEEP = [SHELL_CACHE, AUDIO_CACHE];
@@ -59,6 +62,7 @@ const SHELL = [
   'js/gate.js',
   'js/main.js',
   'js/numerals.js',
+  'js/ops.js',
   'js/parent.js',
   'js/progress.js',
   'js/quantity.js',

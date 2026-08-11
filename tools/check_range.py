@@ -323,6 +323,16 @@ def journey_errors(data: dict) -> list:
         for field in ("title", "hint", "face"):
             if not gate.get(field):
                 errors.append(f"[بوابة {gate['id']}]: بلا {field}")
+        # **ولكلِّ بوابةٍ مدَاها المعلَن** (`METHOD.md §٣`): الأولى من المراحل ١–٤،
+        # والثانية من ٥–٦، والثالثة من الرحلة كلها — فمدىً مجهولٌ أو يبدأ بعد موضعها
+        # يجعل جلستَها فارغةً أو من غير ما تحرسه، ولا يظهر ذلك في شاشة.
+        start = gate.get("from")
+        if start not in stage_ids:
+            errors.append(f"[بوابة {gate['id']}] مدىً يبدأ من مرحلةٍ مجهولة: «{start}» "
+                          "— ولكلِّ بوابةٍ ممَّ تسأل (`METHOD.md §٣`)")
+        elif gate["after"] in stage_ids and stage_ids.index(start) > stage_ids.index(gate["after"]):
+            errors.append(f"[بوابة {gate['id']}] مدىً يبدأ بعد موضعها "
+                          f"(«{start}» بعد «{gate['after']}») — فلا مهارةَ تسأل عنها")
 
     for stage in data["stages"]:
         if not stage["count"]:
@@ -620,6 +630,11 @@ def self_test(data: dict) -> int:
     ok(find(journey(lambda d: [n.update(frontier={"min": 1}) for s in d["sections"]
                                for n in s["nodes"] if n["type"] == "gate"]), "للبوابة جبهة"),
        "وبوابةٌ تدّعي جبهةً تُمسَك (تقيس ولا تدرّس)")
+    ok(find(journey(lambda d: d["gates"][1].update({"from": "stage99"})), "مرحلةٍ مجهولة"),
+       "وبوابةٌ مدَاها من مرحلةٍ لا وجودَ لها تُمسَك (لكلٍّ ممَّ تسأل)")
+    ok(find(journey(lambda d: d["gates"][1].update({"from": d["gates"][2]["after"]})),
+            "مدىً يبدأ بعد موضعها"),
+       "وبوابةٌ مدَاها يبدأ بعد موضعها تُمسَك (جلسةٌ لا مهارةَ فيها)")
 
     src = CURRICULUM.read_text(encoding="utf-8")
     ok(len(re.findall(r"\bfrontier:\s*\{", src)) == len(stations),
@@ -628,6 +643,14 @@ def self_test(data: dict) -> int:
     print("\n— ٤+٥) حكمُ الاستهلاك يُمسك ما فوق الجبهة —")
     f = next(s["frontier"] for s in stations if s["frontier"]["ops"])
     quiet = next(s["frontier"] for s in stations if s["frontier"]["numeral"] is None)
+    # **آلةُ الجمع** (٦·١): عمليةٌ في جبهتها وصفرُ علامة — جولةٌ ترسم «+» فيها تُمسَك
+    machine = next(s["frontier"] for s in stations
+                   if s["frontier"]["ops"] and not s["frontier"]["signs"])
+    ok(not usage_errors("ج", {"ops": machine["ops"]}, machine),
+       "جولةٌ **تفعل بلا علامة** تمرّ (آلةُ الجمع — `METHOD.md §٣` ٦·١)")
+    ok(find(usage_errors("ج", {"ops": machine["ops"], "signs": [data["signs"]["add"]]}, machine),
+            "ليس من رموز محطته"),
+       "**وعلامةٌ في محطةٍ تفعل بلا علامة تُمسَك** — والرمزُ تسميةٌ لِما فُعِل قبله")
     ok(not usage_errors("ج", {"numbers": [f["max"]], "ops": f["ops"],
                               "signs": f["signs"], "displays": f["displays"][:1]}, f),
        "جولةٌ تحت جبهتها تمرّ")

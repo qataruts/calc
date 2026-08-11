@@ -19,7 +19,7 @@
 //    `markReview` نفسُها في لوحة وليّ الأمر — فلا يفترق ما يقرؤه الوالد عمّا فتح
 //    البوابة أو أبقاها.
 
-import { gateById } from './curriculum.js';
+import { gateById, gateSkills } from './curriculum.js';
 import * as progress from './progress.js';
 import { renderSession, sessionItems, starsForReview } from './review.js';
 import { h, icon, faceEl, go, arNum, starsRow, mascot, PAUSE_ACCENT } from './ui.js';
@@ -31,9 +31,22 @@ export const PASS_RATE = 0.8;     // العبور بإصابة ≥٨٠٪ من ا
 export const passed = (right, errors) =>
   right + errors > 0 && right / (right + errors) >= PASS_RATE;
 
-/** تمارين محاولةٍ واحدة: **الأضعف أولاً** من سجلّ ليتنر، ثم تنويعٌ يكمل العدد. */
-export function gateItems(rnd = Math.random) {
-  return sessionItems(progress.weakestSkills(), GATE_SIZE, rnd);
+/**
+ * تمارين محاولةٍ واحدة: **الأضعف أولاً** من سجلّ ليتنر، ثم تنويعٌ يكمل العدد.
+ *
+ * **والأضعفُ من مدى البوابة المعلَن** (الجلسة ٦): `METHOD.md §٣` يذكر لكلٍّ ممّ تسأل،
+ * وبوابةُ العمليات «من أضعف مهارات **المرحلتين ٥–٦**» — فتُصفّى قائمةُ الضعف بمفاتيح
+ * مداها (`gateSkills`). ولولا ذلك لَتصدّر جلستَها ضعفٌ في التقدير الفوريّ ومضى الطفلُ
+ * إلى ما بعد العشرة وعملياتُه متزعزعة، وهي عينُ العلّة التي وُجدت البوابةُ لها.
+ *
+ * **والتنويعُ يبقى من الحصيلة كلِّها** (`METHOD.md §٦`: «والتكميل تنويعاً من الحصيلة»):
+ * المدى يحكم **مادّةَ الضعف** لا حوضَ التنويع.
+ */
+export function gateItems(gateId, rnd = Math.random) {
+  const scope = new Set(gateSkills(gateId));
+  const weakest = progress.weakestSkills()
+    .filter((s) => scope.has(`${s.concept}|${s.range}|${s.kind}`));
+  return sessionItems(weakest, GATE_SIZE, rnd);
 }
 
 export function renderGate(gateId) {
@@ -42,7 +55,7 @@ export function renderGate(gateId) {
   const nodeId = `gate:${gate.id}`;
 
   return renderSession({
-    make: gateItems,
+    make: () => gateItems(gate.id),
     pill: 'بوابة',
     accent: PAUSE_ACCENT,
     leaveAsk: 'تريد الخروج قبل إتمام البوابة؟',

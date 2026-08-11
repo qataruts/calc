@@ -23,14 +23,14 @@
      أصلاً، فيُقرأ «لم تصل نتيجة» بطءَ جهازٍ أو قِصَرَ مهلة — وهو عينُ الالتباس الذي
      وُجد له `--self-test` في `browser_test.py`. فما مضى من الفحوص يُرسَل، ومعه العطبُ
      نفسُه فحصاً أحمر باسمه. */
-  const report = (rows) => fetch('/result', { method: 'POST', body: JSON.stringify(rows) });
+  const report = (rows) => fetch('/result', { method: 'POST', body: JSON.stringify({ from: 'ihsib', rows }) });
 
   /* **والتعلّقُ يُبلَّغ كما يُبلَّغ العطب**: انتظارُ حدثٍ لا يجيء يوقف النصَّ بلا خطأ،
      فلا يصل شيء. فمهلةٌ حارسة ترسل ما تمّ ومعه سطرٌ أحمر يسمّي التعلّق — «لم تصل
      نتيجة» لا يجوز أن يكون آخرَ ما نعرف. */
   const watchdog = setTimeout(() => {
     report([...out, { ok: false, msg: 'تعلّقت صفحةُ الفحص قبل تمامها (انتظارٌ لم ينتهِ)' }]);
-  }, 280000);
+  }, 380000);
 
   /* ————— «لا نطقَ آليّ»: يُقاس في مسار الطفل نفسِه (الجلسة ص) —————
 
@@ -554,6 +554,14 @@
     /* **لوحُ الجسر** (المرحلة ٥): لا جوابَ واحدٌ يُطابَق، بل **ما بقي** من الكلّ —
        يُقرأ من اللوح نفسِه (`data-need` محسوبٌ من المرسوم)، وتُملأ الخانةُ الأخيرة
        بما يُتمّه بالضبط. وبطاقةٌ معطَّلة لا تُلمَس (التجاوزُ ممتنعٌ بنيوياً). */
+    /* **لوحُ العملية** (المرحلة ٦): جوابُه عددٌ **محسوبٌ من المرسوم** يعلنه اللوحُ
+       نفسُه (`data-answer` — مجموعُ ما رُسِم، أو ما لم يُشطَب منه، أو فرقُ الصفّين)،
+       فتُختار البطاقةُ التي **رسمت** ذلك العدد. */
+    const solve = d.querySelector('.q-solve');
+    if (solve) {
+      const want = Number(solve.dataset.answer);
+      return cardsOf(d).find((c) => Number(c.querySelector('.figure')?.dataset.drawn) === want);
+    }
     const bond = d.querySelector('.q-bond');
     if (bond) {
       const need = Number(bond.dataset.need);
@@ -915,6 +923,158 @@
   ok(litCells > 0 && beadNow(fdoc) === restBead,
     `وخطؤه يُعَدّ عليه: **تُضاء الخاناتُ الفارغةُ واحدةً واحدة** (${litCells || 0} خانة)`);
 
+
+  /* ————— ١١د) المرحلة ٦: اجمعْ واطرحْ ضمن ١٠ — وبوّابةُ العمليات (الجلسة ٦) —————
+
+     خمسةُ عهودٍ لا يُثبتها إلا متصفّح:
+       • **٦·١ بلا علامةٍ البتّة** (`METHOD.md §٣`): يُجرَد النصُّ المعروض نفسُه — لا
+         نيّةُ الشيفرة — فالعمليةُ **فعلٌ يُرى** قبل أن تكون سطراً يُقرأ.
+       • **كلُّ حقيقةٍ تُعرَض كمّيةً ورمزاً معاً أوّلَ لقاء**: في ٦·١ تُعَدّ الحصيلةُ ثم
+         يُكشَف رمزُها، وفي ٦·٢ تقف الجملةُ الرمزية **وكمّيتُها تحتها في لحظةٍ واحدة**،
+         ومجموعُ ما رُسِم هو مجموعُ رمزَي الجملة.
+       • **ثم بالرمز وحدَه والكمّيةُ عوناً عند النقر** في «وحدك».
+       • **الإزالةُ مرئية** في الطرح (ما غادر مشطوبٌ، والباقي هو المرسوم غيرَ المشطوب).
+       • **الفرقُ صفّان متحاذيان** والفائضُ في الأعلى هو الجواب. */
+
+  // ————— أ) «آلَةُ الجَمْع» (٦·١): كميتان تلتقيان، ولا علامة —————
+  const mdoc = await open('#/add/machine');
+  ok(mdoc.querySelectorAll('.step').length === 3,
+    `محطةُ «آلَةُ الجَمْع» تفتح بحلقتها (${[...mdoc.querySelectorAll('.step-name')]
+      .map((s) => s.textContent).join(' ← ') || 'لا خطوات'})`);
+
+  const joined = await until(mdoc, (d) => d.querySelector('.q-stage .figure[data-split]'), 14000);
+  const joinA = joined ? joined.querySelectorAll('[data-part="a"]').length : 0;
+  const joinB = joined ? joined.querySelectorAll('[data-part="b"]').length : 0;
+  ok(joined && joinA > 0 && joinB > 0 && joinA + joinB === Number(joined.dataset.drawn),
+    `و**الحصيلةُ ترى مجموعَيها**: ${joinA} و${joinB} من ${joined
+      ? joined.dataset.drawn : '؟'} مرسومة — الجمعُ تركيبُ معلومٍ لا طقسٌ رمزيّ`);
+
+  const sumNumeral = await until(mdoc, (d) => {
+    const box = d.querySelector('.q-reveal');
+    return box && !box.hidden ? box.querySelector('.figure--numeral') : null;
+  }, 22000);
+  ok(sumNumeral && Number(sumNumeral.dataset.drawn) === Number(joined.dataset.drawn),
+    `و**بعد عدّ الحصيلة يُكشَف رمزُها** — الكمّيةُ والرمزُ معاً في أوّل لقاء `
+    + `(${sumNumeral ? sumNumeral.dataset.drawn : '؟'})`);
+
+  (await onward(mdoc))?.click();
+  const meetBoard = await until(mdoc, (d) => d.querySelector('.q-solve'), 12000);
+  ok(!!meetBoard && !mdoc.querySelector('.q-sentence') && !!mdoc.querySelector('.q-meet'),
+    'ولوحُها **كميتان تلتقيان** بلا جملةٍ رمزية (`.q-meet` ولا `.q-sentence`)');
+
+  const machineText = shownIn(mdoc.querySelector('main.screen-card'));
+  const machineSigns = [...new Set(machineText.match(SIGNS) || [])];
+  ok(machineSigns.length === 0,
+    'و**لا رمزَ عمليةٍ واحد على شاشتها** — الرمزُ في التالية تسميةٌ لِما فُعِل هنا'
+    + (machineSigns.length ? ` — وُجد: ${machineSigns.join('، ')}` : ''));
+
+  // **الخطأُ لا ينقل**: تُكشَف الحصيلةُ فتُعَدّ تصاعدياً من الأكبر (`METHOD.md §٣` ٦·٤)
+  const machineBead = beadNow(mdoc);
+  const machineRight = answerOf(mdoc);
+  cardsOf(mdoc).find((c) => c !== machineRight)?.click();
+  const litSum = await until(mdoc,
+    (d) => d.querySelectorAll('.q-fact [data-mark].is-counted').length || null, 14000);
+  ok(litSum > 0 && beadNow(mdoc) === machineBead,
+    `والخيارُ الخاطئ لا ينقل — **تُعَدُّ الحصيلةُ أمامه** (${litSum || 0} عنصراً مُعلَّماً)`);
+
+  const machineDone = await play(mdoc, 90);
+  const machineStars = mdoc.querySelectorAll('.big-stars .on').length;
+  ok(!!machineDone && machineStars > 0,
+    `ومحطةُ آلة الجمع تُجتاز كاملةً لمساً حتى الاحتفال (${machineStars} نجمة)`);
+
+  /* ————— ب) 🚪 بوابةُ العمليات: من مدَاها المعلَن، وتُلعَب —————
+     **وتُساق من داخل الجلسة نفسِها** كأختها: السجلُّ يمتلئ بما لعبه الطفلُ في هذه
+     الصفحة (وضعُ المعاينة لا يكتب على القرص)، فيُنتقَل بالمِرساة لا بتحميلٍ جديد.
+     و«من أضعف مهارات المرحلتين ٥–٦» يُثبَت على **سجلٍّ كاملٍ مصنوع** في
+     `tools/test_gate.mjs`؛ والمقيسُ هنا أنّها **تُرسَم من حصيلته وتُلعَب إلى حكمها**. */
+  mdoc.defaultView.location.hash = '#/gate/ops';
+  await new Promise((r) => setTimeout(r, 1300));
+  const opsDots = mdoc.querySelectorAll('.dots .dot').length;
+  ok(!!mdoc.querySelector('.gate-head'),
+    'بوابةُ «عُبُورُ العَمَلِيَّات» **تُرسَم فعلاً** بجلسةٍ من سجلّ ما لعبه الطفل'
+    + (mdoc.querySelector('.gate-head') ? '' : ' — لم تُرسَم (وما على الشاشة ما كان قبلها)'));
+  ok(opsDots > 0 && opsDots <= 10 && !!mdoc.querySelector('.station-body .qcard'),
+    `وتمارينُها مبنيّةٌ من مهاراته المسجَّلة (${opsDots} تمريناً، وأوّلُها معروضٌ ببطاقاته)`);
+
+  for (let i = 0; i < 60 && !mdoc.querySelector('.celebrate'); i++) {
+    (answerOf(mdoc) || mdoc.querySelector('.station-body .next'))?.click();
+    await new Promise((r) => setTimeout(r, 460));
+  }
+  const opsVerdict = mdoc.querySelector('.celebrate');
+  ok(!!opsVerdict && !/رسوب|فشل|خطأ/.test(shownIn(opsVerdict)),
+    `وتُجتاز إلى حكمها بلا لفظ رسوب (${opsVerdict
+      && !opsVerdict.classList.contains('celebrate--again') ? 'فُتِحَت' : 'لَيْسَ بَعْدُ'})`);
+
+  // ————— ج) «رَمْزُ + وَالجَمْعُ ضِمْنَ ٥» (٦·٢): الجملةُ وكمّيتُها معاً —————
+  const adoc = await open('#/add/five');
+  (await onward(adoc))?.click();
+  await until(adoc, (d) => d.querySelector('.q-sentence'), 12000);
+  const terms = [...adoc.querySelectorAll('.q-sentence .q-term .figure')]
+    .map((f) => Number(f.dataset.drawn));
+  const plus = adoc.querySelector('.q-sentence .q-sign')?.textContent || '';
+  const factBox = adoc.querySelector('.q-fact');
+  const factFig = adoc.querySelector('.q-fact .figure');
+  const factShown = factBox && !factBox.hidden
+    && adoc.defaultView.getComputedStyle(factBox).display !== 'none';
+  ok(terms.length === 2 && plus === '+' && !!adoc.querySelector('.q-ask'),
+    `وجملةُ ٦·٢ رمزان وعلامةٌ وخانةُ سؤال (${terms.join(` ${plus} `)} ؟)`);
+  ok(factShown && factFig
+    && Number(factFig.dataset.drawn) === terms[0] + terms[1]
+    && Number(factFig.dataset.split) === terms[0],
+  `و**الكمّيةُ والرمزُ معاً في أوّل لقاء**: تحت الجملة كمّيةٌ رُسِم منها `
+    + `${factFig ? factFig.dataset.split : '؟'} ثم بقيّتُها، ومجموعُها `
+    + `${factFig ? factFig.dataset.drawn : '؟'} — وهو مجموعُ رمزَيها`);
+
+  // والإصابةُ تُتمّ الجملةَ في خانتها
+  answerOf(adoc)?.click();
+  await new Promise((r) => setTimeout(r, 400));
+  const filledAsk = adoc.querySelector('.q-ask.is-full');
+  ok(!!filledAsk && arDigits(filledAsk.textContent) === terms[0] + terms[1],
+    `وبالإصابة تتمّ الجملةُ في خانتها (${filledAsk ? filledAsk.textContent : '؟'})`);
+
+  // **ثم بالرمز وحدَه والكمّيةُ عوناً عند النقر** (`METHOD.md §٣`)
+  let peek = null;
+  for (let i = 0; i < 16 && !peek; i++) {
+    const btn = adoc.querySelector('.q-peek');
+    if (btn && !btn.hidden) { peek = btn; break; }
+    (answerOf(adoc) || adoc.querySelector('.station-body .next'))?.click();
+    await new Promise((r) => setTimeout(r, 500));
+  }
+  const soloFact = adoc.querySelector('.q-fact');
+  const soloHidden = soloFact && soloFact.hidden
+    && adoc.defaultView.getComputedStyle(soloFact).display === 'none';
+  peek?.click();
+  await new Promise((r) => setTimeout(r, 250));
+  ok(!!peek && soloHidden && soloFact && !soloFact.hidden,
+    'وفي «وحدك» الرمزُ وحدَه — **والكمّيةُ عونٌ عند النقر**، بلا حدٍّ ولا احتساب');
+
+  // ————— د) «رَمْزُ − وَالطَّرْحُ ضِمْنَ ٥» (٦·٣): الإزالةُ مرئية —————
+  const tdoc = await open('#/sub/five');
+  (await onward(tdoc))?.click();
+  const takeFig = await until(tdoc, (d) => d.querySelector('.q-fact .figure'), 12000);
+  const leftGone = takeFig ? takeFig.querySelectorAll('[data-mark].is-gone').length : 0;
+  const stillHere = takeFig ? Number(takeFig.dataset.split) : -1;
+  const takeBoard = tdoc.querySelector('.q-solve');
+  const minus = tdoc.querySelector('.q-sentence .q-sign')?.textContent || '';
+  ok(minus === '−' && leftGone > 0 && takeFig
+    && stillHere + leftGone === Number(takeFig.dataset.drawn)
+    && Number(takeBoard.dataset.answer) === stillHere,
+  `و«رَمْزُ −» إزالةٌ مرئية: ${leftGone} مشطوبٌ من ${takeFig ? takeFig.dataset.drawn : '؟'}، `
+    + `**والجوابُ ما لم يُشطَب** (${stillHere}) مقروءاً من الرسم`);
+
+  // ————— هـ) «كَمِ الفَرْقُ بَيْنَهُمَا؟» (٦·٦): صفّان متحاذيان —————
+  const fdoc6 = await open('#/diff/ten');
+  (await onward(fdoc6))?.click();
+  await until(fdoc6, (d) => d.querySelector('.q-fact-body.q-rows .figure'), 14000);
+  const diffRows = [...fdoc6.querySelectorAll('.q-fact-body.q-rows .figure')];
+  const diffBoard = fdoc6.querySelector('.q-solve');
+  const rowsAligned = diffRows.length === 2
+    && Math.abs(rectOf(diffRows[0]).left - rectOf(diffRows[1]).left) < 2
+    && rectOf(diffRows[0]).bottom <= rectOf(diffRows[1]).top + 1;
+  ok(rowsAligned && Number(diffBoard.dataset.answer)
+    === Number(diffRows[0].dataset.drawn) - Number(diffRows[1].dataset.drawn),
+  `و«كَمِ الفَرْقُ» صفّان متحاذيان (${diffRows.map((f) => f.dataset.drawn).join(' و')})، `
+    + `**والفرقُ من المرسوم** (${diffBoard ? diffBoard.dataset.answer : '؟'})`);
 
   /* ————— ١٢) **تعاقبُ الصوت**: صوتٌ واحدٌ في الجوّ، والانتقالُ بعد تمامه —————
 

@@ -29,6 +29,7 @@ import './counting.js';
 import './numerals.js';
 import './compare.js';
 import './bonds.js';
+import './ops.js';
 import {
   h, icon, faceEl, toast, go, arNum, starsRow, topbar, brandMark, landmark, DEV,
   PAUSE_ACCENT,

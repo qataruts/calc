@@ -380,5 +380,29 @@
     "priority": 20,
     "status": "pending",
     "doneAt": null
+  },
+  {
+    "text": "كَمْ صَارَتْ مَعًا؟",
+    "category": "instruction",
+    "requestedBy": "session-6",
+    "priority": 20,
+    "status": "pending",
+    "doneAt": null
+  },
+  {
+    "text": "كَمْ بَقِيَ؟",
+    "category": "instruction",
+    "requestedBy": "session-6",
+    "priority": 20,
+    "status": "pending",
+    "doneAt": null
+  },
+  {
+    "text": "كَمِ الْفَرْقُ بَيْنَهُمَا؟",
+    "category": "instruction",
+    "requestedBy": "session-6",
+    "priority": 20,
+    "status": "pending",
+    "doneAt": null
   }
 ]
