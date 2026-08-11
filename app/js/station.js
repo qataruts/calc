@@ -32,7 +32,7 @@
 import * as progress from './progress.js';
 import * as audio from './audio.js';
 import { stations } from './curriculum.js';
-import { paint, spotStyle } from './render.js';
+import { paint, spotStyle, spanStyle } from './render.js';
 import { setBuilders } from './review.js';
 import {
   h, icon, go, topbar, starsRow, mascot, cheer, toast, shuffle, arNum, DEV,
@@ -53,11 +53,16 @@ const wait = (ms) => new Promise((r) => setTimeout(r, ms));
 // ————— أسماءُ الأعداد: **العدُّ المجرد فقط** (ق٢ · `METHOD.md §٨`) —————
 //
 // «واحد، اثنان، ثلاثة…» موحّداً في كل التمارين، **ولا يُنطَق معدودٌ مقروناً بعددٍ
-// أبداً**. والمدى هنا ١–١٠ لأنّ المرحلتين ١–٢ لا تتجاوزان العشرة؛ وما فوقها يدخل مع
-// المرحلة ٧ (يُبنى حزمةً وآحاداً)، و«صِفْرْ» يدخل مع محطته ٣·٨ — فلا نصَّ يُصفّ قبل
-// أن تحتاجه شاشة.
+// أبداً**. والمدى هنا ٠–١٠: ما فوق العشرة يدخل مع المرحلة ٧ (يُبنى حزمةً وآحاداً)،
+// **و«صِفْرْ» دخل مع محطته ٣·٨** (الجلسة ٤ — والصفرُ متأخرٌ عمداً، `METHOD.md §٢.٦`)
+// — فلا نصَّ يُصفّ قبل أن تحتاجه شاشة.
+//
+// **وموضعُ الصفر أوّلُ الجدول ولا يُعَدّ به**: `countAloud` تبدأ من الاسم الأول
+// (`NUMBER_NAME[1]`) فلا يُنطَق «صفر» على عنصرٍ مرسوم — وإنما يُنطَق **اسماً لكمّية
+// «لا شيء»** في محطته وحدَها، وهو عينُ ما تُقدِّمه.
 
 export const NUMBER_NAME = {
+  0: 'صِفْرْ',
   1: 'وَاحِدْ',
   2: 'اِثْنَانْ',
   3: 'ثَلَاثَةْ',
@@ -103,6 +108,20 @@ export function skillOf(station, concept, kind) {
   return { concept, range: Number(range), kind };
 }
 
+/**
+ * **المديات التي تدرّسها هذه المحطة** بهذا (المفهوم × نوع التمرين) — مقروءةً من
+ * مفاتيح المنهج لا مكتوبةً في شاشة. وعليها تقوم المرحلة ٣: مفتاحٌ **لكل رمز**
+ * (`numeral|٦|match` و`numeral|٧|match` — `METHOD.md §٦`)، فما تدرّسه المحطةُ هو
+ * ما أعلنته، وشاشتُها تسأل عنه وحدَه.
+ */
+export function rangesOf(station, concept, kind) {
+  return (station.skills || [])
+    .map((key) => key.split('|'))
+    .filter(([c, , t]) => c === concept && t === kind)
+    .map(([, range]) => Number(range))
+    .filter((n) => Number.isInteger(n));
+}
+
 /** محطةٌ بمعرّفها من المنهج (`curriculum.js` وحدَه يملك الرحلة). */
 export const stationById = (id) => stations().find((s) => s.id === id) || null;
 
@@ -124,19 +143,34 @@ export function stationForSkill(skill) {
 // ————— جردُ ما تستهلكه الجولة (البابان ٤+٥ في `check_range.py`) —————
 
 /**
+ * **كلُّ شكلٍ سيُرسَم في الجولة** — الهدفُ والخيارات والنموذج **وما يُكشَف بعد العدّ**
+ * (`reveal` في حلقة تقديم الرمز): فالجردُ يقرأ ما سيراه الطفل لا ما نوى المولّد.
+ */
+export const figuresOf = (round) => [...(round.figures || []), ...(round.reveal?.figures || [])];
+
+/**
  * **ما تستعمله جولةٌ واحدة، بالصنف** — يقابله الحارسُ بجبهة محطتها.
  *
- * وكلُّ جولةٍ تُعلن `figures`: **كلَّ شكلٍ سيُرسَم فيها** بلا استثناء (الهدفُ والخيارات
- * والنموذج)، فالجردُ يقرأ ما سيراه الطفل لا ما نوى المولّد. و`extra` لِما يبلغه عددٌ
- * **بيد الطفل** ولم يُرسَم ابتداءً (حدّا «اجعلهما سواء» مثلاً).
+ * و`extra` لِما يبلغه عددٌ **بيد الطفل** ولم يُرسَم ابتداءً (حدّا «اجعلهما سواء»).
+ *
+ * **والرمزُ يُجرَد من نمطه لا من نيّة الشاشة** (الجلسة ٤): كلُّ شكلٍ نمطُه `numeral`
+ * رمزٌ معروض، وكلُّ خطِّ أعدادٍ يكتب أرقامَ مرساته حتى مداه — فيقابلهما الحارسُ بـ
+ * `numeral` في الجبهة (أقصى رمز)، لا بأقصى الكمّ. و`numerals` في الجولة لِما زاد.
  */
-export const usedOf = (round) => ({
-  numbers: [...new Set([...round.figures.map((f) => f.count), ...(round.extra || [])])],
-  numerals: [],
-  ops: [],
-  signs: [],
-  displays: [...new Set(round.figures.map((f) => f.display))],
-});
+export const usedOf = (round) => {
+  const figures = figuresOf(round);
+  return {
+    numbers: [...new Set([...figures.map((f) => f.count), ...(round.extra || [])])],
+    numerals: [...new Set([
+      ...figures.filter((f) => f.display === 'numeral' || f.display === 'line')
+        .map((f) => f.count),
+      ...(round.numerals || []),
+    ])],
+    ops: [],
+    signs: [],
+    displays: [...new Set(figures.map((f) => f.display))],
+  };
+};
 
 // ————— أدواتُ التوليد: حتميةٌ ببذرة، ومشتّتاتٌ متجاورة —————
 
@@ -167,9 +201,18 @@ export const seeder = (rnd) => () => Math.floor(rnd() * 0xffffffff);
  * شكلُ كميةٍ جاهزٌ للشاشة: **العددُ يُقرأ من المصيِّر لا من الطلب**.
  * `drawn` هو ما رُسِم فعلاً (`[data-mark]` في `render.js`)، وعليه تقوم أجوبةُ التمارين.
  */
-export function figureOf({ display, count, seed, glyph }) {
+export function figureOf({ display, count, seed, glyph, upTo }) {
   const { el, drawn, plan } = paint(display, count, { seed, glyph });
-  return { el, drawn, plan, marks: [...el.querySelectorAll('[data-mark]')] };
+  return {
+    el,
+    drawn,
+    plan,
+    // حدُّ العدّ على خطّ الأعداد إن كان الشكلُ خطّاً (`countAloud`)
+    upTo,
+    marks: [...el.querySelectorAll('[data-mark]')],
+    // علاماتُ خطّ الأعداد — تُقرأ من الرسم نفسِه ليُعَدَّ عليها أمام الطفل
+    ticks: [...el.querySelectorAll('[data-tick]')],
+  };
 }
 
 /** صندوقٌ يحمل الشكلَ وتسكن فوقه طبقةُ اللمس (الشكلُ نفسُه يبقى `aria-hidden`). */
@@ -180,14 +223,30 @@ export function figureBox(spec, className = '') {
 }
 
 /**
+ * **بطاقةُ اختيار** — صانعٌ واحد لكل بطاقات الأجوبة في الرحلة، ومادّتُها من المصيِّر
+ * وحدَه: `drawn` هو ما رُسِم فعلاً، وعليه يقوم الحكم.
+ */
+function cardOf(spec, { onclick, label, className = '' }) {
+  const fig = figureOf(spec);
+  const btn = h('button', {
+    class: `qcard ${className}`.trim(), 'aria-label': label, onclick,
+  }, fig.el);
+  return { btn, drawn: fig.drawn, marks: fig.marks, plan: fig.plan };
+}
+
+/**
  * **بطاقةُ اختيارٍ كمّية** — الجوابُ في المرحلتين ١–٢ **اختيارُ كمّ لا رمز**
  * (`METHOD.md §٣`): يطابق الطفلُ كمّاً بكمّ، فلا رقمَ على زرٍّ ولا تحت صورة.
  */
-export function quantityCard(spec, { onclick, label }) {
-  const fig = figureOf(spec);
-  const btn = h('button', { class: 'qcard', 'aria-label': label, onclick }, fig.el);
-  return { btn, drawn: fig.drawn, marks: fig.marks };
-}
+export const quantityCard = (spec, opts) => cardOf(spec, opts);
+
+/**
+ * **بطاقةُ اختيارٍ رمزية** — ومن المرحلة ٣ فصاعداً وحدَها (`METHOD.md §٣`): الرمزُ
+ * تسميةٌ لكمٍّ عبر بوابتَي الكمّ والعدّ، فلا تظهر هذه البطاقةُ في شاشةٍ قبل موضعها.
+ * وهي بطاقةُ المصيِّر نفسِها (`numeral`)، فرقمُها **مقروءٌ من الرسم** لا مكتوبٌ هنا.
+ */
+export const numeralCard = (value, seed, opts) =>
+  cardOf({ display: 'numeral', count: value, seed }, { ...opts, className: 'qcard--numeral' });
 
 /**
  * **طبقةُ اللمس**: زرٌّ شفّافٌ فوق كل عنصرٍ مرسوم، موضعُه من `spotStyle` في المصيِّر
@@ -213,6 +272,58 @@ export function touchLayer(fig, onTap) {
 }
 
 /**
+ * **طبقةُ خانات خطّ الأعداد**: زرٌّ فوق مواضعَ بعينها من الخطّ، مقاسُه ومكانُه من
+ * `slots` في المصيِّر نفسِه — فلا يُحسَب موضعُ الخانة مرّتين.
+ *
+ * **والخياراتُ مواضعُ متجاورة لا الخطُّ كلُّه** (`METHOD.md §٣`: «المشتّتات أعدادٌ
+ * متجاورة»): وهي قاعدةُ أحواض الخيارات نفسُها مطبَّقةً على المواضع — يقدّر الطفلُ
+ * موضعاً بين موضعين ولا يخبط في إحدى عشرة خانة، وتبقى الخانةُ واسعةً تبلغ هدفَ اللمس.
+ *
+ * **والقيمةُ تُقرأ من الزرّ المرسوم** (`data-value`) لا من متغيّرٍ في الإغلاق — امتدادُ
+ * عقد «الجوابُ من المرسوم» إلى المواضع.
+ */
+export function slotLayer(fig, values, onTap) {
+  const layer = h('div', { class: 'fig-slots' });
+  const wanted = new Set(values);
+  const slots = fig.plan.slots.filter((s) => wanted.has(s.value)).map((slot) => {
+    const btn = h('button', {
+      class: 'fig-slot',
+      css: spanStyle(slot, fig.plan.view),
+      'data-value': String(slot.value),
+      'aria-label': 'هَذَا المَوْضِع',
+      onclick: () => onTap(Number(btn.dataset.value), btn),
+    }, h('span', { class: 'fig-pin', 'aria-hidden': 'true' }));
+    layer.append(btn);
+    return btn;
+  });
+  fig.box?.append(layer);
+  return { layer, slots };
+}
+
+/**
+ * **يَعُدّ على خطّ الأعداد أمام الطفل** — معالجةُ الخطأ في شاشات الخطّ: تُضاء العلامةُ
+ * بعد العلامة من الصفر إلى الموضع الصحيح مع اسم كل عدد، فيرى الصوابَ **عدّاً** لا
+ * تلقيناً (`METHOD.md §٤`) — والخطُّ نفسُه هو المسطرة.
+ */
+export async function countAlongLine(fig, upTo, alive = () => true) {
+  for (const tick of fig.ticks) tick.classList.remove('is-counted');
+  for (const tick of fig.ticks) {
+    const value = Number(tick.dataset.value);
+    if (value > upTo) break;
+    if (!alive()) return false;
+    tick.classList.add('is-counted');
+    if (value > 0) say(NUMBER_NAME[value]);
+    await wait(BEAT);
+  }
+  return alive();
+}
+
+/** إزالةُ أثر العدّ عن علامات الخطّ. */
+export const clearLine = (fig) => {
+  for (const tick of fig.ticks) tick.classList.remove('is-counted');
+};
+
+/**
  * **يَعُدّ الكميةَ أمام الطفل عنصراً عنصراً** — قلبُ معالجة الخطأ (`METHOD.md §٤`):
  * يرى الصوابَ **عدّاً** لا تلقيناً. ويُستعمَل في «شاهِد» نمذجةً وفي الخطأ تصحيحاً.
  *
@@ -222,8 +333,14 @@ export function touchLayer(fig, onTap) {
 export async function countAloud(figures, alive = () => true) {
   for (const fig of figures) {
     for (const mark of fig.marks) mark.classList.remove('is-counted');
+    clearLine(fig);
   }
   for (const fig of figures) {
+    // **وخطُّ الأعداد يُعَدّ عليه لا فيه**: لا عناصرَ له تُعَدّ، وإنما مواضعُ تُقطَع
+    // واحداً بعد واحد — و`upTo` يحدّ المشيَ عند الموضع المقصود (`METHOD.md §٣` — ٤·٢).
+    if (!fig.marks.length && fig.ticks.length) {
+      if (!(await countAlongLine(fig, fig.upTo ?? Infinity, alive))) return false;
+    }
     for (const [i, mark] of fig.marks.entries()) {
       if (!alive()) return false;
       mark.classList.add('is-counted');
@@ -351,11 +468,17 @@ export function stationScreen({ nodeId, title, accent, make, view, score, save }
   /**
    * **خطوةُ «شاهِدْ»**: الكميةُ تُعَدّ أمامه بالصوت — نمذجةٌ **بلا مطالبة** (`METHOD.md §٤`).
    * ولا زرَّ «تابع» قبل أن ينتهي العدّ: الخطوةُ عرضٌ لا امتحان، ولا يُترك معلَّقاً بعده.
+   *
+   * **و`model.reveal` حلقةُ تقديم الرمز** (`METHOD.md §٣` المرحلة ٣): «كميةٌ معروضة ←
+   * تُعدّ ← **يظهر الرمزُ فوقها** ← مطابقةٌ ذهاباً وإياباً». فالمكشوفُ لا يُعرَض قبل
+   * العدّ بحالٍ — ترتيبُ الخطوتين **هو الدرس**: الرمزُ تسميةٌ لكمٍّ عُدّ للتوّ، ولو
+   * ظهر معه لصار صورةً ثانيةً تُحفَظ. ويُعاد الكشفُ مع كل إعادة، فلا يبقى معلَّقاً.
    */
   function watchStep(model, api) {
     // كميتان تُعَدّان في النمذجة (المقارنةُ والتسوية) تأخذان مقاسَ المقارنة لا مقاسَ
     // البطل الواحد — وإلّا خرجت الثانيةُ عن الشاشة فلم يُرَ الطرفان معاً، وهو المقصود.
     const stage = h('div', { class: `q-stage${model.figures.length > 1 ? ' q-pair' : ' q-hero'}` });
+    const shown = h('div', { class: 'q-reveal', hidden: true });
     const foot = h('div', { class: 'row foot' });
     const figures = model.figures.map((spec) => {
       const fig = figureBox(spec);
@@ -365,9 +488,18 @@ export function stationScreen({ nodeId, title, accent, make, view, score, save }
 
     const run = async () => {
       foot.replaceChildren();
+      shown.replaceChildren();
+      shown.hidden = true;
       say(SAY.watch);
       await wait(BEAT);
       if (!(await countAloud(figures, api.alive))) return;
+      if (model.reveal) {
+        shown.replaceChildren(...model.reveal.figures.map((spec) => figureBox(spec).box));
+        shown.hidden = false;
+        say(model.reveal.say);
+        await wait(BEAT);
+        if (!api.alive()) return;
+      }
       foot.replaceChildren(
         h('button', { class: 'btn', onclick: run }, icon('repeat'), ' أَعِدْ'),
         h('button', { class: 'btn btn--primary next', onclick: api.done }, 'تَابِعْ ←'),
@@ -375,8 +507,10 @@ export function stationScreen({ nodeId, title, accent, make, view, score, save }
     };
     run();
 
+    // **والرمزُ يظهر فوقها** (`METHOD.md §٣` حرفاً): الرمزُ لافتةٌ فوق الكمّية لا سطرٌ
+    // بعدها — فيقع بصرُ الطفل عليهما معاً، والأعلى تسميةٌ للأسفل.
     return h('div', {}, mascot('mascot mascot--hello'),
-      h('h2', {}, model.title), h('p', { class: 'hint' }, model.hint), stage, foot);
+      h('h2', {}, model.title), h('p', { class: 'hint' }, model.hint), shown, stage, foot);
   }
 
   function finish() {

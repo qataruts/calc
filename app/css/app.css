@@ -917,7 +917,8 @@ button {
    بظلٍّ داخليّ لا بإطار: الإطارُ يقتطع من الصندوق فتزيح الهندسةُ عن حسابها. */
 .figure--dice,
 .figure--scatter,
-.figure--objects {
+.figure--objects,
+.figure--numeral {
   background: var(--card);
   border-radius: calc(26 * var(--unit));
   box-shadow: inset 0 0 0 calc(3 * var(--unit)) var(--line);
@@ -926,6 +927,34 @@ button {
 /* خاناتُ الإطار: **الفارغةُ جزءٌ من المعنى** («كم بقي للعشرة؟») فتُرسم كلُّها */
 .fig-cell { fill: none; stroke: var(--line); stroke-width: 3; }
 .fig-frame { fill: none; stroke: var(--ink-soft); stroke-width: 4; }
+
+/* ————— بطاقةُ الرمز وخطُّ الأعداد (الجلسة ٤ — المرحلتان ٣–٤) —————
+
+   **الرقمُ المفرد كبيرٌ في صندوقه** (`DESIGN.md §٣`) وبخطّ النسخ (`--font-num`): رسمُ
+   الأرقام المشرقية فيه أبينُ لعينٍ تتعلّمها اليوم. وصندوقُه صندوقُ بطاقة النرد نفسُه
+   فلا يرجّح الحجمُ أحدَ طرفَي المطابقة. */
+.figure--numeral { display: grid; place-items: center; }
+
+.fig-numeral {
+  font-size: calc(112 * var(--unit));
+  line-height: 1;
+  color: color-mix(in srgb, var(--accent, var(--accent-numeral)) 80%, var(--ink));
+}
+
+/* خطُّ الأعداد: محورٌ هادئ وعلاماتٌ عليه، وأرقامُ المرساة تحته */
+.fig-axis { stroke: var(--ink-soft); stroke-width: 4; stroke-linecap: round; }
+.fig-tick { fill: var(--line); stroke: var(--ink-soft); stroke-width: 2; }
+.fig-label { fill: var(--ink-soft); font-family: var(--font-num); font-size: 30px; }
+
+/* أثرُ العدّ على الخطّ — **لونٌ ومعه حجم** كأثر العدّ على الكمية (اللون لا يحمل
+   معنىً وحدَه): تُضاء العلامةُ بعد العلامة من الصفر إلى الموضع المقصود. */
+.fig-tick.is-counted {
+  fill: var(--ok);
+  stroke: var(--ok);
+  transform-box: fill-box;
+  transform-origin: center;
+  transform: scale(1.45);
+}
 
 /* عنصرُ عالم الطفل: صندوقُه من `faceEl` وموضعُه نسبةٌ من الشكل، وصورتُه تملؤه */
 .fig-mark {
@@ -1151,6 +1180,99 @@ button {
 
 .q-give { display: flex; flex-wrap: wrap; justify-content: center; align-items: center; gap: 1rem; }
 
+/* ————— شاشاتُ المرحلتين ٣–٤: الرمزُ والخطُّ والترتيب (الجلسة ٤) —————
+
+   **والرقمُ يدخل الشاشةَ هنا لا قبلها**: عهدُ «لا رمزَ عدديّ» عهدُ المرحلتين ١–٢
+   (`METHOD.md §٣`)، وهذه المرحلةُ درسُها الرمزُ نفسُه — فبطاقتُه بطلُ الشاشة. */
+
+.q-reveal { margin: .25rem 0 1rem; display: flex; justify-content: center; gap: .75rem; }
+.q-reveal .figure { --unit: .85px; }
+
+.q-aid { margin: -.5rem 0 1rem; display: flex; justify-content: center; }
+.q-aid .figure { --unit: .62px; }
+
+/* **الكميّتان صفّان متحاذيان** (تعديلُ `METHOD.md §٤` المعتمد): إطاران متطابقان
+   أحدُهما تحت الآخر، وكلاهما يُملأ من اليمين — فتتحاذى الخانةُ بالخانة ويُرى الفارق. */
+.q-check {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: .5rem;
+  margin: 1rem 0 .25rem;
+}
+
+.q-rows .figure { --unit: .82px; }
+
+/* بطاقةُ الرمز في موضع الاختيار: صندوقٌ يبلغ هدفَ اللمس ورقمُه بيّن */
+.qcard--numeral .figure { --unit: .42px; }
+.q-choices .qcard--numeral { padding: .35rem; }
+
+/* خطُّ الأعداد: يُفرَد على عرض البطاقة فتبلغ خانتُه هدفَ اللمس على الآيباد */
+.q-linebox { margin: .5rem 0 1rem; display: flex; justify-content: center; }
+.q-rail > .figure { --unit: 1.12px; }
+
+/* خاناتُ اللمس على الخطّ: عمودٌ قائم فوق العلامة — مقاسُه من `slots` في المصيِّر */
+.fig-slots { position: absolute; inset: 0; }
+
+.fig-slot {
+  position: absolute;
+  left: var(--x);
+  top: var(--y);
+  width: var(--w);
+  height: var(--h);
+  padding: 0;
+  display: grid;
+  place-items: end center;
+  border-radius: 14px 14px 0 0;
+  background: color-mix(in srgb, var(--accent) 8%, transparent);
+  border: 3px solid transparent;
+  transition: background .18s ease, border-color .18s ease, transform .18s ease;
+}
+
+.fig-slot:active { transform: scale(.94); }
+.fig-slot.good { border-color: var(--ok); background: color-mix(in srgb, var(--ok) 18%, transparent); }
+.fig-slot.bad { border-color: var(--err); background: color-mix(in srgb, var(--err) 14%, transparent); }
+
+/* دبّوسُ الخانة: مثلّثٌ صغير يشير إلى موضعها على الخطّ — لا رقمَ فيه */
+.fig-pin {
+  width: 0;
+  height: 0;
+  margin-bottom: -2px;
+  border-inline: .5rem solid transparent;
+  border-top: .7rem solid color-mix(in srgb, var(--accent) 65%, var(--ink-soft));
+}
+
+/* صفُّ الترتيب: البطاقاتُ تنتقل إليه واحدةً بعد واحدة **من اليمين** */
+.q-tray {
+  display: flex;
+  flex-direction: row;
+  justify-content: center;
+  flex-wrap: wrap;
+  gap: .5rem;
+  min-height: 4rem;
+  margin: 0 0 1rem;
+  padding: .5rem;
+  list-style: none;
+  border-radius: 18px;
+  background: color-mix(in srgb, var(--ink) 4%, var(--card));
+  box-shadow: inset 0 0 0 3px var(--line);
+}
+
+.q-slot {
+  display: grid;
+  place-items: center;
+  min-width: 3rem;
+  padding: .2rem .6rem;
+  border-radius: 14px;
+  background: color-mix(in srgb, var(--ok) 14%, var(--mix));
+  color: var(--ok-text);
+  font-size: 1.6rem;
+  line-height: 1.4;
+}
+
+.q-rack { display: flex; flex-wrap: wrap; justify-content: center; gap: .75rem; }
+.q-rack .qcard[disabled] { opacity: .45; }
+
 /* ————— طبقةُ اللمس: زرٌّ حقيقيّ فوق كل عنصرٍ مرسوم —————
 
    موضعُه من `spotStyle` في المصيِّر نفسِه، فلا يُحسَب موضعُ العنصر مرّتين. وهو
@@ -1202,4 +1324,8 @@ button {
   .q-pair .q-figure > .figure { --unit: .55px; }
   .q-model > .figure { --unit: .5px; }
   .q-touch > .figure { --unit: 1.05px; }
+  .q-rail > .figure { --unit: .5px; }
+  .q-rows .figure { --unit: .5px; }
+  .q-reveal .figure { --unit: .55px; }
+  .qcard--numeral .figure { --unit: .3px; }
 }

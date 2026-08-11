@@ -27,7 +27,7 @@
 // تحتمل غيابَ البيان بلا خطأ، فعملت من تلقائها يوم وُجد. وبيانا الصوت في القشرة كي
 // يُقرآ **دون إنترنت**: بلا `versions.json` لا وسمَ للروابط فيُخزَّن غيرُ ما يُطلَب.
 
-const VERSION = 'v4';
+const VERSION = 'v5';
 const SHELL_CACHE = `ihsib-shell-${VERSION}`;
 const AUDIO_CACHE = 'ihsib-audio';        // ثابتٌ عمداً — لا يحمل VERSION
 const KEEP = [SHELL_CACHE, AUDIO_CACHE];
@@ -43,10 +43,12 @@ const SHELL = [
   'fonts/BalooBhaijaan2-latin.woff2',
   'fonts/Marhey-arabic.woff2',
   'js/audio.js',
+  'js/compare.js',
   'js/counting.js',
   'js/curriculum.js',
   'js/gate.js',
   'js/main.js',
+  'js/numerals.js',
   'js/parent.js',
   'js/progress.js',
   'js/quantity.js',

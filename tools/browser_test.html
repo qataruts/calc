@@ -30,7 +30,7 @@
      نتيجة» لا يجوز أن يكون آخرَ ما نعرف. */
   const watchdog = setTimeout(() => {
     report([...out, { ok: false, msg: 'تعلّقت صفحةُ الفحص قبل تمامها (انتظارٌ لم ينتهِ)' }]);
-  }, 130000);
+  }, 220000);
 
   /* ————— «لا نطقَ آليّ»: يُقاس في مسار الطفل نفسِه (الجلسة ص) —————
 
@@ -196,17 +196,42 @@
   const apart = (a, b) => a.right <= b.left || b.right <= a.left
     || a.bottom <= b.top || b.bottom <= a.top;
 
-  // أ) **العددُ المرسوم هو المقصود** — ثلاثةُ مصادر تتطابق: المقصودُ في البيانات،
-  //    وما أعلن المصيِّر أنه رسم، وما في DOM فعلاً. واختلافُ أيِّها عن الآخر عطب.
+  /* أ) **المرسومُ هو المقصود** — ثلاثةُ مصادر تتطابق: المقصودُ في البيانات، وما أعلن
+        المصيِّر أنه رسم، وما في DOM فعلاً. واختلافُ أيِّها عن الآخر عطب.
+
+        **ولكلِّ صنفٍ مسطرتُه** (`data-kind`، الجلسة ٤): الكمُّ تُعَدّ عناصرُه، والرمزُ
+        **يُقرأ نصُّه هنا قراءةً مستقلّة** عن `arNum` في التطبيق (جدولٌ في هذه الصفحة)،
+        والخطُّ تُعَدّ علاماتُه. فرمزٌ يُكتب خطأً يُمسَك بالقراءة لا بالتصديق. */
+  const readDrawn = {
+    quantity: (f) => f.querySelectorAll('[data-mark]').length,
+    numeral: (f) => arDigits(f.querySelector('[data-numeral]')?.textContent ?? ''),
+    line: (f) => f.querySelectorAll('[data-tick]').length - 1,
+  };
   const miscount = figures.filter((f) => {
     const want = Number(f.dataset.count);
     const said = Number(f.dataset.drawn);
-    return !(want === said && said === f.querySelectorAll('[data-mark]').length);
+    const reader = readDrawn[f.dataset.kind];
+    return !reader || !(want === said && said === reader(f));
   });
   ok(miscount.length === 0,
-    `والعددُ المرسوم هو المقصود في كل شكل (المقصود = ما أعلن المصيِّر = ما في DOM)`
+    `والمرسومُ هو المقصود في كل شكل (المقصود = ما أعلن المصيِّر = ما في DOM)`
     + (miscount.length ? ` — اختلف في: ${miscount.slice(0, 3)
       .map((f) => `${f.dataset.display}/${f.dataset.count}`).join('، ')}` : ''));
+
+  /* أ٢) **خطُّ الأعداد يتصاعد إلى اليسار** — والصفرُ يمنة (`METHOD.md §٣`: جهةُ ملء
+        الإطار نفسُها). **ويُقاس بعد التنسيق**: `check_render.mjs` يقرأ الهندسة، وتنسيقٌ
+        يقلب الشكل (`scaleX`) أو اتجاهٌ يعكسه تعمى عنه الهندسةُ ويمسكه القياسُ هنا. */
+  const rails = figures.filter((f) => f.dataset.display === 'line');
+  const flipped = rails.filter((f) => {
+    const ticks = [...f.querySelectorAll('[data-tick]')]
+      .map((t) => ({ v: Number(t.dataset.value), x: centre(rectOf(t)).x }))
+      .sort((a, b) => a.v - b.v);
+    return ticks.some((t, i) => i && t.x >= ticks[i - 1].x - 0.5);
+  });
+  ok(rails.length > 0 && flipped.length === 0,
+    `وخطوطُ الأعداد كلُّها تبدأ من اليمين وتتصاعد يساراً (${rails.length} خطّاً مقيساً`
+    + `، أطولُها ${rails.length ? Math.max(...rails.map((f) => Number(f.dataset.drawn))) : 0} علامةَ مدى)`
+    + (flipped.length ? ` — انقلب في: ${flipped.length}` : ''));
 
   // ب) **لا تراكب مقيساً بعد التنسيق**: صندوقا عنصرين لا يتلامسان — والبرهانُ
   //    الهندسيّ يضمن انفصالَهما في أحد المحورين، فتلامسُ الصندوقين وحدَه كافٍ حكماً.
@@ -453,6 +478,199 @@
     ? [...d.querySelectorAll('.qcard')] : null));
   ok(answer && answer.length >= 2 && answer.every((c) => c.querySelector('.figure [data-mark]')),
     `وبعد العدّ يُسأل «كم صارت كلها؟» وجوابُه بطاقةُ كمّ (${answer ? answer.length : 0} بطاقة)`);
+
+  /* ————— ١١) شاشاتُ المرحلتين ٣–٤: الرمزُ والمقارنة (الجلسة ٤) —————
+
+     أربعةُ عهودٍ لا يُثبتها إلا متصفّح:
+       • **الرمزُ لا يُكشَف إلا بعد العدّ** — ترتيبُ خطوتَي «شاهِدْ» هو الدرسُ نفسُه.
+       • **طرفا المطابقة يلتقيان على عددٍ واحد** مقروءٍ من الرسم: بطاقةُ الرمز رقمُها
+         من نصّها، وبطاقةُ الكمّية عددُ عناصرها من الـDOM.
+       • **خانةُ الخطّ تبلغ هدفَ اللمس** بعد التنسيق (لا بالحساب وحدَه).
+       • **الخطأُ لا ينقل**: على الخطّ يُعَدّ عليه من الصفر، وفي المقارنة تُكشَف
+         الكميّتان صفّين متحاذيين وتُعَدّان. */
+
+  const numOf = (el) => (el ? Number(el.querySelector('.figure')?.dataset.drawn) : NaN);
+  const cardsOf = (d) => [...d.querySelectorAll(
+    '.q-choices .qcard, .q-rack .qcard, .q-pair .qcard')];
+  /* **ومهلةُ خطوة «شاهِدْ» أوسع**: النمذجةُ تَعُدّ كميّتين عنصراً عنصراً بصوتٍ، فهي
+     ثوانٍ بحسابها لا تعلّقاً — والانتظارُ لها انتظارُ درسٍ يقع. */
+  const onward = (d) => until(d, (x) => x.querySelector('.station-body .next'), 22000);
+  const askOf = (d) => (d.querySelector('.station-body h2')?.textContent || '');
+
+  /** جوابُ الجولة الجارية — **مقروءٌ من الشاشة**: السؤالُ والأرقامُ المرسومة. */
+  const answerOf = (d) => {
+    const ask = askOf(d);
+    const subject = numOf(d.querySelector('.q-stage'));
+    const slots = [...d.querySelectorAll('.fig-slot')];
+    if (slots.length) return slots.find((s) => Number(s.dataset.value) === subject);
+    const cards = cardsOf(d).filter((c) => !c.disabled);
+    if (!cards.length) return d.querySelector('.station-body .next');
+    const value = (c) => Number(c.querySelector('.figure')?.dataset.drawn);
+    // **الترتيبُ أولاً**: نصُّه يذكر «الأصغر» و«الأكبر» معاً، فلو قُدِّمت المقارنةُ
+    // عليه لأُخذ الأكبرُ في سؤالِ ترتيبٍ يبدأ من الأصغر — والخطأُ في الفحص أخطرُ.
+    if (ask.includes('رَتِّبْ')) return cards.reduce((a, b) => (value(a) <= value(b) ? a : b));
+    if (ask.includes('أَكْبَر')) return cards.reduce((a, b) => (value(a) >= value(b) ? a : b));
+    if (ask.includes('أَصْغَر')) return cards.reduce((a, b) => (value(a) <= value(b) ? a : b));
+    if (ask.includes('بَعْدَهُ')) return cards.find((c) => value(c) === subject + 1);
+    if (ask.includes('قَبْلَهُ')) return cards.find((c) => value(c) === subject - 1);
+    return cards.find((c) => value(c) === subject);
+  };
+
+  /** سَوقُ محطةٍ إلى آخرها لمساً — والجوابُ في كل جولةٍ من المرسوم. */
+  const play = async (d, steps = 60) => {
+    for (let i = 0; i < steps && !d.querySelector('.celebrate'); i++) {
+      (answerOf(d) || d.querySelector('.station-body .next'))?.click();
+      await new Promise((r) => setTimeout(r, 480));
+    }
+    return d.querySelector('.celebrate');
+  };
+
+  // ————— أ) «رُمُوزُ ١ ٢ ٣»: الرمزُ بعد العدّ، والمطابقةُ ذهاباً وإياباً —————
+  let ndoc = await open('#/numeral/one-three');
+  ok(ndoc.querySelectorAll('.step').length === 3 && !!ndoc.querySelector('.q-reveal'),
+    'محطةُ «رُمُوزُ ١ ٢ ٣» تفتح بحلقتها، وفيها موضعُ كشف الرمز');
+
+  const revealBox = ndoc.querySelector('.q-reveal');
+  const hiddenAtFirst = revealBox.hidden
+    && ndoc.defaultView.getComputedStyle(revealBox).display === 'none';
+  const countedFirst = await until(ndoc,
+    (d) => d.querySelectorAll('.q-stage .is-counted').length || null);
+  const revealed = await until(ndoc, (d) => {
+    const box = d.querySelector('.q-reveal');
+    return box && !box.hidden ? box : null;
+  });
+  ok(hiddenAtFirst && countedFirst > 0 && !!revealed,
+    `و**الرمزُ لا يُكشَف إلا بعد العدّ**: مخفيٌّ ابتداءً (${hiddenAtFirst})، `
+    + `ثم عُدَّت الكميةُ (${countedFirst || 0} عنصراً) ثم ظهر`);
+  const revealCard = revealed?.querySelector('.figure--numeral');
+  ok(revealCard && Number(revealCard.dataset.drawn) === numOf(ndoc.querySelector('.q-stage')),
+    `والرمزُ المكشوف هو رقمُ الكمّية المعدودة (${revealCard ? revealCard.dataset.drawn : '؟'})`);
+
+  (await onward(ndoc))?.click();
+  const firstCards = await until(ndoc, (d) => (cardsOf(d).length ? cardsOf(d) : null));
+  ok(firstCards && firstCards.every((c) => c.querySelector('.figure')),
+    `وبطاقاتُ الجواب من المصيِّر كلُّها (${firstCards ? firstCards.length : 0} بطاقة)`);
+
+  // **الخطأُ لا ينقل**: تُعَدّ الكميةُ المعنية أمامه ثم يحاول ثانية
+  const rightCard = answerOf(ndoc);
+  const wrongCard = firstCards.find((c) => c !== rightCard);
+  const beadWas = beadNow(ndoc);
+  wrongCard?.click();
+  const litUp = await until(ndoc,
+    (d) => d.querySelectorAll('.is-counted').length || null, 6000);
+  ok(litUp > 0 && beadNow(ndoc) === beadWas,
+    'والخيارُ الخاطئ لا ينقل — تُعَدّ الكميةُ المعنية أمامه ثم يحاول ثانية');
+
+  const finished = await play(ndoc);
+  const nstars = ndoc.querySelectorAll('.big-stars .on').length;
+  ok(!!finished && nstars > 0,
+    `ومحطةُ الرموز تُجتاز كاملةً لمساً حتى الاحتفال (${nstars} نجمة)`);
+
+  /* **والاتجاهان كلاهما يقعان**: تُبنى الجولاتُ من الوحدة نفسِها فتُجرَد أنماطُ
+     أسئلتها — «أيُّ رمزٍ لها؟» (كمّيةٌ فبطاقاتُ رموز) و«أين هذا العدد؟» (رمزٌ
+     فبطاقاتُ كمّيات) — فلو حُفظ اتجاهٌ واحد لم ينفع حفظُه. */
+  const asks = new Set();
+  ndoc = await open('#/numeral/fix-three');
+  (await onward(ndoc))?.click();
+  for (let i = 0; i < 8 && !ndoc.querySelector('.celebrate'); i++) {
+    asks.add(askOf(ndoc));
+    (answerOf(ndoc) || ndoc.querySelector('.station-body .next'))?.click();
+    await new Promise((r) => setTimeout(r, 480));
+  }
+  ok(asks.size >= 2, `والمطابقةُ ذهاباً وإياباً في المحطة الواحدة (${[...asks].join(' · ')})`);
+
+  // ————— ب) «الصِّفْر»: إطارٌ فارغ لا ساحةٌ خالية —————
+  const zdoc = await open('#/numeral/zero');
+  const zeroFig = await until(zdoc, (d) => d.querySelector('.q-stage .figure'));
+  ok(zeroFig && Number(zeroFig.dataset.drawn) === 0
+    && zeroFig.dataset.display.endsWith('-frame')
+    && zeroFig.querySelectorAll('[data-cell]').length > 0,
+  `ومحطةُ الصفر تعرض **إطاراً فارغاً** خاناتُه مرسومة `
+    + `(${zeroFig ? zeroFig.dataset.display : '؟'}، ${zeroFig
+      ? zeroFig.querySelectorAll('[data-cell]').length : 0} خانة، صفرُ عنصر)`);
+
+  // ————— ج) «أَيْنَ يَقَع؟»: الخطُّ وخاناتُه —————
+  const ldoc = await open('#/line/ten');
+  (await onward(ldoc))?.click();
+  const rail = await until(ldoc, (d) => d.querySelector('.q-rail .figure'), 15000);
+  const ticks = [...(rail?.querySelectorAll('[data-tick]') || [])];
+  const labels = [...(rail?.querySelectorAll('.fig-label') || [])].map((t) => t.textContent);
+  ok(ticks.length === 11 && labels.join('،') === '٠،٥،١٠',
+    `وخطُّ ٠–١٠ إحدى عشرةَ علامة، وأرقامُ المرساة وحدَها (${labels.join('، ') || 'لا شيء'})`);
+
+  const zeroTick = ticks.find((t) => t.dataset.value === '0');
+  const tenTick = ticks.find((t) => t.dataset.value === '10');
+  ok(zeroTick && tenTick && centre(rectOf(zeroTick)).x > centre(rectOf(tenTick)).x,
+    'و**الصفرُ في يمين الخطّ** مقيساً على الشاشة (جهةُ ملء الإطار نفسُها)');
+
+  const spots = [...ldoc.querySelectorAll('.fig-slot')];
+  const spotBox = spots.map((s) => s.getBoundingClientRect());
+  ok(spots.length === 3 && spotBox.every((r) => r.width >= 40 && r.height >= 44),
+    `وخياراتُ الموضع ثلاثٌ متجاورة تبلغ هدفَ اللمس `
+    + `(${spotBox.map((r) => `${Math.round(r.width)}×${Math.round(r.height)}`).join('، ') || 'لا خانة'})`);
+
+  const spotWant = numOf(ldoc.querySelector('.q-stage'));
+  const badSpot = spots.find((s) => Number(s.dataset.value) !== spotWant);
+  const lineBead = beadNow(ldoc);
+  badSpot?.click();
+  const walked = await until(ldoc,
+    (d) => d.querySelectorAll('[data-tick].is-counted').length || null, 12000);
+  ok(walked > 0 && beadNow(ldoc) === lineBead,
+    `وخطأُ الموضع لا ينقل — **يُعَدّ على الخطّ نفسِه** من الصفر (${walked || 0} علامة)`);
+
+  /* **ولا فائضَ أفقيّ ولا رقمَ لاتينيّ** في أوسع شاشات الرحلة — والخطُّ أوسعُها:
+     يُقاس **على نافذته الحيّة** قبل أن تُغادر الشاشةُ إلى غيرها. */
+  const wide = ldoc.documentElement.scrollWidth - ldoc.defaultView.innerWidth;
+  const latin34 = [...new Set((shownIn(ldoc.querySelector('main.screen-card'))
+    .match(/\d/g) || []))];
+  ok(wide <= 0 && latin34.length === 0,
+    `ولا فائضَ أفقيّ في شاشة الخطّ (${wide}px) ولا رقمَ لاتينيّ فيها`
+    + (latin34.length ? ` — وُجد: ${latin34.join('، ')}` : ''));
+
+  // ————— د) «أَيُّهُمَا أَكْبَر؟»: الرجوعُ إلى الكميتين صفّين متحاذيين —————
+  const cdoc = await open('#/compare/ten');
+  (await onward(cdoc))?.click();
+  await until(cdoc, (d) => (cardsOf(d).length ? cardsOf(d) : null));
+  const pairCards = cardsOf(cdoc);
+  ok(pairCards.length === 2 && pairCards.every((c) => c.querySelector('.figure--numeral')),
+    `و«أيُّهما أكبر» بالرمزين لا بالكميتين (${pairCards.length} بطاقةَ رمز)`);
+
+  const rightPick = answerOf(cdoc);
+  const wrongPick = pairCards.find((c) => c !== rightPick);
+  wrongPick?.click();
+  const twoRows = await until(cdoc, (d) => {
+    const box = d.querySelector('.q-check');
+    return box && !box.hidden ? [...box.querySelectorAll('.figure')] : null;
+  }, 6000);
+  const aligned = twoRows && twoRows.length === 2
+    && Math.abs(rectOf(twoRows[0]).left - rectOf(twoRows[1]).left) < 2
+    && rectOf(twoRows[0]).bottom <= rectOf(twoRows[1]).top + 1;
+  ok(aligned,
+    'وعند الخطأ تُكشَف الكميتان **صفّين متحاذيين** (إطاران متطابقان، أحدهما تحت الآخر)');
+
+  // ————— هـ) «رَتِّبْ» و«السَّابِقُ وَالتَّالِي» —————
+  const odoc = await open('#/order/ten');
+  (await onward(odoc))?.click();
+  const rack = await until(odoc, (d) => (cardsOf(d).length ? cardsOf(d) : null), 15000);
+  const rackValues = (rack || []).map((c) => Number(c.querySelector('.figure').dataset.drawn));
+  answerOf(odoc)?.click();
+  await new Promise((r) => setTimeout(r, 500));
+  const tray = [...odoc.querySelectorAll('.q-tray .q-slot')].map((s) => arDigits(s.textContent));
+  ok(rack.length >= 3 && tray.length === 1 && tray[0] === Math.min(...rackValues),
+    `و«رتِّب» تنقل الأصغرَ أولاً إلى صفّه (بطاقاتٌ: ${rackValues.length}، `
+    + `والمنقولُ ${tray[0] ?? '؟'} وأصغرُها ${Math.min(...rackValues)})`);
+
+  const gdoc2 = await open('#/neighbor/ten');
+  (await onward(gdoc2))?.click();
+  await until(gdoc2, (d) => (cardsOf(d).length ? cardsOf(d) : null));
+  const modes = new Set();
+  for (let i = 0; i < 6 && !gdoc2.querySelector('.celebrate'); i++) {
+    modes.add(askOf(gdoc2));
+    (answerOf(gdoc2) || gdoc2.querySelector('.station-body .next'))?.click();
+    await new Promise((r) => setTimeout(r, 480));
+  }
+  ok(modes.size >= 2,
+    `و«السابقُ والتالي» تدور على أوجهها (${[...modes].join(' · ')})`);
 
   // ————— ج) الصوت في مسار الطفل: من البنك لا من نطقٍ آليّ —————
   const heard = [...new Set(played)];

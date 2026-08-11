@@ -26,6 +26,8 @@ import { renderGallery } from './render.js';
    وحارسُ `test_pwa` أنّ الملفَّ حيٌّ لا ميّت. */
 import './quantity.js';
 import './counting.js';
+import './numerals.js';
+import './compare.js';
 import {
   h, icon, faceEl, toast, go, arNum, starsRow, topbar, brandMark, landmark, DEV,
   PAUSE_ACCENT,

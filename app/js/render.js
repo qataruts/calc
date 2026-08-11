@@ -24,7 +24,7 @@
 // فلو كبر عنصرُ الأقلّ لصارت المقارنةُ بصرَ مساحةٍ لا حسَّ عدد — وهو عينُ الخطأ الذي
 // تبنيه الرحلة لتهدمه. ولذلك تُرسم الأشكالُ كلُّها بوحدةٍ واحدة (`--unit` في CSS).
 
-import { h, faceEl, seeded, shuffle, arNum, icon, go, topbar, brandMark } from './ui.js';
+import { h, faceEl, seeded, shuffle, arNum, latinNum, icon, go, topbar, brandMark } from './ui.js';
 
 // ————— المقاييس (بوحدات الرسم — و`--unit` في `app.css` يحوّلها إلى بكسل) —————
 
@@ -175,6 +175,64 @@ function scatterPlan(count, rnd, view) {
   };
 }
 
+// ————— بطاقةُ الرمز: **رقمٌ مشرقيّ في صندوقٍ بمقاس بطاقة الكمية** (الجلسة ٤) —————
+//
+// **ولِمَ يمرّ الرمزُ من المصيِّر أصلاً وهو نصٌّ لا هندسة؟** لأنّ عقدَ هذا التطبيق
+// «الشيفرةُ تُرجِع ما فعلت لا ما نوت» (`METHOD.md §١٠.٢`): بطاقةٌ تكتب رقمَها بيدها
+// تُصدَّق على دعواها، وبطاقةٌ من هنا **يُقرأ رقمُها من الـDOM بعد رسمه** (`readNumeral`)
+// فيقابله الحارس بالمقصود — كما يُقرأ عددُ النقاط من `[data-mark]`. وبه تلتقي شاشةُ
+// المرحلة ٣ على عددٍ واحد: كمّيةٌ تقول «رسمتُ سبعاً» وبطاقةٌ تقول «رسمتُ سبعة».
+//
+// **ومقاسُها مقاسُ بطاقة النرد** حرفاً (الصندوقُ نفسُه): الرمزُ تسميةٌ لكمٍّ عرفه، فلا
+// يكبر عليه ولا يصغر — ويقعان في «طابِقْ» متجاورين بلا أن يرجّح الحجمُ أحدَهما.
+//
+// **والأرقامُ مشرقيةٌ حصراً** (ق١، `METHOD.md §٩`) ومصدرُها `arNum` وحدَه — ولا يكتب
+// هذا الملفُّ محرفَ رقمٍ واحداً بيده.
+
+function numeralPlan(count) {
+  return { text: arNum(count), marks: [] };
+}
+
+/** قراءةُ الرمز المرسوم عدداً — **من نصّ الـDOM لا من `count`**، و‑١ لِما لا يُقرأ. */
+const readNumeral = (text) => (/^[٠-٩]+$/.test(String(text || '')) ? Number(latinNum(text)) : -1);
+
+// ————— خطُّ الأعداد: **يبدأ من اليمين** (واجهةٌ RTL) —————
+//
+// **و`count` هنا مدى الخطّ لا كميةٌ تُعَدّ**: `plan('line', 10)` خطٌّ من الصفر إلى
+// العشرة — إحدى عشرة علامة. وهو أوّلُ نمطٍ في المصيِّر ليس كمّاً، فلذلك أعلن كلُّ
+// رسّامٍ **صنفَه** (`kind`) أدناه: يقرأ الحارسُ الكمَّ بعدّ عناصره، والرمزَ بقراءة
+// نصّه، والخطَّ بعدّ علاماته — ولا يُقاس نمطٌ بمسطرة غيره.
+//
+// **والصفرُ على اليمين** ليتّفق الخطُّ والإطارُ على جهةٍ واحدة: إطارُ العشرة يُملأ من
+// اليمين (`METHOD.md §٣` — ٣·٥)، فلو تصاعد الخطُّ إلى اليمين لتناقض المرساتان في
+// ذهن الطفل ولزمه أن يقلب اتجاهَ العدّ بين شاشتين. (بندٌ يُرفع إلى مدير المشروع.)
+//
+// **والعلاماتُ المسمّاةُ مرساةٌ لا قائمةُ أجوبة**: يُكتب رقمُ الصفر وطرفِ الخطّ ومضاعفاتُ
+// الخمسة وحدَها — فلو كُتب رقمُ كلِّ علامةٍ لصار «أين يقع؟» قراءةَ لافتةٍ لا حسَّ موضع.
+
+const LINE_AXIS = 86;      // ارتفاعُ المحور من أعلى الصندوق — وما فوقه ساحةُ الاختيار
+
+function linePlan(count) {
+  const view = VIEWS.line;
+  const step = (view.w - 2 * (PAD + R)) / count;
+  const r = Math.min(R / 2, step / 2 - GAP / 2);
+  const half = Math.min(step / 2, PAD + R);        // نصفُ الخانة، محبوسٌ في الصندوق
+  const x0 = view.w - PAD - R;                     // **الصفرُ على اليمين**
+  const ticks = [];
+  for (let value = 0; value <= count; value++) {
+    ticks.push({ value, x: x0 - value * step, y: LINE_AXIS, r });
+  }
+  return {
+    marks: [],
+    axis: { x1: x0 - count * step, x2: x0, y: LINE_AXIS },
+    ticks,
+    // **خانةُ كل علامة**: ساحةُ اللمس فوقها، من المصيِّر نفسِه لا من حساب الشاشة
+    slots: ticks.map((t) => ({ value: t.value, x: t.x - half, y: 0, w: 2 * half, h: LINE_AXIS })),
+    labels: ticks.filter((t) => t.value === 0 || t.value === count || t.value % 5 === 0)
+      .map((t) => ({ value: t.value, x: t.x, y: LINE_AXIS, text: arNum(t.value) })),
+  };
+}
+
 // ————— سِجلُّ الأنماط —————
 //
 // **المعجمُ يملكه المنهج** (`DISPLAYS` في `curriculum.js`)، وهذا الملفُّ يُنفِّذ منه ما
@@ -189,19 +247,46 @@ const VIEWS = {
   'five-frame': { w: 2 * PAD + 5 * CELL, h: 2 * PAD + CELL },
   'ten-frame': { w: 2 * PAD + 5 * CELL, h: 2 * PAD + 2 * CELL },
   'two-frames': { w: 4 * PAD + 10 * CELL, h: 2 * PAD + 2 * CELL },
+  // بطاقةُ الرمز بصندوق بطاقة النرد نفسِه — الرمزُ تسميةٌ لكمٍّ لا بديلٌ أكبرُ منه
+  numeral: { w: 2 * (PAD + 4) + 3 * CELL, h: 2 * (PAD + 4) + 3 * CELL },
+  line: { w: 660, h: 140 },
 };
 
+/**
+ * **ولكلِّ رسّامٍ صنفُه** (`kind`، الجلسة ٤): `quantity` كمّيةٌ تُعَدّ عناصرُها ·
+ * `numeral` رمزٌ يُقرأ نصُّه · `line` خطٌّ تُعَدّ علاماتُه. وبه يعرف **قارئُ المرسوم**
+ * (`read`) كيف يُرجِع ما رُسِم فعلاً، ويعرف الحارسُ بأيّ مسطرةٍ يقيس — فلا يُطالَب
+ * الرمزُ بأن يرسم سبعةَ أشياء ولا الكمّيةُ بأن تكتب رقماً.
+ */
 const PAINTERS = {
-  dice: { min: 1, max: 6, plan: dicePlan, paint: paintDots },
-  scatter: { min: 0, max: 20, plan: scatterPlan, paint: paintDots },
-  objects: { min: 0, max: 20, plan: scatterPlan, paint: paintObjects },
-  'five-frame': { min: 0, max: 5, plan: framePlan(5, 1), paint: paintDots },
-  'ten-frame': { min: 0, max: 10, plan: framePlan(5, 2), paint: paintDots },
-  'two-frames': { min: 0, max: 20, plan: twoFramesPlan, paint: paintDots },
+  dice: { kind: 'quantity', min: 1, max: 6, plan: dicePlan, paint: paintDots },
+  scatter: { kind: 'quantity', min: 0, max: 20, plan: scatterPlan, paint: paintDots },
+  objects: { kind: 'quantity', min: 0, max: 20, plan: scatterPlan, paint: paintObjects },
+  'five-frame': { kind: 'quantity', min: 0, max: 5, plan: framePlan(5, 1), paint: paintDots },
+  'ten-frame': { kind: 'quantity', min: 0, max: 10, plan: framePlan(5, 2), paint: paintDots },
+  'two-frames': { kind: 'quantity', min: 0, max: 20, plan: twoFramesPlan, paint: paintDots },
+  numeral: { kind: 'numeral', min: 0, max: 20, plan: numeralPlan, paint: paintNumeral },
+  // **الخطُّ من عددٍ واحدٍ فصاعداً**: خطٌّ بلا مسافةٍ ليس خطّاً — والمدى هنا مدى
+  // الخطّ لا كميةٌ تُعَدّ، فالصفرُ طرفُه الأيمن دائماً لا قيمةٌ يُطلَب رسمُها.
+  line: { kind: 'line', min: 1, max: 20, plan: linePlan, paint: paintLine },
+};
+
+/**
+ * **قارئو المرسوم** — لكلِّ صنفٍ قراءتُه من الـDOM نفسِه لا من العدد المطلوب:
+ * الكمّيةُ تُعَدّ عناصرُها، والرمزُ يُقرأ نصُّه عدداً، والخطُّ تُعَدّ علاماتُه فيُرَدّ
+ * مداه. وهو عينُ عقد `drawn`: **الفرقُ بين النية والفعل مقيسٌ لا مظنون**.
+ */
+const READERS = {
+  quantity: (el) => el.querySelectorAll('[data-mark]').length,
+  numeral: (el) => readNumeral(el.querySelector('[data-numeral]')?.dataset.numeral),
+  line: (el) => el.querySelectorAll('[data-tick]').length - 1,
 };
 
 /** أنماطُ العرض التي يرسمها المصيِّر اليوم، بترتيب الرحلة. */
 export const displays = () => Object.keys(PAINTERS);
+
+/** صنفُ النمط: `quantity` أو `numeral` أو `line` — بأيّ مسطرةٍ يُقاس المرسوم. */
+export const kindOf = (display) => PAINTERS[display]?.kind || null;
 
 /** مدى النمط: `dice` من ١ (لا وجهَ لصفر)، وسواه من ٠ إلى سقفه. */
 export function rangeOf(display) {
@@ -238,9 +323,9 @@ export function plan(display, count, opts = {}) {
     : null;
 
   return {
-    display, count, view, r: R, glyph,
+    display, count, view, r: R, glyph, kind: painter.kind,
     seed: (opts.seed ?? 0) >>> 0,
-    cells: [], frames: [],
+    cells: [], frames: [], ticks: [], slots: [], labels: [], text: null,
     ...painter.plan(count, rnd, view),
   };
 }
@@ -285,6 +370,21 @@ export function spotStyle(mark, view) {
 }
 
 /**
+ * **ساحةٌ مستطيلة نسبةً من صندوق الشكل** — لخانات خطّ الأعداد (`slots`)، وعلّتُها
+ * علّةُ `spotStyle` نفسُها: من رسم الخانةَ يقول أين هي، فلا يُحسَب موضعُها مرّتين.
+ * (وهي مستطيلٌ لا قرص: خانةُ الخطّ عمودٌ قائم لا نقطةٌ — فيبلغ هدفَ اللمس ارتفاعاً
+ * وإن ضاق عرضُه بازدحام العلامات.)
+ */
+export function spanStyle(box, view) {
+  return {
+    '--x': `${(box.x / view.w) * 100}%`,
+    '--y': `${(box.y / view.h) * 100}%`,
+    '--w': `${(box.w / view.w) * 100}%`,
+    '--h': `${(box.h / view.h) * 100}%`,
+  };
+}
+
+/**
  * عناصرُ عالم الطفل: كلُّ عنصرٍ **من المُصيِّر الواحد** (`faceEl` في `ui.js`) — فلا
  * موضعَ ثانٍ في التطبيق يحوّل رمزاً إلى صورة، ولا محرفَ يُسلَّم لخطّ النظام. ومواضعُها
  * نسبٌ مئوية من الصندوق، فتتبع مقاسَه أيّاً كان (`--unit`) بالهندسة نفسِها.
@@ -303,20 +403,50 @@ function paintObjects(figure) {
 }
 
 /**
- * **يرسم الكمية ويُرجِع العدد الذي رسم**.
+ * **بطاقةُ الرمز**: الرقمُ المشرقيّ نصّاً في صندوقه — و`data-numeral` تُعلن ما كُتب
+ * فيه، فيقرؤه `READERS.numeral` من الـDOM ولا يُصدَّق على دعواه.
  *
- * `drawn` **يُعَدّ من الـDOM** (`[data-mark]`) لا من `count`: لو أسقط رسّامٌ عنصراً أو
- * كرّره لظهر الفرقُ في العدد المُرجَع فأمسكه الحارس. وهو نصُّ `METHOD.md §١٠.٢`.
+ * ونصٌّ لا SVG: رسمُ الرقم خطٌّ (Noto Naskh) لا هندسةٌ نرسمها — و`<text>` في SVG
+ * يُقاس بمقاييس الخطّ فلا يتوسّط صندوقَه على كل جهاز.
+ */
+function paintNumeral(figure) {
+  return h('div', {},
+    h('span', { class: 'fig-numeral num', 'data-numeral': figure.text }, figure.text));
+}
+
+/**
+ * **خطُّ الأعداد**: محورٌ وعلاماتٌ وأرقامُ المرساة — والصفرُ على اليمين.
+ * وكلُّ علامةٍ تحمل قيمتَها (`data-value`) فتقرؤها الشاشةُ من المرسوم لا من حسابٍ ثانٍ.
+ */
+function paintLine(figure) {
+  const { axis, ticks, labels } = figure;
+  const rail = `<line class="fig-axis" x1="${axis.x1.toFixed(2)}" y1="${axis.y}"`
+    + ` x2="${axis.x2.toFixed(2)}" y2="${axis.y}"/>`;
+  const dots = ticks.map((t) => `<circle data-tick data-value="${t.value}"`
+    + ` cx="${t.x.toFixed(2)}" cy="${t.y}" r="${t.r.toFixed(2)}" class="fig-tick"/>`).join('');
+  const text = labels.map((l) => `<text class="fig-label num" x="${l.x.toFixed(2)}"`
+    + ` y="${l.y + 34}" text-anchor="middle">${l.text}</text>`).join('');
+  return svgFigure(figure, rail + dots + text);
+}
+
+/**
+ * **يرسم الشكلَ ويُرجِع ما رسم**.
+ *
+ * `drawn` **يُقرأ من الـDOM** لا من `count` (بقارئ صنفه — `READERS`): لو أسقط رسّامٌ
+ * عنصراً أو كتب رقماً غيرَ المطلوب لظهر الفرقُ في المُرجَع فأمسكه الحارس. وهو نصُّ
+ * `METHOD.md §١٠.٢`، وعليه تقوم أجوبةُ التمارين كلِّها.
  */
 export function paint(display, count, opts = {}) {
   const figure = plan(display, count, opts);
-  const el = PAINTERS[display].paint(figure);
+  const painter = PAINTERS[display];
+  const el = painter.paint(figure);
   el.className = `figure figure--${display}`;
   el.style.setProperty('--vw', String(figure.view.w));
   el.style.setProperty('--vh', String(figure.view.h));
   el.setAttribute('aria-hidden', 'true');
-  const drawn = el.querySelectorAll('[data-mark]').length;
+  const drawn = READERS[painter.kind](el);
   el.dataset.display = display;
+  el.dataset.kind = painter.kind;
   el.dataset.count = String(count);
   el.dataset.drawn = String(drawn);
   return { el, drawn, plan: figure };
@@ -336,6 +466,8 @@ const TITLES = {
   'five-frame': 'إِطَارُ الخَمْسَة — يُمْلَأُ مِنَ اليَمِين',
   'ten-frame': 'إِطَارُ العَشَرَة — يُمْلَأُ مِنَ اليَمِين',
   'two-frames': 'إِطَارَا العَشَرَة — عَشَرَةٌ وَآحَاد',
+  numeral: 'بِطَاقَةُ الرَّمْز — مَشْرِقِيَّةٌ حَصْراً',
+  line: 'خَطُّ الأَعْدَاد — الصِّفْرُ مِنَ اليَمِين',
 };
 
 function sheet(display) {
