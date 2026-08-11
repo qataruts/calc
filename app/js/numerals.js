@@ -50,10 +50,13 @@ const TYPES = new Set(['numeral']);
 // **مُعلَنةٌ لا مستنتَجة** (`check_speech.mjs`): لكلٍّ ملفٌّ مولَّد أو مكانٌ في
 // `tools/audio_queue.json`. ولا رقمَ في نصٍّ منطوق (ق١)، ولا معدودٌ مقرونٌ بعدد (ق٢).
 
+// **وجملةُ الكشف ليست هنا**: «وَهَذَا رَمْزُهَا» عرضٌ يُشاهَد لا فعلٌ يُطلَب، فموضعُها
+// جدولُ `SAY` في `station.js` (`SAY.reveal`) — وبموضعها تُشتقّ فئتُها `modeling` لا
+// `instruction`، فتُصرَّف بمسحة النمذجة (حكمُ المدير، مراجعة الجلسة ٤ البند ٥).
+
 const ASK = {
   toNumeral: 'أَيُّ رَمْزٍ لَهَا؟',
   toQuantity: 'أَيْنَ هَذَا الْعَدَدْ؟',
-  reveal: 'وَهَذَا رَمْزُهَا',
 };
 
 export const SPOKEN = Object.values(ASK);
@@ -189,7 +192,7 @@ export function buildStation(stationId, seed) {
     figures: [{
       display: quantityDisplay(f, shown, rnd, { frame: true }), count: shown, seed: next(),
     }],
-    reveal: { say: ASK.reveal, figures: [{ display: 'numeral', count: shown, seed: next() }] },
+    reveal: { say: SAY.reveal, figures: [{ display: 'numeral', count: shown, seed: next() }] },
   };
 
   const guided = targetsOf(station, GUIDED, rnd).map((target, i) =>

@@ -53,9 +53,11 @@ const ASK = {
   after: 'مَا الَّذِي يَأْتِي بَعْدَهُ؟',
   before: 'مَا الَّذِي يَأْتِي قَبْلَهُ؟',
   same: 'أَيُّهُمَا يُسَاوِيهِ؟',
-  revealPair: 'وَهَذَانِ رَمْزَاهُمَا',
-  revealSpot: 'وَهَذَا مَوْضِعُهُ عَلَى الْخَطّ',
 };
+
+// **وجملتا الكشف ليستا هنا**: «وَهَذَانِ رَمْزَاهُمَا» و«وَهَذَا مَوْضِعُهُ عَلَى الْخَطّ»
+// عرضٌ يُشاهَد لا فعلٌ يُطلَب، فموضعُهما جدولُ `SAY` في `station.js` — وبموضعهما
+// تُشتقّ فئتُهما `modeling` (حكمُ المدير، مراجعة الجلسة ٤ البند ٥).
 
 export const SPOKEN = Object.values(ASK);
 
@@ -496,7 +498,7 @@ function modelOf(station, rnd) {
       hint: 'نَعُدُّهَا وَاحِدَةً وَاحِدَة، مِنَ الأَصْغَرِ إِلَى الأَكْبَر',
       figures: steps.map((n, i) => ({ display: check, count: n, seed: seeds[i] })),
       reveal: {
-        say: ASK.revealPair,
+        say: SAY.revealPair,
         figures: steps.map((n) => ({ display: 'numeral', count: n, seed: next() })),
       },
     };
@@ -515,7 +517,7 @@ function modelOf(station, rnd) {
         { display: check, count: small, seed: next() },
       ],
       reveal: {
-        say: ASK.revealPair,
+        say: SAY.revealPair,
         figures: [
           { display: 'numeral', count: big, seed: next() },
           { display: 'numeral', count: small, seed: next() },
@@ -530,7 +532,7 @@ function modelOf(station, rnd) {
     // **الخطُّ يُعَدّ عليه** (`upTo`): علامةٌ بعد علامةٍ باسمها حتى الموضع المقصود
     figures: [{ display: 'line', count: f.max, seed: next(), upTo: shown }],
     reveal: {
-      say: ASK.revealSpot,
+      say: SAY.revealSpot,
       figures: [{ display: 'numeral', count: shown, seed: next() }],
     },
   };

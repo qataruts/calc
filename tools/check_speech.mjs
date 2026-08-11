@@ -14,14 +14,22 @@
 // ويُطالَب كلُّ نصٍّ مُعلَنٍ بملفٍّ مولَّد **أو** بمكانٍ في قائمة الانتظار — والغيابُ
 // نفسُه صار فشلاً أحمر.
 //
-// وأربعةُ أبواب:
+// وخمسةُ أبواب:
 //   ١) **الإعلان**: كلُّ وحدةٍ تنادي `audio.play` (أو `say`) تُعلن `SPOKEN`.
 //   ٢) **القائمة**: كلُّ نصٍّ مُعلَنٍ له ملفٌّ مولَّد أو مدخلٌ في القائمة، وصيغةُ
 //      المدخل تامّة — ولا مدخلَ في القائمة لا تنطقه وحدة (نصٌّ يُولَّد بلا مستهلك).
-//   ٣) **قيدا المنهج**: **لا رقمَ في نصٍّ منطوق** (ق١ — الرمزُ يُسمّى ولا يُقرأ رسمُه)،
+//   ٣) **الفئةُ تتبع الموضع**: فئةُ كلِّ مدخلٍ **منتظِرٍ** هي المشتقّةُ من موضع نصّه في
+//      الشجرة — لا فئةٌ كُتبت بيد ولا فئةٌ بقيت بعد انتقال النصّ (بابٌ فُتح في الدفعة
+//      الثانية يومَ نُقلت جملُ الكشف الثلاث إلى `SAY`، فكادت تُصرَّف بمسحة تعليمة).
+//   ٤) **قيدا المنهج**: **لا رقمَ في نصٍّ منطوق** (ق١ — الرمزُ يُسمّى ولا يُقرأ رسمُه)،
 //      و**لا معدودٌ مقرونٌ بعدد** (ق٢ — «ثلاث تفاحات» ممنوعةٌ نصّاً).
-//   ٤) **الشكلُ الكامل**: كلُّ حرفٍ يحمل حركتَه (قاعدةُ اقرأ الدائمة) — وإلّا احتمل
+//   ٥) **الشكلُ الكامل**: كلُّ حرفٍ يحمل حركتَه (قاعدةُ اقرأ الدائمة) — وإلّا احتمل
 //      النصُّ قراءتين فأخطأ المولّد وهو لا يدري.
+//
+// **والبابُ الثالث يقرأ اشتقاقَ `queue_texts.mjs` نفسِه** (`--wanted-json`) لا نسخةً
+// ثانيةً عنه: الحارسُ يحكم والأداةُ تُصلح، **والاشتقاقُ واحدٌ لهما** — ومصدران لحقيقةٍ
+// واحدةٍ يفترقان. ومفتاحٌ في `SAY` لا تعرف الأداةُ فئتَه يوقفها، **فيحمرّ هذا البابُ
+// بعلّته** بدل أن يمرّ صامتاً.
 //
 // ————— النومُ الذاتيّ (`docs/SEED.md §٥`) —————
 //
@@ -29,6 +37,8 @@
 // تُعلن `SPOKEN` ولا وحدةَ تنادي `audio.play`) ويستيقظ من تلقائه يومَ تُكتب أولاها.
 
 import { readFileSync, readdirSync, existsSync } from 'node:fs';
+import { spawnSync } from 'node:child_process';
+import { fileURLToPath } from 'node:url';
 
 const APP = new URL('../app/js/', import.meta.url);
 const QUEUE = new URL('./audio_queue.json', import.meta.url);
@@ -97,6 +107,21 @@ export function coverOf(text, banked, entry) {
 }
 
 /**
+ * **الفئةُ تتبع موضعَ النصّ**: مدخلٌ **منتظِرٌ** فئتُه غير المشتقّة يُصرَّف بمسحةِ أداءٍ
+ * ليست له — ويُسمَع في أذن طفل. والمُصرَّفُ (`done`) خارجَ الباب: فئتُه أثرُ ما سُمع،
+ * وتبديلُ الكلمة لا يبدّل صوتاً — إنما يُعاد تصريفُه بـ`--requeue` إن أرادت الأذن.
+ */
+export function categoryDrift(queue, wanted) {
+  const drift = [];
+  for (const entry of queue) {
+    if ((entry.status ?? 'pending') === 'done') continue;
+    const now = wanted.get(entry.text);
+    if (now && now !== entry.category) drift.push({ text: entry.text, was: entry.category, now });
+  }
+  return drift;
+}
+
+/**
  * **لا معدودٌ مقرونٌ بعدد** (ق٢ · `METHOD.md §٨`): «ثَلَاثُ تُفَّاحَاتْ» ممنوعةٌ نصّاً.
  * ويُجرَد باسم العدد متبوعاً بكلمة — لا بمعنى الجملة: لفظُ عددٍ يليه اسمٌ **إشارةٌ
  * كافية** أن يُراجَع النصّ، وهذا حارسٌ عند البوّابة لا مصحّحُ نحو.
@@ -125,6 +150,21 @@ function declaredSpoken() {
 async function spokenOf(file) {
   const mod = await import(new URL(file, APP));
   return Array.isArray(mod.SPOKEN) ? mod.SPOKEN : [];
+}
+
+/**
+ * الاشتقاقُ من الأداة نفسِها (`queue_texts.mjs --wanted-json`) — قراءةٌ لا تكتب شيئاً.
+ * وتوقُّفُ الأداة (مفتاحٌ في `SAY` بلا فئة) **علّةٌ تُنقَل بنصّها** فيحمرّ الباب بها.
+ */
+function derivedCategories() {
+  const tool = fileURLToPath(new URL('./queue_texts.mjs', import.meta.url));
+  const run = spawnSync(process.execPath, [tool, '--wanted-json'], { encoding: 'utf8' });
+  if (run.status !== 0) {
+    return { error: (run.stderr || run.stdout || '').trim().split('\n').slice(0, 3).join(' | ') };
+  }
+  const line = run.stdout.trim().split('\n').reverse().find((l) => l.startsWith('['));
+  if (!line) return { error: 'لا مخرَجَ JSON من queue_texts.mjs --wanted-json' };
+  return { wanted: new Map(JSON.parse(line)) };
 }
 
 async function main() {
@@ -181,6 +221,18 @@ async function main() {
     `وصيغةُ كل مدخلٍ تامّةٌ بفئةٍ من الأربع (${queue.length} مدخلاً)`
     + (broken.length ? ` — معطوب: ${broken.length}` : ''));
 
+  console.log('\n— الفئة: مشتقّةٌ من موضع النصّ لا مكتوبةٌ بيد —');
+  const derived = derivedCategories();
+  if (derived.error) {
+    ok(false, `اشتقاقُ الفئات متعذّر — ${derived.error}`);
+  } else {
+    const drift = categoryDrift(queue, derived.wanted);
+    ok(drift.length === 0,
+      `فئةُ كل مدخلٍ منتظِرٍ هي المشتقّةُ من موضعه (${queue.filter((r) => (r.status ?? 'pending') !== 'done').length} منتظِراً)`
+      + (drift.length ? ` — **منحرف (يُردّ بـ\`queue_texts --retag\`): ${drift
+        .map((d) => `«${d.text}» ${d.was}←${d.now}`).join(' · ')}**` : ''));
+  }
+
   console.log('\n— قيدا المنهج: لا رقمَ منطوق، ولا معدودٌ مقرونٌ بعدد —');
   const digits = unique.filter(hasDigit);
   ok(digits.length === 0,
@@ -227,6 +279,20 @@ function selfTest() {
   check(coverOf('رَائِعْ', bank, { status: 'done' }) === 'مُصرَّفٌ بلا ملف',
     '**ومدخلٌ يقول «صُرِّف» ولا ملفَ له يُمسَك** — الأخطرُ من الغياب');
   check(coverOf('رَائِعْ', bank, undefined) === '', 'ونصٌّ خارج القائمة والبنك لا سترَ له');
+
+  console.log('\n— الفئةُ المنحرفة تُمسَك، والمُصرَّفُ لا يُمَسّ —');
+  const wanted = new Map([['وَهَذَا رَمْزُهَا', 'modeling'], ['خَمْسَةْ', 'number_name']]);
+  const drift = (queue) => categoryDrift(queue, wanted);
+  check(drift([{ text: 'وَهَذَا رَمْزُهَا', category: 'instruction', status: 'pending' }]).length === 1,
+    'منتظِرٌ فئتُه غير المشتقّة يُمسَك (نصٌّ انتقل موضعَه)');
+  check(drift([{ text: 'وَهَذَا رَمْزُهَا', category: 'modeling', status: 'pending' }]).length === 0,
+    'ومَن وافقت فئتُه موضعَه يمرّ');
+  check(drift([{ text: 'وَهَذَا رَمْزُهَا', category: 'instruction', status: 'done' }]).length === 0,
+    '**والمُصرَّفُ خارجَ الباب** — فئتُه أثرُ ما سُمع، وتبديلُها لا يبدّل صوتاً');
+  check(drift([{ text: 'خَمْسَةْ', category: 'number_name' }]).length === 0,
+    'ومدخلٌ بلا حالةٍ يُقرأ منتظِراً ويُقاس');
+  check(drift([{ text: 'نَصٌّ بَائِدْ', category: 'instruction', status: 'pending' }]).length === 0,
+    'وما لا تنطقه الشجرةُ ليس منحرفاً (بابُ البائد يتولّاه)');
 
   console.log('\n— قيدا المنهج يُمسكان —');
   check(hasDigit('اِقْرَأْ ٣') && hasDigit('رَقْم 3'), 'الرقمُ في النصّ المنطوق يُمسَك (مشرقياً ومغربياً)');

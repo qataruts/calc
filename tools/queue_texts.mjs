@@ -1,8 +1,9 @@
 // **مسوِّي القائمة الصوتية** — يقابل ما تنطقه الشجرة بما في `tools/audio_queue.json`:
 //
-//   node tools/queue_texts.mjs                 # عرضُ الناقص والبائد (لا يكتب شيئاً)
+//   node tools/queue_texts.mjs                 # عرضُ الناقص والبائد والمنحرف (لا يكتب)
 //   node tools/queue_texts.mjs --add           # إضافةُ الناقص إلى القائمة
 //   node tools/queue_texts.mjs --prune         # إسقاطُ المنتظِر الذي لم يعد يُنطق
+//   node tools/queue_texts.mjs --retag         # ردُّ فئةِ المنتظِر إلى المشتقّة من موضعه
 //   node tools/queue_texts.mjs --wanted-json   # «المطلوب» JSON (لعدّة الصوت)
 //
 // منسوخٌ ومجرَّدٌ من `read@77a14b3` (`docs/SEED.md §٣`). **وجلساتُ التطوير لا تشغّل
@@ -28,6 +29,18 @@
 // **ولا تُخمَّن فئةٌ البتّة**: الفئةُ تختار **تعليمةَ الأداء** في المولّد، ومسحةٌ خاطئة
 // تُسمع في أذن طفل. فمفتاحٌ جديد في `SAY` لا تعرفه هذه الأداة **يوقفها باسمه** ويُطلب
 // تصنيفُه — وهو أهونُ من أن يُصرَّف احتفالٌ بمسحة تعليمة.
+//
+// ————— والمنحرفُ ثالثُ الثلاثة (الدفعة الثانية) —————
+//
+// كان للأداة بابان: الناقصُ يُضاف والبائدُ يُسقَط. وثالثٌ ظهر يومَ **نُقل نصٌّ من
+// موضعٍ إلى موضع**: «وَهَذَا رَمْزُهَا» انتقلت من وحدة تمارينَ إلى جدول `SAY` بحكم
+// المدير (مراجعة الجلسة ٤ البند ٥) فصارت فئتُها المشتقّة `modeling`، **ومدخلُها في
+// القائمة ما زال يقول `instruction`** — فلا هو ناقصٌ (مصفوفٌ أصلاً) ولا بائدٌ
+// (تنطقه الشجرةُ بعدُ)، ويُصرَّف بمسحةٍ ليست له وأحدٌ لا يدري. فالفئةُ تُشتقّ من
+// الموضع، **والمنتظِرُ يُردّ إلى مشتقّه** (`--retag`)، ولا تُعدَّل فئةٌ بيد.
+//
+// **والمُصرَّفُ لا يُمَسّ**: تغييرُ فئةِ ملفٍّ مولَّدٍ لا يغيّر صوتَه — إنما يُعاد
+// تصريفُه بـ`--requeue` إن أرادت الأذنُ مسحةً أخرى، فيُقاس ما يُسمع لا ما يُكتب.
 
 import { readFileSync, readdirSync, renameSync, writeFileSync, existsSync } from 'node:fs';
 
@@ -45,6 +58,9 @@ const SAY_CATEGORY = {
   withMe: 'modeling',
   alone: 'modeling',
   together: 'modeling',
+  reveal: 'modeling',        // «وَهَذَا رَمْزُهَا» — كشفٌ يُشاهَد لا فعلٌ يُطلَب
+  revealPair: 'modeling',
+  revealSpot: 'modeling',
   bravo: 'celebration',
   great: 'celebration',
 };
@@ -54,7 +70,13 @@ const CATEGORY_ORDER = ['number_name', 'celebration', 'modeling', 'instruction']
 
 const read = (url) => readFileSync(url, 'utf8');
 
-/** كلُّ نصٍّ تُعلنه الشجرة ← فئتُه، بترتيب لقاء الطفل به (الأعدادُ ثم الحلقةُ ثم التعليمات). */
+/**
+ * كلُّ نصٍّ تُعلنه الشجرة ← فئتُه، بترتيب لقاء الطفل به (الأعدادُ ثم الحلقةُ ثم التعليمات).
+ *
+ * **وهي الاشتقاقُ الوحيد**: يقرؤه الحارسُ (`check_speech.mjs`) من `--wanted-json` لا
+ * بنسخةٍ ثانيةٍ عنده — فالحارسُ يحكم والأداةُ تُصلح، **والاشتقاقُ واحدٌ لهما**، ولو
+ * نُسخ لصار لحقيقةٍ واحدةٍ مصدران يفترقان (وهو عينُ ما أُسقط في الدفعة الأولى، البند ٣).
+ */
 async function declaredTexts() {
   const files = readdirSync(APP).filter((f) => f.endsWith('.js') && !ENGINE.has(f));
   const out = new Map();
@@ -128,6 +150,16 @@ if (missing.length) {
   for (const [text, cat] of missing) console.log(`  + ${text}   (${cat})`);
 }
 
+// **المنحرفُ**: مدخلٌ منتظِرٌ فئتُه ليست المشتقّةَ من موضع نصّه اليوم (انظر الرأس).
+// ويحكم به `check_speech.mjs` من هذا الاشتقاق نفسِه (`--wanted-json`) فيحمرّ حتى يُردّ.
+const drift = queue.filter((e) => (e.status ?? 'pending') !== 'done'
+  && wanted.has(e.text) && wanted.get(e.text) !== e.category);
+if (drift.length) {
+  console.log(`\nمنحرفُ الفئة: ${drift.length} مدخلاً منتظِراً فئتُه غير مشتقّةٍ من موضعه`
+    + ' — يُردّ بـ`--retag`:');
+  for (const e of drift) console.log(`  ~ ${e.text}   (${e.category} ← ${wanted.get(e.text)})`);
+}
+
 /**
  * كتابةٌ ذرّية بنمط `mark_done` في المولّد: ملفٌّ مؤقّت ثم استبدال، **وإعادةُ قراءةٍ
  * قُبيل الكتابة** — فالمصرِّف عمليةٌ حيّة قد تُحوِّل مدخلاً إلى `done` بين قراءتنا
@@ -144,6 +176,8 @@ function rewriteQueue(edit) {
 
 /** أولويةُ التصريف: الأعدادُ أولاً ثم التعليماتُ ثم النمذجةُ ثم الاحتفال — كترتيب لقاء الطفل. */
 const PRIORITY = { number_name: 10, instruction: 20, modeling: 30, celebration: 40 };
+/** ما ردّته الأذنُ يتقدّم الصفَّ (`--requeue` في المصرِّف) — ولا تخفضه إعادةُ تصنيف. */
+const URGENT_PRIORITY = 10;
 
 if (process.argv.includes('--add') && missing.length) {
   const added = missing.map(([text, category]) => ({
@@ -159,6 +193,27 @@ if (process.argv.includes('--add') && missing.length) {
     return [...disk, ...added.filter((e) => !known.has(e.text))];
   });
   console.log(`\nأُضيف ${added.length} نصاً إلى tools/audio_queue.json`);
+}
+
+// ————————————— الردّ: فئةُ المنتظِر تتبع موضعَ نصّه —————————————
+//
+// **والأولويةُ تتبع الفئة**: ترتيبُ التصريف «كترتيب لقاء الطفل»، فنصٌّ صار نمذجةً
+// يأخذ أولويتَها. وما رُفعت أولويتُه بيدٍ لأمرٍ عارض (`--requeue` = ١٠) **لا يُخفَض**:
+// إصلاحُ عيبٍ مسموع يتقدّم الصفَّ ولو تغيّرت فئتُه.
+
+if (process.argv.includes('--retag')) {
+  if (!drift.length) {
+    console.log('\nالردّ: لا مدخلَ منتظِراً فئتُه غير مشتقّةٍ من موضعه — القائمة مستوية.');
+  } else {
+    const fixed = new Map(drift.map((e) => [e.text, wanted.get(e.text)]));
+    rewriteQueue((disk) => disk.map((e) => {
+      const cat = (e.status ?? 'pending') !== 'done' ? fixed.get(e.text) : null;
+      if (!cat) return e;
+      const urgent = (e.priority ?? 100) <= URGENT_PRIORITY;
+      return { ...e, category: cat, priority: urgent ? e.priority : (PRIORITY[cat] ?? 100) };
+    }));
+    console.log(`\nرُدَّ ${fixed.size} مدخلاً إلى فئته المشتقّة في tools/audio_queue.json`);
+  }
 }
 
 // ————————————————— التقليم: إسقاطُ المنتظِر الذي لم يعد يُنطق —————————————————

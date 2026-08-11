@@ -229,103 +229,116 @@
     "category": "number_name",
     "requestedBy": "session-4",
     "priority": 10,
-    "status": "pending",
-    "doneAt": null
+    "status": "done",
+    "doneAt": "2026-08-11",
+    "model": "gemini-3.1-flash-tts-preview"
   },
   {
     "text": "أَيُّهُمَا أَكْبَرْ؟",
     "category": "instruction",
     "requestedBy": "session-4",
     "priority": 20,
-    "status": "pending",
-    "doneAt": null
+    "status": "done",
+    "doneAt": "2026-08-11",
+    "model": "gemini-3.1-flash-tts-preview"
   },
   {
     "text": "أَيُّهُمَا أَصْغَرْ؟",
     "category": "instruction",
     "requestedBy": "session-4",
     "priority": 20,
-    "status": "pending",
-    "doneAt": null
+    "status": "done",
+    "doneAt": "2026-08-11",
+    "model": "gemini-3.1-flash-tts-preview"
   },
   {
     "text": "أَيْنَ يَقَعْ؟",
     "category": "instruction",
     "requestedBy": "session-4",
     "priority": 20,
-    "status": "pending",
-    "doneAt": null
+    "status": "done",
+    "doneAt": "2026-08-11",
+    "model": "gemini-3.1-flash-tts-preview"
   },
   {
     "text": "رَتِّبْ مِنَ الْأَصْغَرِ إِلَى الْأَكْبَرْ",
     "category": "instruction",
     "requestedBy": "session-4",
     "priority": 20,
-    "status": "pending",
-    "doneAt": null
+    "status": "done",
+    "doneAt": "2026-08-11",
+    "model": "gemini-3.1-flash-tts-preview"
   },
   {
     "text": "مَا الَّذِي يَأْتِي بَعْدَهُ؟",
     "category": "instruction",
     "requestedBy": "session-4",
     "priority": 20,
-    "status": "pending",
-    "doneAt": null
+    "status": "done",
+    "doneAt": "2026-08-11",
+    "model": "gemini-3.1-flash-tts-preview"
   },
   {
     "text": "مَا الَّذِي يَأْتِي قَبْلَهُ؟",
     "category": "instruction",
     "requestedBy": "session-4",
     "priority": 20,
-    "status": "pending",
-    "doneAt": null
+    "status": "done",
+    "doneAt": "2026-08-11",
+    "model": "gemini-3.1-flash-tts-preview"
   },
   {
     "text": "أَيُّهُمَا يُسَاوِيهِ؟",
     "category": "instruction",
     "requestedBy": "session-4",
     "priority": 20,
-    "status": "pending",
-    "doneAt": null
+    "status": "done",
+    "doneAt": "2026-08-11",
+    "model": "gemini-3.1-flash-tts-preview"
   },
   {
     "text": "وَهَذَانِ رَمْزَاهُمَا",
-    "category": "instruction",
+    "category": "modeling",
     "requestedBy": "session-4",
-    "priority": 20,
-    "status": "pending",
-    "doneAt": null
+    "priority": 30,
+    "status": "done",
+    "doneAt": "2026-08-11",
+    "model": "gemini-3.1-flash-tts-preview"
   },
   {
     "text": "وَهَذَا مَوْضِعُهُ عَلَى الْخَطّ",
-    "category": "instruction",
+    "category": "modeling",
     "requestedBy": "session-4",
-    "priority": 20,
-    "status": "pending",
-    "doneAt": null
+    "priority": 30,
+    "status": "done",
+    "doneAt": "2026-08-11",
+    "model": "gemini-3.1-flash-tts-preview"
   },
   {
     "text": "أَيُّ رَمْزٍ لَهَا؟",
     "category": "instruction",
     "requestedBy": "session-4",
     "priority": 20,
-    "status": "pending",
-    "doneAt": null
+    "status": "done",
+    "doneAt": "2026-08-11",
+    "model": "gemini-3.1-flash-tts-preview"
   },
   {
     "text": "أَيْنَ هَذَا الْعَدَدْ؟",
     "category": "instruction",
     "requestedBy": "session-4",
     "priority": 20,
-    "status": "pending",
-    "doneAt": null
+    "status": "done",
+    "doneAt": "2026-08-11",
+    "model": "gemini-3.1-flash-tts-preview"
   },
   {
     "text": "وَهَذَا رَمْزُهَا",
-    "category": "instruction",
+    "category": "modeling",
     "requestedBy": "session-4",
-    "priority": 20,
-    "status": "pending",
-    "doneAt": null
+    "priority": 30,
+    "status": "done",
+    "doneAt": "2026-08-11",
+    "model": "gemini-3.1-flash-tts-preview"
   }
 ]
