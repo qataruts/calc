@@ -269,6 +269,22 @@ function paintDots(figure) {
 }
 
 /**
+ * **موضعُ عنصرٍ نسبةً من صندوق الشكل** — يستعمله رسمُ عناصر عالم الطفل **وطبقةُ اللمس**
+ * في شاشات «المس وعُدّ» معاً (الجلسة ٣).
+ *
+ * وعلّةُ إخراجه من `paintObjects`: لو حسبت الشاشةُ مواضعَ أهدافِ اللمس بنفسها لصار
+ * للعنصر موضعان — واحدٌ يُرى وواحدٌ يُلمَس — فيفترقان يومَ يتحرّك أحدهما، ويلمس الطفلُ
+ * فراغاً. **والمصيِّر واحد** (`METHOD.md §١٠.٢`): من رسم العنصرَ يقول أين وضعه.
+ */
+export function spotStyle(mark, view) {
+  return {
+    '--x': `${((mark.x - mark.r) / view.w) * 100}%`,
+    '--y': `${((mark.y - mark.r) / view.h) * 100}%`,
+    '--d': `${((2 * mark.r) / view.w) * 100}%`,
+  };
+}
+
+/**
  * عناصرُ عالم الطفل: كلُّ عنصرٍ **من المُصيِّر الواحد** (`faceEl` في `ui.js`) — فلا
  * موضعَ ثانٍ في التطبيق يحوّل رمزاً إلى صورة، ولا محرفَ يُسلَّم لخطّ النظام. ومواضعُها
  * نسبٌ مئوية من الصندوق، فتتبع مقاسَه أيّاً كان (`--unit`) بالهندسة نفسِها.
@@ -278,9 +294,9 @@ function paintObjects(figure) {
   for (const m of figure.marks) {
     const mark = faceEl(figure.glyph, 'fig-mark');
     mark.dataset.mark = '';
-    mark.style.setProperty('--x', `${((m.x - m.r) / figure.view.w) * 100}%`);
-    mark.style.setProperty('--y', `${((m.y - m.r) / figure.view.h) * 100}%`);
-    mark.style.setProperty('--d', `${((2 * m.r) / figure.view.w) * 100}%`);
+    for (const [key, value] of Object.entries(spotStyle(m, figure.view))) {
+      mark.style.setProperty(key, value);
+    }
     el.append(mark);
   }
   return el;

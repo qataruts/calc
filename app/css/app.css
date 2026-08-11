@@ -980,9 +980,191 @@ button {
   border-color: color-mix(in srgb, #fff 55%, transparent);
 }
 
+/* ————— حلقةُ المحطة وشاشاتُ التمارين (الجلسة ٣ — `METHOD.md §٤`) —————
+
+   **ولا رقمَ في هذا القسم كلِّه**: خطواتُ الحلقة **أسماؤها** لا أعدادُها، وجولاتُها
+   **خرزاتٌ تمتلئ** لا أرقام — فلا رمزَ عدديّ على شاشة المرحلة ١ (`METHOD.md §٣`)،
+   ولا يقع بصرُ الطفل على رقمٍ قبل أن يتقن كمَّه. ويحرسه فحصٌ في `browser_test.html`. */
+
+.steps {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: .35rem .9rem;
+  margin: 0 0 1rem;
+  padding: 0;
+  list-style: none;
+  color: var(--ink-soft);
+  font-size: .9rem;
+}
+
+.step { display: inline-flex; align-items: center; gap: .35rem; opacity: .5; }
+.step--now { opacity: 1; color: var(--ink); font-weight: 700; }
+.step--done { opacity: .85; color: var(--ok-text); }
+
+.step-dot {
+  display: grid;
+  place-items: center;
+  width: 1.5rem;
+  height: 1.5rem;
+  border-radius: 50%;
+  background: color-mix(in srgb, var(--ink) 7%, var(--card));
+  font-size: .8rem;
+  line-height: 1;
+}
+
+.step--now .step-dot { background: color-mix(in srgb, var(--accent) 20%, var(--mix)); }
+.step--done .step-dot { background: color-mix(in srgb, var(--ok) 18%, var(--mix)); }
+
+/* خرزاتُ الجولات: امتلاءٌ يُرى بلا رقمٍ يُقرأ */
+.beads {
+  display: flex;
+  justify-content: center;
+  gap: .45rem;
+  margin: 0 0 1.1rem;
+  padding: 0;
+  list-style: none;
+}
+
+.bead {
+  width: .75rem;
+  height: .75rem;
+  border-radius: 50%;
+  background: color-mix(in srgb, var(--ink) 12%, var(--card));
+}
+
+.bead--now { background: var(--accent); transform: scale(1.35); }
+.bead--done { background: var(--ok); }
+
+/* ————— ساحةُ الكمية: الشكلُ وغطاءُ الخطف —————
+
+   **وحدةُ الرسم تختلف بالدور لا بالنمط** (`DESIGN.md §٥`): بطلُ الشاشة أكبرُ من
+   بطاقة الاختيار، والملموسُ أكبرُهما — ويبقى **حجمُ العنصر واحداً داخل الدور الواحد**
+   في كل الأنماط، فتقع المقارنةُ على العدد لا على المساحة. */
+
+.q-figure { position: relative; display: inline-block; max-width: 100%; }
+
+.q-stage {
+  position: relative;
+  display: inline-block;
+  max-width: 100%;
+  margin: .25rem 0 1rem;
+}
+
+.q-figure > .figure { --unit: 1.15px; }         /* بطلُ الشاشة */
+.q-choices .figure { --unit: .52px; }           /* بطاقةُ اختيار */
+.q-pair .q-figure > .figure { --unit: .78px; }  /* طرفا المقارنة */
+.q-model > .figure { --unit: .72px; }           /* بطاقةُ النموذج في «أعطني» */
+.q-touch > .figure { --unit: 1.55px; }          /* ما يُلمَس ويُعَدّ بالإصبع */
+
+/* غطاءُ الخطف: ورقةٌ هادئة تحلّ محلّ الكمية — **لا عدّادَ ولا شريطَ يفرغ**
+   (`METHOD.md §٢.٧`): الخطفُ يمنع العدَّ فيُجبِر التقدير، وليس سباقاً مع وقت. */
+.q-cover {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  border-radius: 26px;
+  background: var(--card);
+  box-shadow: inset 0 0 0 3px var(--line);
+  color: color-mix(in srgb, var(--accent) 55%, var(--ink-soft));
+  font-size: 2.6rem;
+}
+
+.q-cover .ui-icon { width: 1em; height: 1em; }
+
+/* بطاقاتُ الاختيار — **كمٌّ لا رمز**: لا رقمَ تحتها ولا فيها */
+.q-choices {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: .75rem;
+  margin-top: .5rem;
+}
+
+.qcard {
+  display: grid;
+  place-items: center;
+  min-width: var(--tap);
+  min-height: var(--tap);
+  padding: .55rem;
+  border-radius: 20px;
+  background: var(--card);
+  border: 3px solid color-mix(in srgb, var(--accent) 25%, var(--mix));
+  box-shadow: var(--shadow);
+  transition: transform .15s ease, border-color .2s ease, background .2s ease;
+}
+
+.qcard:active { transform: scale(.96); }
+.qcard.good { background: color-mix(in srgb, var(--ok) 14%, var(--mix)); border-color: var(--ok); }
+.qcard.bad { background: color-mix(in srgb, var(--err) 12%, var(--mix)); border-color: var(--err); }
+
+/* «أيُّهما أكثر» — بطاقتان متجاورتان بمقاسٍ واحد */
+.q-pair {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  align-items: center;
+  gap: .9rem;
+  margin-bottom: .5rem;
+}
+
+.q-side { padding: .35rem; }
+.q-tools { gap: .5rem; margin-top: .35rem; }
+.q-tools .btn { min-height: 3.5rem; min-width: 6rem; }
+.same-btn { max-width: 22rem; margin: 0 auto; min-height: 3.5rem; }
+
+.q-give { display: flex; flex-wrap: wrap; justify-content: center; align-items: center; gap: 1rem; }
+
+/* ————— طبقةُ اللمس: زرٌّ حقيقيّ فوق كل عنصرٍ مرسوم —————
+
+   موضعُه من `spotStyle` في المصيِّر نفسِه، فلا يُحسَب موضعُ العنصر مرّتين. وهو
+   `<button>` لا مستمعٌ على شكل: بذلك يجرده **حارسُ هدف اللمس** من تلقائه، وتصله
+   لوحةُ المفاتيح كما يصله الإصبع. */
+
+.fig-taps { position: absolute; inset: 0; }
+
+.fig-tap {
+  position: absolute;
+  left: var(--x);
+  top: var(--y);
+  width: var(--d);
+  aspect-ratio: 1;
+  padding: 0;
+  border-radius: 50%;
+  background: transparent;
+  border: 3px solid transparent;
+  transition: border-color .18s ease, transform .18s ease;
+}
+
+.fig-tap:active { transform: scale(.92); }
+.fig-tap.is-counted { border-color: var(--ok); }
+.fig-tap.is-picked { border-color: var(--star); background: color-mix(in srgb, var(--star) 14%, transparent); }
+
+/* أثرُ العدّ على العنصر المرسوم نفسِه — **لونٌ ومعه حجم**: اللون لا يحمل معنىً وحدَه
+   (عمى الألوان، `DESIGN.md §٢`)، فالمعدودُ يكبر قليلاً كما يكبر تحت الإصبع. */
+.fig-dot.is-counted {
+  fill: var(--ok);
+  transform-box: fill-box;
+  transform-origin: center;
+  transform: scale(1.12);
+}
+
+.fig-mark.is-counted {
+  border-radius: 50%;
+  background: color-mix(in srgb, var(--ok) 20%, transparent);
+  box-shadow: 0 0 0 3px var(--ok);
+  transform: scale(1.08);
+}
+
 /* ————— الشاشات الضيقة ————— */
 
 @media (max-width: 26rem) {
   :root { --node-size: 5.4rem; }
   .station-meta { font-size: .85rem; }
+  .q-figure > .figure { --unit: .8px; }
+  .q-choices .figure { --unit: .4px; }
+  .q-pair .q-figure > .figure { --unit: .55px; }
+  .q-model > .figure { --unit: .5px; }
+  .q-touch > .figure { --unit: 1.05px; }
 }

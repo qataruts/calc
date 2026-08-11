@@ -216,9 +216,14 @@ if (!types.length) {
 
   console.log('\n— المراجعة: لكل نوع قياسٍ تمرينُه —');
   const kinds = [...new Set(Object.values(STATIONS).flatMap((s) => s.kinds || []))];
-  // **درجتان تنامان وتستيقظان ذاتياً** (نظيرُ `test_nodes.mjs`): المفاتيحُ تكتبها
-  // الجلسة ١، و**بانيها** تحقنه الجلسة ٣ بـ`setBuilders`. وقبل الحقن لا تستطيع أيُّ
-  // مهارةٍ أن تُنتج تمرينَها — فالمطالبةُ سابقةٌ لأوانها، والشرطُ **مجرودٌ لا مضبوط**.
+  // **والنومُ بالنوع لا بالجميع** (إصلاحُ الجلسة ٣ — `SEED.md §٩`، نظيرُ ما وقع
+  // لـ`test_nodes` في الجلسة ١): أنواعُ التمارين الخمسةَ عشرَ تُكتب شاشاتُها في **خمس
+  // جلسات**، فمطالبةُ الجميع يومَ يُحقَن أوّلُ بانٍ تُسقِط الجلسةَ الثالثة بذنب
+  // السابعة. والشرطُ الصحيحُ شرطُ بابِ الشيفرة نفسِه: **نوعُ تمرينٍ لا ملفَّ لأيّ
+  // شاشةٍ تدرّسه بعد** نائمٌ، وما وُجد ملفُّ شاشته **يُطالَب فوراً** — والجردُ يجيب،
+  // لا رايةٌ تُضبط بيد.
+  const owners = (kind) => Object.values(STATIONS)
+    .filter((s) => (s.kinds || []).includes(kind));
   const injectors = screenFiles.filter((f) => /setBuilders\s*\(/.test(src(f)));
   if (!kinds.length) {
     dormant('لا نوعَ قياسٍ مُعلَناً بعد (الجلسة ١ تكتب المفاتيح، والجلسة ٣ بانيَها)');
@@ -226,9 +231,19 @@ if (!types.length) {
     dormant(`${kinds.length} نوعَ قياسٍ مُعلَناً، ولا وحدةَ تمارينَ تحقن بانيَها بعد `
       + '(`setBuilders` — الجلسة ٣ تكتب أولاها)');
   } else {
+    // **تُحمَّل وحداتُ التمارين كلُّها**: هي التي تسجّل بانِيَ كل نوع، فبلا تحميلها
+    // يُقاس الهيكلُ فارغاً فيُقال «لا تمرين» وفي الشجرة تمرين. وتحميلُها هنا يُثبت
+    // معه **عقدَ الوحدة الخالصة**: تُستورَد في node بلا متصفّح (`check_range.py`).
+    for (const file of screenFiles) await import(new URL(file, APP));
     const review = await import(new URL('review.js', APP));
     const { seeded } = await import(new URL('ui.js', APP));
     for (const kind of kinds) {
+      const waiting = owners(kind).every((s) => !has(s.file));
+      if (waiting) {
+        dormant(`[${kind}] لا شاشةَ تدرّسه بعد `
+          + `(${[...new Set(owners(kind).map((s) => s.file))].join('، ')})`);
+        continue;
+      }
       const due = [{ kind, box: 0, wrong: 1, concept: 'probe', range: 'probe' }];
       const built = [1, 5, 11, 23].some((seed) =>
         review.sessionItems(due, review.SESSION_SIZE, seeded(seed))

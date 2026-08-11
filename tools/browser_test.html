@@ -19,6 +19,21 @@
   const out = [];
   const ok = (cond, msg) => out.push({ ok: !!cond, msg });
 
+  /* **عطبُ الصفحة يُبلَّغ ولا يصمت**: كان خطأٌ واحد يوقف هذا النصّ فلا تصل نتيجةٌ
+     أصلاً، فيُقرأ «لم تصل نتيجة» بطءَ جهازٍ أو قِصَرَ مهلة — وهو عينُ الالتباس الذي
+     وُجد له `--self-test` في `browser_test.py`. فما مضى من الفحوص يُرسَل، ومعه العطبُ
+     نفسُه فحصاً أحمر باسمه. */
+  const report = (rows) => fetch('/result', { method: 'POST', body: JSON.stringify(rows) });
+
+  /* **والتعلّقُ يُبلَّغ كما يُبلَّغ العطب**: انتظارُ حدثٍ لا يجيء يوقف النصَّ بلا خطأ،
+     فلا يصل شيء. فمهلةٌ حارسة ترسل ما تمّ ومعه سطرٌ أحمر يسمّي التعلّق — «لم تصل
+     نتيجة» لا يجوز أن يكون آخرَ ما نعرف. */
+  const watchdog = setTimeout(() => {
+    report([...out, { ok: false, msg: 'تعلّقت صفحةُ الفحص قبل تمامها (انتظارٌ لم ينتهِ)' }]);
+  }, 130000);
+
+  try {
+
   const frame = document.getElementById('app');
   const ready = new Promise((r) => frame.addEventListener('load', r, { once: true }));
   await ready;
@@ -204,7 +219,158 @@
   const gover = gdoc.documentElement.scrollWidth - gwin.innerWidth;
   ok(gover <= 0, `ولا فائضَ أفقيّ في لوح المصيِّر (${gover}px)`);
 
-  await fetch('/result', { method: 'POST', body: JSON.stringify(out) });
+  /* ————— ١٠) شاشاتُ المحطات: المرحلتان ١–٢ (METHOD §٤ — الجلسة ٣) —————
+
+     ثلاثةُ عهودٍ لا يُثبتها إلا متصفّح: **صفرُ رمزٍ عدديّ** على شاشة المرحلة ١،
+     و**التناظرُ الفرديّ مفروضٌ بنيوياً** (لمستان على عنصرٍ واحد لا تُحتسبان مرّتين)،
+     و**الخطأُ يُعَدّ أمامه ولا ينقل**. وتُساق الشاشاتُ بـ`?preview=1` — يفتح القفلَ
+     ولا يكتب تقدّماً، فلا يبقى في الجهاز أثرُ اختبار. */
+
+  const DIGITS = /[0-9٠-٩]/g;
+  /* **وسمٌ يميّز كل سَوقة**: إسنادُ `src` يختلف عن سابقه بالمقطع (`#`) وحدَه **لا
+     يُطلِق `load`** — ينتقل المستندُ في مكانه فينتظر الفحصُ حدثاً لا يجيء، وتنتهي
+     المهلةُ صامتة. فيُزاد وسمٌ في الاستعلام: تحميلٌ كاملٌ في كل مرة. */
+  let visit = 0;
+  const open = async (hash) => {
+    frame.src = `/?preview=1&v=${++visit}${hash}`;
+    await new Promise((r) => frame.addEventListener('load', r, { once: true }));
+    await new Promise((r) => setTimeout(r, 900));
+    return frame.contentDocument;
+  };
+  const until = async (doc, test, ms = 9000) => {
+    for (let waited = 0; waited < ms; waited += 120) {
+      const found = test(doc);
+      if (found) return found;
+      await new Promise((r) => setTimeout(r, 120));
+    }
+    return null;
+  };
+  const shownIn = (el) => (el ? el.innerText || '' : '');
+  const drawnOf = (el) => Number(el.querySelector('.figure')?.dataset.drawn);
+  const beadNow = (doc) => [...doc.querySelectorAll('.bead')].findIndex((b) => b.classList.contains('bead--now'));
+
+  // ————— أ) «كم ترى؟» ١–٢ — أوّلُ محطةٍ في الرحلة —————
+  let sdoc = await open('#/subitize/two');
+  const card1 = sdoc.querySelector('main.screen-card');
+  ok(sdoc.querySelector('.station-screen') && sdoc.querySelectorAll('.step').length === 3,
+    `محطةُ «كم ترى؟» تفتح بحلقتها الثلاثية (${[...sdoc.querySelectorAll('.step-name')]
+      .map((s) => s.textContent).join(' ← ') || 'لا خطوات'})`);
+
+  // **صفرُ رمزٍ عدديّ في المرحلة ١** — لا مشرقيّ ولا لاتينيّ، لا في خطوةٍ ولا عدّاد
+  const digits1 = [...new Set(shownIn(card1).match(DIGITS) || [])];
+  ok(digits1.length === 0,
+    `ولا رمزَ عدديّ واحد على شاشتها (المرحلة ١: كمياتٌ وأصواتٌ فقط)`
+    + (digits1.length ? ` — وُجد: ${digits1.join('، ')}` : ''));
+
+  // خطوةُ «شاهِد»: تُعَدّ الكميةُ أمامه عنصراً عنصراً ثم يظهر «تابع»
+  const counted = await until(sdoc, (d) => d.querySelectorAll('.q-stage .is-counted').length || null);
+  ok(counted > 0, `وخطوةُ «شاهِدْ» تَعُدُّ الكميةَ أمامه (${counted || 0} عنصراً مُعلَّماً)`);
+  const goOn = await until(sdoc, (d) => d.querySelector('.next'));
+  goOn?.click();
+
+  // «جرِّب معي»: بطاقاتُ **كمٍّ** لا أرقام
+  const cards = await until(sdoc, (d) => (d.querySelectorAll('.qcard').length ? [...d.querySelectorAll('.qcard')] : null));
+  ok(cards && cards.length >= 2 && cards.every((c) => c.querySelector('.figure [data-mark]')),
+    `والجوابُ بطاقاتُ كمّ لا رمز (${cards ? cards.length : 0} بطاقة، كلٌّ فيها كميةٌ مرسومة)`);
+  const digits2 = [...new Set(shownIn(sdoc.querySelector('main.screen-card')).match(DIGITS) || [])];
+  ok(digits2.length === 0,
+    `ولا رقمَ على بطاقةٍ ولا تحتها${digits2.length ? ` — وُجد: ${digits2.join('، ')}` : ''}`);
+
+  // **الخطأ لا ينقل، وتُعَدّ الكميةُ أمامه** (METHOD §٤)
+  const want = drawnOf(sdoc.querySelector('.q-stage'));
+  const right = cards.find((c) => drawnOf(c) === want);
+  const wrong = cards.find((c) => c !== right);
+  const beadBefore = beadNow(sdoc);
+  wrong?.click();
+  const marked = await until(sdoc, (d) => d.querySelectorAll('.q-stage .is-counted').length >= want || null);
+  ok(marked && beadNow(sdoc) === beadBefore,
+    'والخيارُ الخاطئ لا ينقل — تُعَدّ الكميةُ أمامه عنصراً عنصراً ثم يحاول ثانية');
+
+  // الصواب ينقل — وبعد جولتَي العون تبدأ «وحدك» بالخطف
+  await until(sdoc, (d) => !d.querySelector('.qcard.bad'));
+  right?.click();
+  const cards2 = await until(sdoc, (d) => (beadNow(d) === 1 ? [...d.querySelectorAll('.qcard')] : null));
+  ok(cards2 && cards2.length > 0, 'والصوابُ ينقل إلى الجولة التالية');
+  const want2 = drawnOf(sdoc.querySelector('.q-stage'));
+  cards2?.find((c) => drawnOf(c) === want2)?.click();
+
+  /* **الخطفُ طبيعةُ تمرينٍ لا مؤقّتُ ضغط** (METHOD §٢.٧): تُغطّى الكميةُ بعد لحظة،
+     ومعها زرُّ إعادةٍ **بلا حدٍّ ولا احتساب** — ولا عدّادَ ينزل ولا شريطَ يفرغ. */
+  const cover = await until(sdoc, (d) => {
+    const c = d.querySelector('.q-cover');
+    return c && !c.hidden ? c : null;
+  });
+  const replay = [...sdoc.querySelectorAll('.station-body button')]
+    .find((b) => b.textContent.includes('أَعِدِ الْعَرْض'));
+  ok(!!cover && !!replay,
+    'و«وحدك» تخطف الكميةَ ثم تغطّيها، ومعها زرُّ إعادةِ عرضٍ بلا حدّ');
+  ok(!sdoc.querySelector('progress, .countdown, .timer'),
+    'ولا عدّادَ ينزل ولا شريطَ يفرغ (لا مؤقّتَ ضغطٍ في التطبيق)');
+
+  /* **قابليةُ الاجتياز تُثبَت بالاجتياز لا بالدعوى** (معيارُ قبول الجلسة ٣): تُساق
+     المحطةُ إلى آخرها لمساً — شاهِدْ ثم جرِّبْ معي ثم وحدك — ويُقابَل الجوابُ بما رسمه
+     المصيِّرُ في كل جولة، حتى يقع الاحتفالُ وتُكتب النجمة. فلو تعلّقت حلقةٌ في موضعٍ
+     ما بقي الطفلُ فيه، ظهر ذلك هنا لا في جهازه. */
+  for (let step = 0; step < 40 && !sdoc.querySelector('.celebrate'); step++) {
+    const cardsNow = [...sdoc.querySelectorAll('.qcard')];
+    const stageNow = sdoc.querySelector('.q-stage');
+    const onward = sdoc.querySelector('.station-body .next');
+    if (cardsNow.length && stageNow) {
+      cardsNow.find((c) => drawnOf(c) === drawnOf(stageNow))?.click();
+    } else if (onward) {
+      onward.click();
+    }
+    await new Promise((r) => setTimeout(r, 520));
+  }
+  const stars = sdoc.querySelectorAll('.big-stars .on').length;
+  ok(!!sdoc.querySelector('.celebrate') && stars > 0,
+    `والمحطةُ تُجتاز كاملةً لمساً حتى الاحتفال والنجوم (${stars} نجمة)`);
+  ok(sdoc.querySelector('.step--done') && !sdoc.querySelector('.step--now'),
+    'وخطواتُ الحلقة الثلاث كلُّها مُنجَزة عند الختام');
+
+  // ————— ب) «المس وعُدّ» — التناظرُ الفرديّ مفروضٌ بنيوياً —————
+  sdoc = await open('#/count/three');
+  const digits3 = [...new Set(shownIn(sdoc.querySelector('main.screen-card')).match(DIGITS) || [])];
+  ok(digits3.length === 0,
+    `ومحطةُ «المس وعُدّ» بلا رمزٍ عدديّ كذلك (المرحلة ٢ قبل الرموز)`
+    + (digits3.length ? ` — وُجد: ${digits3.join('، ')}` : ''));
+
+  await until(sdoc, (d) => d.querySelector('.next'));
+  sdoc.querySelector('.next')?.click();
+
+  const taps = await until(sdoc, (d) => (d.querySelectorAll('.fig-tap').length
+    ? [...d.querySelectorAll('.fig-tap')] : null));
+  const marks = sdoc.querySelectorAll('.q-touch [data-mark]').length;
+  ok(taps && taps.length === marks && marks > 0,
+    `ولكلِّ عنصرٍ مرسومٍ هدفُ لمسٍ واحد (${taps ? taps.length : 0} زرّاً لِـ${marks} عنصراً)`);
+
+  const tiny = (taps || []).map((t) => t.getBoundingClientRect())
+    .filter((r) => Math.min(r.width, r.height) < 40);
+  ok(tiny.length === 0,
+    `وكلُّ عنصرٍ يُعَدّ يبلغ هدفَ اللمس (أصغرُها ${(taps || []).length
+      ? Math.round(Math.min(...taps.map((t) => t.getBoundingClientRect().width))) : 0}px)`);
+
+  // **لمستان على عنصرٍ واحد لا تُحتسبان مرّتين** — امتناعٌ في البنية لا تحقّقٌ بعده
+  taps[0].click();
+  taps[0].click();
+  await new Promise((r) => setTimeout(r, 200));
+  const once = sdoc.querySelectorAll('.fig-tap[disabled]').length;
+  ok(once === 1 && taps[0].disabled,
+    `والتناظرُ الفرديّ مفروضٌ بنيوياً: لمستان على عنصرٍ واحد عَدَّتاه مرّةً (${once})`);
+
+  // إتمامُ العدّ ← سؤالُ **العدديّة** بجوابٍ كمّيّ لا رمزيّ
+  for (const tap of taps.slice(1)) tap.click();
+  const answer = await until(sdoc, (d) => (d.querySelectorAll('.qcard').length
+    ? [...d.querySelectorAll('.qcard')] : null));
+  ok(answer && answer.length >= 2 && answer.every((c) => c.querySelector('.figure [data-mark]')),
+    `وبعد العدّ يُسأل «كم صارت كلها؟» وجوابُه بطاقةُ كمّ (${answer ? answer.length : 0} بطاقة)`);
+
+  } catch (err) {
+    ok(false, `عطبٌ في صفحة الفحص: ${(err && (err.stack || err.message)) || err}`);
+  }
+
+  clearTimeout(watchdog);
+  await report(out);
 </script>
 </body>
 </html>

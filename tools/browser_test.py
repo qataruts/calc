@@ -21,6 +21,7 @@
 import argparse
 import http.server
 import json
+import re
 import shutil
 import socketserver
 import subprocess
@@ -108,8 +109,22 @@ def make_server(port: int, results: list):
         def log_message(self, *a):
             pass
 
-    socketserver.TCPServer.allow_reuse_address = True
-    return socketserver.TCPServer(("127.0.0.1", port), Handler)
+    class Quiet(socketserver.TCPServer):
+        allow_reuse_address = True
+
+        def handle_error(self, request, client_address):
+            """المتصفّحُ يُقتل وسط نقلِ ملفّ فينكسر الأنبوب — **ضجيجٌ لا عطب**.
+
+            وأثرُه ليس جمالياً: أثرُ مكدَّسٍ من عشرين سطراً يطبعه الخادمُ فوق تقرير
+            الفحص يدفع القارئَ إلى تخطّي المخرَج، فيمرّ فشلٌ حقيقيّ تحت الضجيج.
+            وما سوى انكسارِ الأنبوب يبقى معروضاً كما كان.
+            """
+            kind = sys.exc_info()[0]
+            if kind and issubclass(kind, (BrokenPipeError, ConnectionResetError)):
+                return
+            super().handle_error(request, client_address)
+
+    return Quiet(("127.0.0.1", port), Handler)
 
 
 def run_chrome(url: str, profile: Path, extra: list, show: bool):
@@ -235,6 +250,24 @@ def device_main(args) -> int:
     return 1 if fails else 0
 
 
+SCRIPT_RE = re.compile(r'<script type="module">(.*?)</script>', re.S)
+
+
+def script_parses(html: str) -> tuple:
+    """أيُحلَّل نصُّ الوحدة في صفحة الفحص؟ — بـ`node --check` بلا متصفّحٍ ولا شبكة."""
+    scripts = SCRIPT_RE.findall(html)
+    if not scripts:
+        return True, ""            # صفحةٌ بلا وحدة: لا شيء يُحلَّل
+    for body in scripts:
+        run = subprocess.run(["node", "--input-type=module", "--check"],
+                             input=body, capture_output=True, text=True)
+        if run.returncode != 0:
+            first = next((ln.strip() for ln in run.stderr.splitlines()
+                          if "Error" in ln), run.stderr.strip()[:120])
+            return False, first
+    return True, ""
+
+
 def self_test() -> int:
     """بلا Chrome ولا شبكة: **العدّةُ نفسُها** — أصفحاتُها موجودةٌ وموصولةٌ وتردّ؟
 
@@ -252,6 +285,12 @@ def self_test() -> int:
                        f"  و`{route}` تُرسِل نتيجتَها إلى `/result` (وإلا انتهت المهلةُ صامتة)"))
         checks.append(('src="/"' in text,
                        f"  و`{route}` تسوق التطبيقَ نفسَه من الخادم لا نسخةً منه"))
+        # **وتُحلَّل**: خطأُ صياغةٍ واحد في نصّ الصفحة يمنع تشغيلَ **كل** فحوصها بلا
+        # أثر — لا خطأ في الطرفية ولا نتيجةٌ في الخادم، فيُقرأ ذلك بطءَ جهازٍ أو قِصَرَ
+        # مهلة. وثمنُ كشفِه هنا نداءُ `node --check` قبل أن يُشغَّل المتصفّح أصلاً.
+        ok_parse, why = script_parses(text)
+        checks.append((ok_parse, f"  و`{route}` نصُّها يُحلَّل بلا خطأ صياغة"
+                                 + ("" if ok_parse else f" — {why}")))
 
     # **الاستثناءُ الصوتيّ موصولٌ**: صفحاتُ الاختبار تستثني نصوصَ قائمة الانتظار من
     # فحص «لا لجوء للنطق الآلي» — والقائمةُ تُخدَم من هنا، فإن سقط المسارُ صار الفحصُ
@@ -288,8 +327,13 @@ def self_test() -> int:
 def main() -> int:
     ap = argparse.ArgumentParser(description="اختبارات الواجهة في متصفّح حقيقي")
     ap.add_argument("--port", type=int, default=8790)
-    ap.add_argument("--timeout", type=int, default=60, help="ثوانٍ قبل الاستسلام")
+    ap.add_argument("--timeout", type=int, default=150, help="ثوانٍ قبل الاستسلام")
     ap.add_argument("--shots", metavar="PNG", help="لقطة للمراجعة البصرية بدل الاختبارات")
+    # **المراجعةُ البصرية تحتاج الشاشةَ بعينها**: لقطةُ الجذر تُري الخريطةَ وحدَها،
+    # وشاشاتُ المحطات خلف مسارها — فتُساق بمسارها كما يسوقها الطفل (`?preview=1`
+    # يفتح القفلَ ولا يكتب تقدّماً).
+    ap.add_argument("--at", default="", metavar="PATH",
+                    help="مسارُ اللقطة داخل التطبيق، مثل '?preview=1#/count/ten'")
     ap.add_argument("--render-shots", action="store_true",
                     help="مع --shots DIR: لقطةٌ مرجعية لكل نمطٍ من أنماط المصيِّر")
     ap.add_argument("--device", action="store_true", help="مقاسات الآيباد الخمسة")
@@ -318,7 +362,7 @@ def main() -> int:
             if out.exists():
                 out.unlink()
             size = args.size or "834,1194"
-            proc = run_chrome(f"http://127.0.0.1:{args.port}/", profile,
+            proc = run_chrome(f"http://127.0.0.1:{args.port}/{args.at}", profile,
                               ["--headless=new", "--disable-gpu", "--hide-scrollbars",
                                "--virtual-time-budget=4000",
                                f"--screenshot={out}", f"--window-size={size}"], False)

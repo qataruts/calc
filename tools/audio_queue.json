@@ -1,1 +1,202 @@
-[]
+[
+  {
+    "text": "وَاحِدْ",
+    "category": "number_name",
+    "requestedBy": "session-3",
+    "priority": 10,
+    "status": "pending",
+    "doneAt": null
+  },
+  {
+    "text": "اِثْنَانْ",
+    "category": "number_name",
+    "requestedBy": "session-3",
+    "priority": 10,
+    "status": "pending",
+    "doneAt": null
+  },
+  {
+    "text": "ثَلَاثَةْ",
+    "category": "number_name",
+    "requestedBy": "session-3",
+    "priority": 10,
+    "status": "pending",
+    "doneAt": null
+  },
+  {
+    "text": "أَرْبَعَةْ",
+    "category": "number_name",
+    "requestedBy": "session-3",
+    "priority": 10,
+    "status": "pending",
+    "doneAt": null
+  },
+  {
+    "text": "خَمْسَةْ",
+    "category": "number_name",
+    "requestedBy": "session-3",
+    "priority": 10,
+    "status": "pending",
+    "doneAt": null
+  },
+  {
+    "text": "سِتَّةْ",
+    "category": "number_name",
+    "requestedBy": "session-3",
+    "priority": 10,
+    "status": "pending",
+    "doneAt": null
+  },
+  {
+    "text": "سَبْعَةْ",
+    "category": "number_name",
+    "requestedBy": "session-3",
+    "priority": 10,
+    "status": "pending",
+    "doneAt": null
+  },
+  {
+    "text": "ثَمَانِيَةْ",
+    "category": "number_name",
+    "requestedBy": "session-3",
+    "priority": 10,
+    "status": "pending",
+    "doneAt": null
+  },
+  {
+    "text": "تِسْعَةْ",
+    "category": "number_name",
+    "requestedBy": "session-3",
+    "priority": 10,
+    "status": "pending",
+    "doneAt": null
+  },
+  {
+    "text": "عَشَرَةْ",
+    "category": "number_name",
+    "requestedBy": "session-3",
+    "priority": 10,
+    "status": "pending",
+    "doneAt": null
+  },
+  {
+    "text": "كَمْ تَرَى؟",
+    "category": "instruction",
+    "requestedBy": "session-3",
+    "priority": 20,
+    "status": "pending",
+    "doneAt": null
+  },
+  {
+    "text": "شَاهِدْ ثُمَّ أَجِبْ",
+    "category": "instruction",
+    "requestedBy": "session-3",
+    "priority": 20,
+    "status": "pending",
+    "doneAt": null
+  },
+  {
+    "text": "طَابِقِ الْكَمِّيَّتَيْنْ",
+    "category": "instruction",
+    "requestedBy": "session-3",
+    "priority": 20,
+    "status": "pending",
+    "doneAt": null
+  },
+  {
+    "text": "أَيُّهُمَا أَكْثَرْ؟",
+    "category": "instruction",
+    "requestedBy": "session-3",
+    "priority": 20,
+    "status": "pending",
+    "doneAt": null
+  },
+  {
+    "text": "اِلْمَسْ وَعُدَّ",
+    "category": "instruction",
+    "requestedBy": "session-3",
+    "priority": 20,
+    "status": "pending",
+    "doneAt": null
+  },
+  {
+    "text": "كَمْ صَارَتْ كُلُّهَا؟",
+    "category": "instruction",
+    "requestedBy": "session-3",
+    "priority": 20,
+    "status": "pending",
+    "doneAt": null
+  },
+  {
+    "text": "بَعْثَرْتُهَا، فَكَمْ صَارَتْ؟",
+    "category": "instruction",
+    "requestedBy": "session-3",
+    "priority": 20,
+    "status": "pending",
+    "doneAt": null
+  },
+  {
+    "text": "أَعْطِنِي هَذَا الْعَدَدْ",
+    "category": "instruction",
+    "requestedBy": "session-3",
+    "priority": 20,
+    "status": "pending",
+    "doneAt": null
+  },
+  {
+    "text": "اِجْعَلْهُمَا سَوَاءْ",
+    "category": "instruction",
+    "requestedBy": "session-3",
+    "priority": 20,
+    "status": "pending",
+    "doneAt": null
+  },
+  {
+    "text": "اُنْظُرْ وَعُدَّ مَعِي",
+    "category": "modeling",
+    "requestedBy": "session-3",
+    "priority": 30,
+    "status": "pending",
+    "doneAt": null
+  },
+  {
+    "text": "الْآنَ جَرِّبْ مَعِي",
+    "category": "modeling",
+    "requestedBy": "session-3",
+    "priority": 30,
+    "status": "pending",
+    "doneAt": null
+  },
+  {
+    "text": "وَالْآنَ وَحْدَكْ",
+    "category": "modeling",
+    "requestedBy": "session-3",
+    "priority": 30,
+    "status": "pending",
+    "doneAt": null
+  },
+  {
+    "text": "لِنَعُدَّهَا مَعًا",
+    "category": "modeling",
+    "requestedBy": "session-3",
+    "priority": 30,
+    "status": "pending",
+    "doneAt": null
+  },
+  {
+    "text": "أَحْسَنْتْ",
+    "category": "celebration",
+    "requestedBy": "session-3",
+    "priority": 40,
+    "status": "pending",
+    "doneAt": null
+  },
+  {
+    "text": "رَائِعْ",
+    "category": "celebration",
+    "requestedBy": "session-3",
+    "priority": 40,
+    "status": "pending",
+    "doneAt": null
+  }
+]

@@ -14,10 +14,18 @@
 
 import * as progress from './progress.js';
 import * as audio from './audio.js';
+import { registerScreen, hasScreen, screenFor } from './registry.js';
 import { renderReview } from './review.js';
 import { renderGate } from './gate.js';
 import { renderParent, skillsText } from './parent.js';
 import { renderGallery } from './render.js';
+/* **وحداتُ التمارين تُحمَّل لأثرها**: كلُّ وحدةٍ تسجّل شاشاتِ أنواعها في السجلّ
+   (`registry.js`) وتمارينَها في المراجعة عند تحميلها — فلا يعرف هذا الملفّ اسمَ شاشةٍ
+   واحدة منها، ولا تدخل محطةٌ جديدة بسطرٍ يُعدَّل هنا. والسطرُ الواحدُ لكل **وحدة**
+   (لا لكل محطة) ثمنُ أن تصل إليها شجرةُ الاستيراد، وبه يعرف عاملُ الخدمة ماذا يخزّن
+   وحارسُ `test_pwa` أنّ الملفَّ حيٌّ لا ميّت. */
+import './quantity.js';
+import './counting.js';
 import {
   h, icon, faceEl, toast, go, arNum, starsRow, topbar, brandMark, landmark, DEV,
   PAUSE_ACCENT,
@@ -27,18 +35,10 @@ const app = document.getElementById('app');
 
 // ————— سِجلّ الشاشات —————
 //
-// **مَن يملك نوعَ عقدةٍ يسجّل مُصيِّرَها**، فلا يعرف الموجِّهُ شاشةً بعينها. والبوابةُ
-// مسجَّلةٌ هنا لأنها من بذرة المنصة لا من مادّة المنهج (`gate.js`).
-
-const screens = new Map();
-
-/**
- * تسجيل شاشةٍ لنوع عقدة: `render(part)` تُرجِع عنصرَ الشاشة أو `null`.
- * تناديها وحدةُ التمارين مرّةً عند تحميلها (الجلسات ٣+).
- */
-export function registerScreen(type, render) {
-  screens.set(type, render);
-}
+// **مَن يملك نوعَ عقدةٍ يسجّل مُصيِّرَها**، فلا يعرف الموجِّهُ شاشةً بعينها. والسجلُّ
+// نفسُه في `registry.js` (وحدةٌ محايدة) لا هنا — وعلّةُ نقله مكتوبةٌ في رأسه: وحدةُ
+// التمارين لا تستطيع أن تستورد `main.js` (دَورٌ في الاستيراد، وعقدُ المولّد النقيّ).
+// والبوابةُ مسجَّلةٌ هنا لأنها من بذرة المنصة لا من مادّة المنهج (`gate.js`).
 
 registerScreen('gate', renderGate);
 
@@ -347,10 +347,10 @@ async function render() {
     }
   } else if (name === 'parent') {
     screen = renderParent(render);
-  } else if (name && screens.has(name) && arg) {
+  } else if (name && hasScreen(name) && arg) {
     const part = decodeURIComponent(arg);
     if (!guard(`${name}:${part}`)) return;
-    screen = screens.get(name)(part) || renderMap();
+    screen = screenFor(name)(part) || renderMap();
   } else {
     screen = renderMap();
   }

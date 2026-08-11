@@ -27,7 +27,7 @@
 // فالمنظومةُ قائمةٌ من اليوم الأول ولا تنتظر شيئاً، ويومَ يُولَّد الصوتُ يعمل الخزن
 // بلا سطرٍ يُعدَّل هنا — وتدخل بياناتُه قائمةَ القشرة حينها.
 
-const VERSION = 'v2';
+const VERSION = 'v3';
 const SHELL_CACHE = `ihsib-shell-${VERSION}`;
 const AUDIO_CACHE = 'ihsib-audio';        // ثابتٌ عمداً — لا يحمل VERSION
 const KEEP = [SHELL_CACHE, AUDIO_CACHE];
@@ -43,13 +43,17 @@ const SHELL = [
   'fonts/BalooBhaijaan2-latin.woff2',
   'fonts/Marhey-arabic.woff2',
   'js/audio.js',
+  'js/counting.js',
   'js/curriculum.js',
   'js/gate.js',
   'js/main.js',
   'js/parent.js',
   'js/progress.js',
+  'js/quantity.js',
+  'js/registry.js',
   'js/render.js',
   'js/review.js',
+  'js/station.js',
   'js/ui.js',
   // فهرسُ رموز عالم الطفل — **ومنه** تُخزَّن ملفاتُها (`precacheEmoji`)، فلا يُكتب
   // ملفُّ رمزٍ في هذه القائمة بيد: رمزٌ جديد يدخل المخزون بجرد `fetch_twemoji.py`.

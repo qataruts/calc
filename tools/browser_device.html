@@ -12,15 +12,34 @@
      فيُقاس **الفائضُ الأفقيّ** حيث يقع فعلاً — لا في إطارٍ ذي مقاسٍ آخر.
      و«بلا فائض أفقي» عهدٌ مطلق (`METHOD.md §١٠.٧`): طفلُ الرابعة لا يسحب ليجد زرّاً. */
   const frame = document.getElementById('app');
-  await new Promise((r) => frame.addEventListener('load', r, { once: true }));
-  await new Promise((r) => setTimeout(r, 1200));
-  const doc = frame.contentDocument;
-  const win = frame.contentWindow;
-  const overflow = doc.documentElement.scrollWidth - win.innerWidth;
-  await fetch('/result', {
-    method: 'POST',
-    body: JSON.stringify([{ overflow, width: win.innerWidth, height: win.innerHeight }]),
-  });
+
+  /* **وتُقاس شاشاتُ التمارين لا الخريطةُ وحدَها** (الجلسة ٣): الكمياتُ المرسومة أوسعُ
+     ما في التطبيق (لوحُ العدّ يفرد الشكلَ ليبلغ العنصرُ هدفَ اللمس)، فهي أولى ما
+     يفيض على آيباد mini. ويُبلَّغ **أسوأُ** ما قِيس لا آخرُه. */
+  const SCREENS = [
+    '/',                                  // الخريطة
+    '/?preview=1&v=2#/count/ten',         // لوحُ العدّ — أوسعُ شكلٍ في الرحلة
+    '/?preview=1&v=3#/more/five',         // كميّتان متجاورتان
+    '/?preview=1&v=4#/equal/five',        // كميّتان ومعهما أزرارُ التسوية
+  ];
+
+  let worst = { overflow: -1e9 };
+  for (const src of SCREENS) {
+    frame.src = src;
+    await new Promise((r) => frame.addEventListener('load', r, { once: true }));
+    await new Promise((r) => setTimeout(r, 1200));
+    const doc = frame.contentDocument;
+    const win = frame.contentWindow;
+    const row = {
+      overflow: doc.documentElement.scrollWidth - win.innerWidth,
+      width: win.innerWidth,
+      height: win.innerHeight,
+      at: src,
+    };
+    if (row.overflow > worst.overflow) worst = row;
+  }
+
+  await fetch('/result', { method: 'POST', body: JSON.stringify([worst]) });
 </script>
 </body>
 </html>

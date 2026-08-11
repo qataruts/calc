@@ -75,12 +75,17 @@ ok(inShell.length === 0,
   `ولا تشمل الصفحة التعريفية (خارج القشرة عمداً)${inShell.length ? ' — دخلت: ' + inShell.join('، ') : ''}`);
 
 // كل وحدة جافاسكربت مستوردة فعلاً من شجرة `main.js` (لا ملف ميت في القائمة)
+//
+// **والاستيرادُ لأثره استيراد** (إصلاحُ الجلسة ٣ — `SEED.md §٩`): وحدةُ التمارين
+// تُحمَّل لتسجّل شاشاتِها في السجلّ (`import './quantity.js';` بلا `from`)، وكان
+// التعبيرُ يقرأ `from` وحدَه فيَعُدّ الحيَّ ميتاً — بلاغٌ كاذب لا فحصٌ ساقط. والحارسُ
+// بعد الإصلاح **أدقُّ لا أرخى**: ملفٌّ لا يستورده أحدٌ يبقى مكشوفاً كما كان.
 const modules = onDisk.filter((p) => p.startsWith('js/'));
 const reachable = new Set(['js/main.js']);
 for (let changed = true; changed;) {
   changed = false;
   for (const mod of [...reachable]) {
-    for (const m of read(mod).matchAll(/from '\.\/([\w.]+\.js)'/g)) {
+    for (const m of read(mod).matchAll(/(?:from|import)\s+'\.\/([\w.-]+\.js)'/g)) {
       const path = `js/${m[1]}`;
       if (!reachable.has(path)) { reachable.add(path); changed = true; }
     }
