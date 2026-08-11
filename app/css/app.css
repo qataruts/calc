@@ -847,6 +847,79 @@ button {
   animation: rise .25s ease;
 }
 
+/* ————— مصيِّر الكميات: الشكلُ الواحد وعناصرُه (`DESIGN.md §٥`) —————
+
+   **وحدةُ رسمٍ واحدة لكل الأنماط** (`--unit`): الشكلُ يعلن مقاسَ صندوقه بوحدات
+   الرسم (`--vw` × `--vh`) وتضربها الوحدةُ في البكسل — فيخرج **العنصرُ بحجمٍ واحد
+   في كل نمط**. وعلّتُه تعليمية: في «أيُّهما أكثر» يقارن الطفلُ عدداً، فلو كبر عنصرُ
+   الأقلّ صارت المقارنةُ بصرَ مساحةٍ لا حسَّ عدد.
+
+   و`max-width: 100%` مع `aspect-ratio` يجعلان الشكلَ يتقلّص على الشاشة الضيقة
+   بنسبته — **فلا فائضَ أفقيّ أبداً** (عهدُ `METHOD.md §١٠.٧`).
+
+   **ونسبةُ العنصر إلى ساحته ١:١٠** (٤٤ وحدةً من ٤٤٠): فشاشةُ تمرينٍ تُفرد الشكلَ
+   على عرض الآيباد (≈٧٠٠بك) يصير عنصرُها ≈٧٠بك — فوق هدف اللمس (٦٤بك) الذي تطلبه
+   محطاتُ «المس وعُدّ». وتُثبته الجلسةُ ٣ حين تصير العناصرُ أزراراً تُلمَس: حارسُ
+   هدف اللمس في `browser_test.html` يجردها يومئذٍ من تلقائه. */
+
+.figure {
+  --unit: 1px;
+  position: relative;
+  width: calc(var(--vw) * var(--unit));
+  max-width: 100%;
+  aspect-ratio: var(--vw) / var(--vh);
+  flex: none;
+}
+
+.figure svg { display: block; width: 100%; height: 100%; }
+
+/* العنصرُ المعدود: بلون المرحلة — ولا يحمل اللونُ معنىً وحدَه (الكمُّ هو المعنى) */
+.fig-dot { fill: var(--accent, var(--accent-quantity)); }
+
+/* **بطاقةُ الكمية**: ورقةٌ هادئة تحدّ الساحة — النردُ يُقرأ بها «نرداً» بنظرة،
+   و**المبعثرُ يُقرأ بها كمّاً واحداً**: كميتان بلا حدٍّ تنزّان إحداهما في الأخرى فلا
+   يُعرَف أين تنتهي هذه وتبدأ تلك، وهو عينُ ما تقوم عليه «أيُّهما أكثر». وحدُّها
+   بظلٍّ داخليّ لا بإطار: الإطارُ يقتطع من الصندوق فتزيح الهندسةُ عن حسابها. */
+.figure--dice,
+.figure--scatter,
+.figure--objects {
+  background: var(--card);
+  border-radius: calc(26 * var(--unit));
+  box-shadow: inset 0 0 0 calc(3 * var(--unit)) var(--line);
+}
+
+/* خاناتُ الإطار: **الفارغةُ جزءٌ من المعنى** («كم بقي للعشرة؟») فتُرسم كلُّها */
+.fig-cell { fill: none; stroke: var(--line); stroke-width: 3; }
+.fig-frame { fill: none; stroke: var(--ink-soft); stroke-width: 4; }
+
+/* عنصرُ عالم الطفل: صندوقُه من `faceEl` وموضعُه نسبةٌ من الشكل، وصورتُه تملؤه */
+.fig-mark {
+  position: absolute;
+  inset-inline-start: auto;      /* الموضع هندسيّ لا اتجاهيّ: يسارُ الصندوق دائماً */
+  left: var(--x);
+  top: var(--y);
+  width: var(--d);
+  aspect-ratio: 1;
+}
+
+.fig-mark .emoji { width: 100%; height: 100%; vertical-align: top; }
+
+/* لوحُ المصيِّر (`?dev=1`) — تُلتقط منه اللقطات المرجعية، ولا يراه طفل */
+.gallery { --unit: .62px; padding-bottom: 2rem; }
+.gallery-sheet { margin-top: 1.75rem; }
+.gallery-sheet h2 { font-size: 1.05rem; margin: 0 0 .75rem; color: var(--ink-soft); }
+
+.gallery-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 1rem .9rem;
+  align-items: flex-end;
+  justify-content: center;
+}
+
+.gallery-item { max-width: 100%; }
+.gallery-num { display: block; text-align: center; color: var(--ink-soft); font-size: 1.05rem; }
+
 /* ————— الرموز والأيقونات («أيقونات لا إيموجي») ————— */
 
 .emoji {

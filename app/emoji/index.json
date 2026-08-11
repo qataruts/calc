@@ -1,0 +1,16 @@
+{
+  "source": "twemoji",
+  "version": "15.1.0",
+  "license": "CC-BY 4.0",
+  "url": "https://github.com/jdecked/twemoji/tree/v15.1.0",
+  "files": {
+    "1f33c": "🌼",
+    "1f34e": "🍎",
+    "1f36a": "🍪",
+    "1f388": "🎈",
+    "1f41f": "🐟",
+    "1f697": "🚗",
+    "1f98b": "🦋",
+    "2b50": "⭐"
+  }
+}

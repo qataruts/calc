@@ -3,6 +3,8 @@
 
     python3 tools/browser_test.py             # يسوق التطبيق ويطبع التقرير
     python3 tools/browser_test.py --shots out.png   # لقطة للمراجعة البصرية
+    python3 tools/browser_test.py --shots shots/render --render-shots
+                                              # لقطةٌ مرجعية لكل نمطٍ من أنماط المصيِّر
     python3 tools/browser_test.py --device    # مقاسات الآيباد الخمسة: فائضٌ أفقيّ؟
     python3 tools/browser_test.py --show      # بمتصفّح مرئي لتتبّع ما يجري
 
@@ -126,6 +128,71 @@ def window_of(size: str) -> str:
     return f"{w},{h + VIEWPORT_PAD}"
 
 
+def render_displays(strict: bool = True) -> list:
+    """أنماطُ المصيِّر **من الوحدة نفسِها** — لا قائمةٌ تُكتب هنا فتتخلّف عنها.
+
+    (نظيرُ `load_curriculum` في `check_range.py`: تُشغَّل الوحدةُ ولا يُخمَّن نصُّها،
+    فنمطٌ جديد يدخل اللقطاتِ يومَ يُكتب رسّامُه بلا سطرٍ يُضاف هنا.)
+    """
+    module = (APP / "js" / "render.js").as_uri()
+    js = (f'const m = await import("{module}");'
+          ' console.log(JSON.stringify(m.displays()));')
+    run = subprocess.run(["node", "--input-type=module", "-e", js],
+                         capture_output=True, text=True)
+    if run.returncode != 0:
+        if strict:
+            sys.exit(f"تعذّرت قراءة أنماط المصيِّر:\n{run.stderr.strip()}")
+        return []
+    return json.loads(run.stdout)
+
+
+def render_shots(args) -> int:
+    """**لقطةٌ مرجعية لكل نمط** من لوح المصيِّر — للمراجعة البصرية (بندُ الجلسة ٢).
+
+    تُلتقط من التطبيق نفسِه (`?dev=1#/render/<النمط>`) لا من صفحةِ عرضٍ مصنوعة:
+    فما يراه المراجعُ هو اللوحُ واللونُ والخطُّ والاتجاهُ التي يراها الطفل.
+    """
+    names = render_displays()
+    out_dir = Path(args.shots).resolve()
+    out_dir.mkdir(parents=True, exist_ok=True)
+
+    results: list = []
+    server = make_server(args.port, results)
+    threading.Thread(target=server.serve_forever, daemon=True).start()
+    profiles, missing = [], []
+    try:
+        for name in names:
+            png = out_dir / f"{name}.png"
+            if png.exists():
+                png.unlink()
+            profile = Path(tempfile.mkdtemp(prefix="ihsib-shot-"))
+            profiles.append(profile)
+            proc = run_chrome(
+                f"http://127.0.0.1:{args.port}/?dev=1#/render/{name}", profile,
+                ["--headless=new", "--disable-gpu", "--hide-scrollbars",
+                 "--virtual-time-budget=5000", f"--screenshot={png}",
+                 f"--window-size={args.size or '1000,2400'}"], False)
+            deadline = time.time() + args.timeout
+            while time.time() < deadline and not png.exists():
+                time.sleep(0.3)
+            time.sleep(0.5)
+            proc.kill()
+            if png.exists():
+                print(f"  ✓ {name}: {png.relative_to(ROOT)} ({png.stat().st_size // 1024}كب)")
+            else:
+                missing.append(name)
+                print(f"  ✗ {name}: تعذّرت اللقطة")
+    finally:
+        server.shutdown()
+        for p in profiles:
+            shutil.rmtree(p, ignore_errors=True)
+
+    print(f"\n{len(missing)} لقطةً متعذّرة" if missing
+          else f"\n{len(names)} لقطةً مرجعيةً في {out_dir.relative_to(ROOT)} — "
+               "نمطٌ لكل ملفّ، للمراجعة البصرية.")
+    return 1 if missing else 0
+
+
 def device_main(args) -> int:
     """مقاسات الآيباد: **لا فائض أفقيّ** على أيٍّ منها."""
     results: list = []
@@ -193,6 +260,18 @@ def self_test() -> int:
     checks.append(("/__queue.json" in Path(__file__).read_text(encoding="utf-8"),
                    "ويخدمها الخادمُ على `/__queue.json` (استثناءُ «لا نطق آليّ» موصول)"))
 
+    # **وصلةُ اللقطات المرجعية موصولة** (الجلسة ٢): `--render-shots` يسوق المسار
+    # `?dev=1#/render/<النمط>`. ولو تبدّل اسمُ المسار في الموجِّه لَعادت اللقطاتُ
+    # صورَ **خريطةٍ** صامتة — ملفاتٌ تُكتب ويُظنّ أنها مراجعةٌ بصرية وليست منها.
+    render_js = APP / "js" / "render.js"
+    checks.append((render_js.exists(), f"ووحدةُ المصيِّر موجودة ({render_js.name})"))
+    main_js = (APP / "js" / "main.js")
+    checks.append((main_js.exists() and "registerScreen('render'" in main_js.read_text(encoding="utf-8"),
+                   "ولوحُ المصيِّر مسجَّلٌ في الموجِّه بالمسار الذي تسوقه اللقطات (`render`)"))
+    if render_js.exists():
+        names = render_displays(strict=False)
+        checks.append((len(names) > 0, f"ويُعلن أنماطَه فتُلتقط لها لقطاتُها ({len(names)} نمطاً)"))
+
     # **مقاسات الآيباد الخمسة** (`METHOD.md §١٠.٧`) — لا أربعة ولا واحد
     checks.append((len(IPADS) == 5, f"ومقاساتُ الآيباد خمسةٌ ({len(IPADS)})"))
     checks.append((all("," in size for _n, size in IPADS), "ولكلٍّ عرضُه وارتفاعُه"))
@@ -211,6 +290,8 @@ def main() -> int:
     ap.add_argument("--port", type=int, default=8790)
     ap.add_argument("--timeout", type=int, default=60, help="ثوانٍ قبل الاستسلام")
     ap.add_argument("--shots", metavar="PNG", help="لقطة للمراجعة البصرية بدل الاختبارات")
+    ap.add_argument("--render-shots", action="store_true",
+                    help="مع --shots DIR: لقطةٌ مرجعية لكل نمطٍ من أنماط المصيِّر")
     ap.add_argument("--device", action="store_true", help="مقاسات الآيباد الخمسة")
     ap.add_argument("--size", help="مقاس النافذة W,H")
     ap.add_argument("--show", action="store_true", help="متصفّح مرئي")
@@ -219,6 +300,10 @@ def main() -> int:
 
     if args.self_test:
         return self_test()
+    if args.render_shots:
+        if not args.shots:
+            sys.exit("--render-shots يحتاج --shots DIR (مجلَّدُ اللقطات)")
+        return render_shots(args)
     if args.device:
         return device_main(args)
 

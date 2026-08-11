@@ -93,6 +93,117 @@
   ok(doc.querySelector('.gate .giant'), 'ولوحةُ وليّ الأمر خلف بوابةٍ حسابية');
   ok(!doc.querySelector('.audit'), 'ولا تُعرَض اللوحةُ قبل حلّها');
 
+  /* ————— ٩) مصيِّر الكميات **على الشاشة نفسِها** (METHOD §١٠.٢ — الجلسة ٢) —————
+
+     أخو `tools/check_render.mjs`: ذاك يقرأ الهندسةَ أعداداً في node، وهذا يقرأ
+     **الرسمَ بعد أن يقع** — بلوح التطبيق وخطوطه واتجاهه ومقاساته المحسوبة. فما
+     يفوت الحسابَ (تنسيقٌ يقلب، صورةٌ لا تُحمَّل، شكلٌ ينسحق) يمسكه القياسُ هنا.
+     ولوحُ المصيِّر تحت `?dev=1` وحدَه، فلا طريقَ إليه من شاشة طفل. */
+
+  frame.src = '/?dev=1#/render/all';
+  await new Promise((r) => frame.addEventListener('load', r, { once: true }));
+  await new Promise((r) => setTimeout(r, 1800));
+
+  const gdoc = frame.contentDocument;
+  const gwin = frame.contentWindow;
+  const figures = [...gdoc.querySelectorAll('.figure')];
+  const kinds = new Set(figures.map((f) => f.dataset.display));
+  ok(figures.length > 0 && kinds.size > 0,
+    `لوحُ المصيِّر يرسم ${figures.length} شكلاً في ${kinds.size} نمطاً (${[...kinds].join('، ')})`);
+
+  const rectOf = (el) => el.getBoundingClientRect();
+  const centre = (r) => ({ x: (r.left + r.right) / 2, y: (r.top + r.bottom) / 2 });
+  const apart = (a, b) => a.right <= b.left || b.right <= a.left
+    || a.bottom <= b.top || b.bottom <= a.top;
+
+  // أ) **العددُ المرسوم هو المقصود** — ثلاثةُ مصادر تتطابق: المقصودُ في البيانات،
+  //    وما أعلن المصيِّر أنه رسم، وما في DOM فعلاً. واختلافُ أيِّها عن الآخر عطب.
+  const miscount = figures.filter((f) => {
+    const want = Number(f.dataset.count);
+    const said = Number(f.dataset.drawn);
+    return !(want === said && said === f.querySelectorAll('[data-mark]').length);
+  });
+  ok(miscount.length === 0,
+    `والعددُ المرسوم هو المقصود في كل شكل (المقصود = ما أعلن المصيِّر = ما في DOM)`
+    + (miscount.length ? ` — اختلف في: ${miscount.slice(0, 3)
+      .map((f) => `${f.dataset.display}/${f.dataset.count}`).join('، ')}` : ''));
+
+  // ب) **لا تراكب مقيساً بعد التنسيق**: صندوقا عنصرين لا يتلامسان — والبرهانُ
+  //    الهندسيّ يضمن انفصالَهما في أحد المحورين، فتلامسُ الصندوقين وحدَه كافٍ حكماً.
+  let pairs = 0;
+  const overlap = figures.filter((f) => {
+    const boxes = [...f.querySelectorAll('[data-mark]')].map(rectOf);
+    for (let i = 0; i < boxes.length; i++) {
+      for (let j = i + 1; j < boxes.length; j++) {
+        pairs++;
+        if (!apart(boxes[i], boxes[j])) return true;
+      }
+    }
+    return false;
+  });
+  ok(overlap.length === 0,
+    `ولا عنصرين متراكبين في أيّ شكل (${pairs} مقابلةً مقيسة على الشاشة)`
+    + (overlap.length ? ` — تراكبَ في: ${overlap.slice(0, 3)
+      .map((f) => `${f.dataset.display}/${f.dataset.count}`).join('، ')}` : ''));
+
+  // ج) **الإطاراتُ تُملأ من اليمين** — يُعاد اشتقاقُ الترتيب من المقاسات المرئية:
+  //    الإطارُ الأيمنُ أولاً، ثم الصفُّ الأعلى، ثم الخانةُ اليمنى. فتنسيقٌ يقلب
+  //    الاتجاه (أو `scaleX`) يسقط هنا ولو كانت الهندسةُ سليمةً في node.
+  const framed = figures.filter((f) => f.querySelector('[data-cell]'));
+  const wrongFill = framed.filter((f) => {
+    const boxes = [...f.querySelectorAll('.fig-frame')].map(rectOf)
+      .sort((a, b) => b.left - a.left);
+    const rank = (c) => Math.max(0, boxes.findIndex((b) =>
+      c.x >= b.left - 1 && c.x <= b.right + 1 && c.y >= b.top - 1 && c.y <= b.bottom + 1));
+    const cells = [...f.querySelectorAll('[data-cell]')].map(rectOf).map(centre)
+      .sort((a, b) => (rank(a) - rank(b)) || (a.y - b.y) || (b.x - a.x));
+    const marks = [...f.querySelectorAll('[data-mark]')].map(rectOf).map(centre);
+    const near = (a, b) => Math.abs(a.x - b.x) < 2 && Math.abs(a.y - b.y) < 2;
+    return !marks.every((m, i) => cells[i] && near(cells[i], m));
+  });
+  ok(framed.length > 0 && wrongFill.length === 0,
+    `وإطاراتُ الخمسة والعشرة تُملأ من اليمين (${framed.length} إطاراً مقيساً)`
+    + (wrongFill.length ? ` — انقلب في: ${wrongFill.slice(0, 3)
+      .map((f) => `${f.dataset.display}/${f.dataset.count}`).join('، ')}` : ''));
+
+  // د) **نقاطُ النرد على شبكة ٣×٣ متساوية** بعد التنسيق (القياسيَّةُ نفسُها يُثبتها
+  //    `check_render.mjs` بالجدول المستقلّ؛ وهنا يُثبَت أنّ الشبكةَ نجت من الرسم).
+  const dice = figures.filter((f) => f.dataset.display === 'dice');
+  const skewed = dice.filter((f) => {
+    const box = rectOf(f);
+    const spots = [...f.querySelectorAll('[data-mark]')].map(rectOf).map(centre);
+    const lane = (v, lo, hi) => Math.round(((v - lo) / (hi - lo)) * 100) / 100;
+    return !spots.every((s) => [0.22, 0.5, 0.78].some((t) =>
+      Math.abs(lane(s.x, box.left, box.right) - t) < 0.03)
+      && [0.22, 0.5, 0.78].some((t) => Math.abs(lane(s.y, box.top, box.bottom) - t) < 0.03));
+  });
+  ok(dice.length === 6 && skewed.length === 0,
+    `ووجوهُ النرد الستة على شبكةٍ ٣×٣ متساوية (${dice.length} وجهاً)`);
+
+  // هـ) **صدق الصورة**: كلُّ عنصرٍ معدودٍ صورةُ Twemoji محليةٌ **حُمِّلت فعلاً**، ولا
+  //     محرفَ يُسلَّم لخطّ النظام، والكميةُ الواحدة متجانسةٌ رمزاً واحداً.
+  const objectFigs = figures.filter((f) => f.dataset.display === 'objects');
+  const images = objectFigs.flatMap((f) => [...f.querySelectorAll('[data-mark] img.emoji')]);
+  const broken = images.filter((img) => !img.complete || img.naturalWidth === 0);
+  const mixed = objectFigs.filter((f) => new Set([...f.querySelectorAll('[data-mark] img.emoji')]
+    .map((img) => img.dataset.emoji)).size > 1);
+  ok(images.length > 0 && broken.length === 0 && mixed.length === 0,
+    `وعناصرُ عالم الطفل صورٌ محليةٌ حُمِّلت (${images.length} صورة، `
+    + `${new Set(images.map((i) => i.dataset.emoji)).size} رمزاً)، والكميةُ متجانسة`
+    + (broken.length ? ` — لم تُحمَّل ${broken.length}` : '')
+    + (mixed.length ? ` — مختلطةٌ في ${mixed.length} شكلاً` : ''));
+
+  // و) وعهودُ الشاشة نفسُها تسري على هذا اللوح: أرقامُ المشرق، ولا إيموجي نظام،
+  //    ولا فائضَ أفقيّ — فشكلٌ يفيض عن عرض الصفحة عيبٌ ولو رسم عددَه صحيحاً.
+  const gshown = gdoc.body.innerText || '';
+  const glatin = [...new Set(gshown.match(/\d/g) || [])];
+  const gglyphs = [...gshown].filter((ch) => EMOJI_RE.test(ch));
+  ok(glatin.length === 0 && gglyphs.length === 0,
+    `ولا رقمَ لاتينيّ ولا محرفَ إيموجي في نصّ اللوح${glatin.length
+      ? ` — أرقام: ${glatin.join('، ')}` : ''}${gglyphs.length ? ` — رموز: ${gglyphs.join(' ')}` : ''}`);
+  const gover = gdoc.documentElement.scrollWidth - gwin.innerWidth;
+  ok(gover <= 0, `ولا فائضَ أفقيّ في لوح المصيِّر (${gover}px)`);
+
   await fetch('/result', { method: 'POST', body: JSON.stringify(out) });
 </script>
 </body>

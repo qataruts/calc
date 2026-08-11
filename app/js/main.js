@@ -17,6 +17,7 @@ import * as audio from './audio.js';
 import { renderReview } from './review.js';
 import { renderGate } from './gate.js';
 import { renderParent, skillsText } from './parent.js';
+import { renderGallery } from './render.js';
 import {
   h, icon, faceEl, toast, go, arNum, starsRow, topbar, brandMark, landmark, DEV,
   PAUSE_ACCENT,
@@ -40,6 +41,13 @@ export function registerScreen(type, render) {
 }
 
 registerScreen('gate', renderGate);
+
+/* **لوحُ المصيِّر — في وضع التجربة وحدَه** (`?dev=1`، الجلسة ٢): مرجعٌ بصريّ لأنماط
+   الكميات كما ترسمها `render.js` على الشاشة نفسِها بلوحها واتجاهها. منه تُؤخذ
+   اللقطاتُ المرجعية، وعليه يقيس حارسُ المتصفّح التراكبَ وترتيبَ الملء من اليمين.
+   وهو **ليس محطةً ولا شاشةَ تمرين**: لا عقدةَ له في الرحلة ولا نجمةَ يكتبها، ولا
+   طريقَ إليه من شاشة طفلٍ لأنّ التسجيل نفسَه لا يقع إلا تحت `DEV`. */
+if (DEV) registerScreen('render', renderGallery);
 
 // ————— خريطة الرحلة —————
 //
@@ -123,6 +131,7 @@ function renderMap() {
     main.append(h('div', { class: 'dev' },
       h('div', { class: 'dev-title' }, 'أدوات التجربة (?dev=1) — لا تظهر للطفل'),
       h('div', { class: 'dev-row' },
+        h('button', { class: 'btn', onclick: () => go('#/render/all') }, 'لوحُ المصيِّر'),
         h('button', { class: 'btn', onclick: () => fillAll(1) }, 'أنجِز الكل بنجمة'),
         h('button', { class: 'btn', onclick: () => fillAll(3) }, 'أنجِز الكل بثلاث'),
         h('button', {
