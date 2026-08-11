@@ -45,6 +45,8 @@ const nodes = progress.allNodes();
 
 // **وحداتُ البذرة لا تُعدّ شاشاتِ تمارين**: هذه هي المنصةُ نفسُها (مصنعُ العقد
 // والموجِّهُ والمحرّكاتُ)، وما يقيسه الحارسُ **مَن يكتب النجمة** من شاشات المحطات.
+// و`gate.js` **خارج هذه القائمة قصداً**: هو من البذرة، لكنه **شاشةٌ تكتب نجمةَ
+// عقدتها** (`gate:<البوابة>`) — فمَن أخرجه من الجرد أعمى الحارسَ عن سابقة البوابات.
 const SEED = new Set([
   'main.js', 'progress.js', 'curriculum.js', 'ui.js', 'audio.js', 'review.js', 'parent.js',
 ]);
@@ -70,10 +72,15 @@ if (!nodes.length) {
 
 console.log('\n٢. لكل سابقةِ عقدةٍ شاشةٌ تكتب نجمتَها');
 
+// **نومُه صار بالسابقة لا بالرحلة كلها** (الجلسة ١، وقد أيقظت الرحلةُ هذا الباب):
+// الرحلةُ اثنتان وعشرون سابقةً تُكتب شاشاتُها في **خمس جلسات**، فمطالبةُ الجميع يوم
+// تُكتب أوّلُ شاشة تُسقِط الجلسةَ الثالثة بذنب السابعة. والمقياسُ الصحيح **الموجِّه**:
+// سابقةٌ سجّلت شاشتَها فيه (`registerScreen('<السابقة>'`) لها شاشةٌ فعلاً، فيجب أن
+// يكتب أحدٌ نجمتَها بمعرّفها هو — وهذا عينُ العيب الذي وُلد منه الحارس. وسابقةٌ لم
+// تُسجَّل بعدُ نائمةٌ بشرطٍ **مجرود** يستيقظ يومَ تُسجَّل. ولا يخفّ الحارسُ بذلك بل
+// **يشتدّ**: كان يقيس بوجود ملفٍّ ما في المجلد، وصار يقيس بالتسجيل عينِه.
 if (!nodes.length) {
   dormant('لا عقدةَ في الرحلة تُنسَب إلى كاتب (الجلسة ١ تكتب المنهج)');
-} else if (!screenFiles.length) {
-  dormant('لا شاشةَ محطةٍ بعد خارج وحدات البذرة (الجلسة ٣ تكتب أولاها)');
 } else {
   // **مصنعُ العقد والموجِّه يُستثنيان**: `progress.js` ينشئ المعرّفات و`main.js`
   // يحرس بها الطريق — وكلاهما يذكر كلَّ سابقة. والمقيسُ **مَن يكتب النجمة** لا مَن
@@ -85,14 +92,28 @@ if (!nodes.length) {
     const literals = new Set([...src.matchAll(/['"`]([a-z][a-z0-9-]*)['"`:]/g)].map((m) => m[1]));
     writers.set(name, literals);
   }
-  ok(writers.size > 0, `شاشاتٌ تكتب النجوم: ${writers.size} وحدة`);
+
+  // السوابقُ المسجَّلة في الموجِّه — تُجرَد من `app/js/` كلِّها (البوابةُ تسجّلها
+  // بذرةُ المنصة في `main.js`، ووحداتُ التمارين تسجّل نفسَها من الجلسة ٣).
+  const registered = new Set(modules.flatMap((name) =>
+    [...read(name).matchAll(/registerScreen\(\s*['"`]([a-z][a-z0-9-]*)['"`]/g)].map((m) => m[1])));
 
   const prefixes = [...new Set(nodes.map((n) => n.id.split(':')[0]))].sort();
-  const orphans = prefixes.filter((prefix) =>
+  const waiting = prefixes.filter((prefix) => !registered.has(prefix));
+  const live = prefixes.filter((prefix) => registered.has(prefix));
+
+  ok(writers.size > 0, `شاشاتٌ تكتب النجوم: ${writers.size} وحدة`);
+
+  const orphans = live.filter((prefix) =>
     ![...writers].some(([, set]) => set.has(prefix)));
   ok(orphans.length === 0,
-    `ولا سابقةَ بلا كاتب (${prefixes.length} سابقة)`
+    `ولا سابقةَ مسجَّلةٍ بلا كاتب (${live.length} من ${prefixes.length} سابقة)`
     + (orphans.length ? ` — يتيمة: ${orphans.join('، ')}` : ''));
+
+  if (waiting.length) {
+    dormant(`${waiting.length} سابقةً لم تُسجَّل شاشتُها في الموجِّه بعد `
+      + `(${waiting.join('، ')})`);
+  }
 }
 
 console.log(fails

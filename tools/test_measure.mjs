@@ -25,12 +25,25 @@
 // أوّلُ محطةٍ تُكتب في `curriculum.js` (الجلسة ١) توقظ **بابَ الإعلان** فيطالب بجدول
 // `STATIONS` أدناه؛ وأوّلُ شاشةٍ تُكتب (الجلسة ٣) توقظ **بابَي الشيفرة والمراجعة**.
 // فلا يملك أحدٌ أن ينسى إيقاظه.
+//
+// **وقد أيقظت الجلسةُ ١ بابَ الإعلان** (وأضافت إليه بابَ «لا انحراف بين الجردين»)،
+// وبقي البابان الآخران نائمين بشرطَيهما المجرودين: الشيفرةُ تنام لكل نوعٍ لم يُكتب
+// ملفُّ شاشته، والمراجعةُ تنام ما دامت **لا وحدةَ تمارينَ تحقن بانِيَ التمارين**
+// (`setBuilders` في `review.js`) — فلا مهارةَ يمكن أن تُنتج تمرينَها قبل أن يُحقَن
+// بانيها. وشرطُ نومها **مجرودٌ من `app/js/` لا مضبوطٌ بيد**، فتستيقظ من تلقائها يوم
+// تكتب الجلسةُ ٣ أوّلَ مولّد. (بندٌ يُرفع إلى مدير المشروع — `SESSIONS.md`.)
 
-import { readFileSync, existsSync } from 'node:fs';
+import { readFileSync, readdirSync, existsSync } from 'node:fs';
 
 const APP = new URL('../app/js/', import.meta.url);
 const src = (name) => readFileSync(new URL(name, APP), 'utf8');
 const has = (name) => existsSync(new URL(name, APP));
+
+// وحداتُ البذرة ليست شاشاتِ تمارين (نظيرُ `SEED` في `test_nodes.mjs`)
+const SEED = new Set([
+  'main.js', 'progress.js', 'curriculum.js', 'ui.js', 'audio.js', 'review.js', 'parent.js',
+]);
+const screenFiles = readdirSync(APP).filter((f) => f.endsWith('.js') && !SEED.has(f));
 
 const store = new Map();
 globalThis.localStorage = {
@@ -40,6 +53,7 @@ globalThis.localStorage = {
 };
 
 const p = await import(new URL('progress.js', APP));
+const curriculum = await import(new URL('curriculum.js', APP));
 
 let fails = 0;
 let asleep = 0;
@@ -62,7 +76,55 @@ const dormant = (msg) => { asleep++; console.log('  ⏸', `${msg} — نائم،
 //   • **البوابات الثلاث**: تقيس ولا تدرّس — تمارينُها تمارينُ المراجعة نفسُها
 //     (`sessionItems` في `review.js`)، فتكتب بأنواعِ غيرِها ولا نوعَ لها.
 
+// **والنوعُ اسمُ الشاشة لا اسمُ المفهوم** (`curriculum.js` في رأسه): شاشتان قد
+// تقيسان مفهوماً واحداً لأنهما درسان في جلستين — `more` (أيُّهما أكثر بالكميات،
+// `compare|5|more`) و`compare` (أكبرُ وأصغر بالرموز، `compare|10|pick`). ولذلك
+// **كلُّ نوعٍ يُنجَز في جلسةٍ واحدة**: نوعٌ تتوزّع أنواعُ تمارينه على جلستين يبقى
+// أحمرَ بينهما بحقّ، وليس ذلك عيباً في الجدول بل في تقسيم الشاشات.
+
 const STATIONS = {
+  // ————— المرحلتان ١–٢: الكمّ والعدّ (الجلسة ٣) —————
+  subitize: { title: 'كم ترى؟ (تقديرٌ فوريّ)', file: 'quantity.js', kinds: ['flash'] },
+  match: { title: 'طابِقِ الكميتين', file: 'quantity.js', kinds: ['set'] },
+  more: { title: 'أيُّهما أكثر؟ (بالكميات)', file: 'quantity.js', kinds: ['more', 'set'] },
+  count: { title: 'المس وعُدّ · أعطني ن', file: 'counting.js', kinds: ['touch', 'give'] },
+  equal: { title: 'اجعلهما سواء', file: 'counting.js', kinds: ['make'] },
+
+  // ————— المرحلتان ٣–٤: الرموز والمقارنة (الجلسة ٤) —————
+  numeral: { title: 'رموز ٠–١٠', file: 'numerals.js', kinds: ['match'] },
+  compare: { title: 'أكبر وأصغر (بالرموز)', file: 'compare.js', kinds: ['pick'] },
+  line: { title: 'أين يقع؟ (خطُّ الأعداد)', file: 'compare.js', kinds: ['place'] },
+  order: { title: 'رتِّب', file: 'compare.js', kinds: ['sort'] },
+  neighbor: { title: 'السابق والتالي', file: 'compare.js', kinds: ['next'] },
+
+  // ————— المرحلة ٥: ركِّب وفكِّك (الجلسة ٥) —————
+  bond: { title: 'جسور الأعداد', file: 'bonds.js', kinds: ['make'] },
+
+  // ————— المرحلة ٦: العمليات ضمن ١٠ (الجلسة ٦) —————
+  add: { title: 'الجمع', file: 'ops.js', kinds: ['solve'] },
+  sub: { title: 'الطرح', file: 'ops.js', kinds: ['solve'] },
+  diff: { title: 'الطرح فرقاً', file: 'ops.js', kinds: ['solve'] },
+  zero: { title: 'الصفر في العمليات', file: 'ops.js', kinds: ['solve'] },
+  fluent: { title: 'طلاقة ضمن ١٠', file: 'ops.js', kinds: ['solve'] },
+
+  // ————— المرحلة ٧: ١١–٢٠ (الجلسة ٧) —————
+  teen: { title: 'العشرة وما بعدها', file: 'teens.js', kinds: ['build', 'place'] },
+  bridge: { title: 'اجمع بالعبور', file: 'teens.js', kinds: ['bridge'] },
+
+  // ————— المرحلة ٨: الأنماط والقياس (الجلسة ٧) —————
+  pattern: { title: 'أكمِل النمط', file: 'patterns.js', kinds: ['extend'] },
+  measure: { title: 'القياس الوصفي', file: 'patterns.js', kinds: ['pick', 'sort'] },
+
+  // ————— المعفاتان بسببَيهما المكتوبين —————
+  intro: {
+    title: 'تعارُف: أرقامٌ أخرى (١٢٣)',
+    // **وملفُّها مفردٌ عن شاشات المرحلة ٨ عمداً**: بابُ الشيفرة يطالب المعفاةَ بألّا
+    // تكتب مهارةً البتّة، فلو سكنت ملفَّ شاشةٍ تقيس لَما أمكن إثباتُ إعفائها.
+    file: 'intro.js',
+    exempt: 'محطةُ تعارفٍ على الأرقام المغربية (123) **بلا قياسٍ عليها** بنصّ القرار '
+      + 'ق١ (`METHOD.md §٩`): يعرف الطفل أنّ للأعداد رسماً آخر سيلقاه، ولا يُمتحن '
+      + 'فيه — فلا مفتاحَ ليتنر واحداً يُكتب من هذه المحطة.',
+  },
   gate: {
     title: 'بوابة الإتقان',
     file: 'gate.js',
@@ -70,7 +132,6 @@ const STATIONS = {
       + '(`sessionItems`)، فتكتب بأنواعِ غيرِها ولا نوعَ لها. وهذا الإعفاءُ منقولٌ '
       + 'من اقرأ بعلّته لا بنصّه — والبوابةُ عندنا ثلاثٌ لا اثنتان (`METHOD.md §٥`).',
   },
-  // ————— الجلسة ١ تُدخل هنا أنواعَ محطات المراحل الثماني —————
 };
 
 // ————— ١) الإعلان: لا نوعَ محطةٍ في الرحلة خارج الجرد —————
@@ -97,6 +158,33 @@ if (!types.length) {
     'ولكلٍّ قياسُها **أو** إعفاؤها المكتوب — لا الاثنان ولا لا شيء');
   ok(declared.filter(([, s]) => s.exempt).every(([, s]) => s.exempt.length > 40),
     'وسببُ الإعفاء جملةٌ تُقرأ لا كلمةٌ تُكتب للمرور');
+
+  // ————— ١ب) لا انحرافَ بين الجردين (زيادةُ الجلسة ١) —————
+  //
+  // **العلّة**: صار للقياس مصدران — المنهجُ يعلن مفاتيح كل محطة (`skills` في
+  // `curriculum.js`)، وهذا الجدولُ يعلن أنواعَ تمارين كل شاشة. ومصدران لحقيقةٍ
+  // واحدة يفترقان بلا حارس: تُضاف محطةٌ بنوع تمرينٍ جديد فيبقى الجدولُ ساكتاً،
+  // فيمرّ بابُ الشيفرة أخضرَ وهو لا يطالب بالجديد. فيُقابَل الجردان هنا صنفاً بصنف.
+
+  const fromCurriculum = new Map();
+  for (const station of curriculum.stations()) {
+    const set = fromCurriculum.get(station.type) || new Set();
+    for (const key of station.skills || []) set.add(key.split('|')[2]);
+    fromCurriculum.set(station.type, set);
+  }
+  const drift = [...fromCurriculum].filter(([type, set]) => {
+    const listed = new Set(STATIONS[type]?.kinds || []);
+    return set.size !== listed.size || [...set].some((k) => !listed.has(k));
+  });
+  ok(drift.length === 0,
+    `وأنواعُ تمارين كل شاشةٍ في الجدول هي التي يعلنها المنهج (${fromCurriculum.size} نوعاً)`
+    + (drift.length ? ` — منحرفة: ${drift.map(([t, s]) => `${t} (المنهج: ${[...s].join('،') || 'لا شيء'
+      })`).join('، ')}` : ''));
+
+  const claiming = [...fromCurriculum].filter(([type, set]) => set.size && STATIONS[type]?.exempt);
+  ok(claiming.length === 0,
+    'ولا محطةَ معفاةٍ تعلن مفتاحَ ليتنر في المنهج'
+    + (claiming.length ? ` — ${claiming.map(([t]) => t).join('، ')}` : ''));
 
   // ————— ٢) الشيفرة: المالكةُ تكتب فعلاً، والمعفاةُ لا تكتب —————
 
@@ -128,8 +216,15 @@ if (!types.length) {
 
   console.log('\n— المراجعة: لكل نوع قياسٍ تمرينُه —');
   const kinds = [...new Set(Object.values(STATIONS).flatMap((s) => s.kinds || []))];
+  // **درجتان تنامان وتستيقظان ذاتياً** (نظيرُ `test_nodes.mjs`): المفاتيحُ تكتبها
+  // الجلسة ١، و**بانيها** تحقنه الجلسة ٣ بـ`setBuilders`. وقبل الحقن لا تستطيع أيُّ
+  // مهارةٍ أن تُنتج تمرينَها — فالمطالبةُ سابقةٌ لأوانها، والشرطُ **مجرودٌ لا مضبوط**.
+  const injectors = screenFiles.filter((f) => /setBuilders\s*\(/.test(src(f)));
   if (!kinds.length) {
     dormant('لا نوعَ قياسٍ مُعلَناً بعد (الجلسة ١ تكتب المفاتيح، والجلسة ٣ بانيَها)');
+  } else if (!injectors.length) {
+    dormant(`${kinds.length} نوعَ قياسٍ مُعلَناً، ولا وحدةَ تمارينَ تحقن بانيَها بعد `
+      + '(`setBuilders` — الجلسة ٣ تكتب أولاها)');
   } else {
     const review = await import(new URL('review.js', APP));
     const { seeded } = await import(new URL('ui.js', APP));

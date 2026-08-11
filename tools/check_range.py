@@ -1,0 +1,661 @@
+#!/usr/bin/env python3
+"""حارسُ الجبهة في «اِحْسِبْ» — **نظيرُ المفكوكية في اقرأ** (`METHOD.md §١٠.١`).
+
+القاعدة الملزمة: **لا تمرينَ يستعمل عدداً أو عمليةً أو رمزاً فوق جبهة محطته**.
+وكلُّ محطةٍ تُعلن جبهتَها في `app/js/curriculum.js` (أدنى عدد · أقصى عدد · أقصى رمز ·
+العمليات · رموزُ العمليات · أنماطُ العرض)، وكلُّ مولّد تمارين يعلن ما يستهلك —
+والفاحصُ يجرد **بالصنف والحدود لا بالتعداد الأعمى**.
+
+خمسةُ أبوابٍ يفحصها:
+  ١) **بنيةُ الجبهة**: كلُّ محطةٍ تعلن جبهةً تامّةً بحدودٍ معقولة من معجمٍ معلَن.
+  ٢) **تدرّجُ الجبهة**: لا رمزَ قبل موضعه، ولا صفرَ قبل محطته، ولا رمزَ عمليةٍ قبل
+     أن تُفعَل العمليةُ بلا رمز، ولا إطارَ عشرةٍ قبل إطار الخمسة.
+  ٣) **بواباتُ المعرفة الثلاث** (`METHOD.md §٢.٢`): كمّاً ← عدّاً ← رمزاً، ولا يدخل
+     عمليةً عددٌ لم يعبر الثلاث. **وهذا هو لبُّ الحارس**: يُشتقّ من ترتيب الرحلة
+     نفسِه، فلا يمرّ عددٌ إلى عمليةٍ ولمّا يُعَدّ ولم يُرسَم رمزُه.
+  ٤) **استهلاكُ المولّدات**: ما تعلن وحدةُ التمارين أنّها تستهلكه ⊆ جبهةُ محطاتها.
+  ٥) **الجولاتُ المولَّدة**: كلُّ جولةٍ تُولَّد ببذرةٍ تُجرَد ويُقابَل ما فيها بالجبهة.
+
+والبابان ٤ و٥ **نائمان نوماً ذاتياً** (`docs/SEED.md §٥`): لا مولّدَ اليوم، والشرطُ
+يُجرَد ولا يُضبَط بيد — فيستيقظان من تلقائهما يومَ تُكتب أوّلُ وحدةِ تمارين (الجلسة ٣).
+
+الاستعمال:
+    python3 tools/check_range.py              # الفحص على المنهج الحيّ
+    python3 tools/check_range.py --self-test  # فحصُ الفاحص: أيمسك المخالفات؟
+
+يخرج بـ ١ عند وجود خطأ واحد على الأقل، وبـ ٠ إن مرّ الفحص.
+"""
+
+import argparse
+import copy
+import json
+import re
+import subprocess
+import sys
+from pathlib import Path
+
+ROOT = Path(__file__).resolve().parent.parent
+APP_JS = ROOT / "app" / "js"
+CURRICULUM = APP_JS / "curriculum.js"
+
+# وحداتُ البذرة ليست شاشاتِ تمارين — هي المنصةُ نفسُها (نظيرُ `SEED` في `test_nodes.mjs`)
+SEED_MODULES = {
+    "main.js", "progress.js", "curriculum.js", "ui.js", "audio.js", "review.js", "parent.js",
+}
+
+FRONTIER_FIELDS = ("min", "max", "numeral", "ops", "signs", "displays")
+
+# عقدُ المولّد (تلتزم به الجلسات ٣+): وحدةٌ **خالصة** تُستورَد في node بلا متصفّح —
+# لا تستورد `main.js` (فهو يمسّ الـDOM وقت التحميل)، وتُعلن ما تستهلك وتفتح جولاتِها
+# للجرد. والشاشةُ التي تسجّل نفسَها في الموجِّه تستورد هذه الوحدة، لا العكس.
+CONSUMES_DECL = re.compile(r"export\s+const\s+CONSUMES\b")
+PROBE_DECL = re.compile(r"export\s+(?:function|const)\s+probeRounds\b")
+
+
+# ————— قراءةُ المنهج: تُشغَّل الوحدةُ نفسُها ولا يُخمَّن نصُّها —————
+#
+# **ولِمَ تشغيلٌ لا تعبيرٌ نمطيّ؟** لأنّ الرحلةَ هنا **محسوبة** لا مكتوبة: `sections()`
+# تؤلّف المراحلَ والبوابات تأليفاً، فقارئٌ نصّيّ يقرأ البيانات ولا يقرأ الرحلة التي
+# يراها الطفل. والوحدةُ محايدةٌ للمتصفّح (لا تمسّ DOM وقت التحميل) فتُستورَد في node.
+
+def load_curriculum() -> dict:
+    js = f"""
+    const m = await import({json.dumps(CURRICULUM.as_uri())});
+    console.log(JSON.stringify({{
+      ops: m.OPS, signs: m.SIGNS, displays: m.DISPLAYS,
+      levelMax: m.LEVEL_MAX, subitizeMax: m.SUBITIZE_MAX, countMax: m.COUNT_MAX,
+      stages: m.STAGES.map((s) => ({{ id: s.id, count: s.stations.length }})),
+      gates: m.GATES,
+      stations: m.stations(),
+      sections: m.sections().map((s) => ({{
+        kind: s.kind, id: s.id,
+        nodes: (s.nodes || []).map((n) => ({{
+          id: n.id, type: n.type, part: n.part, frontier: n.frontier || null,
+        }})),
+      }})),
+    }}));
+    """
+    run = subprocess.run(["node", "--input-type=module", "-e", js],
+                         capture_output=True, text=True)
+    if run.returncode != 0:
+        sys.exit(f"تعذّرت قراءة المنهج من {CURRICULUM.name}:\n{run.stderr.strip()}")
+    return json.loads(run.stdout)
+
+
+def parsed_all(data: dict) -> list:
+    """حارسُ المحلّل: **لا محطةَ في الملفّ خارج الرحلة**.
+
+    محطةٌ تُكتب في `STAGES` ولا تصل إلى `sections()` بيانٌ ميّت: لا تظهر للطفل ولا
+    يفحصها أحد. فيُقابَل عددُ الجبهات المكتوبة في المصدر بعدد المحطات التي أرجعتها
+    الوحدة — والفرقُ خطأ لا تنبيه.
+    """
+    written = len(re.findall(r"\bfrontier:\s*\{", CURRICULUM.read_text(encoding="utf-8")))
+    if written != len(data["stations"]):
+        return [f"[المحلّل] في المصدر {written} جبهةً مكتوبة، وفي الرحلة "
+                f"{len(data['stations'])} محطة — محطةٌ لا تصل إلى `sections()` بيانٌ ميّت"]
+    return []
+
+
+# ————— أدواتٌ صغيرة —————
+
+def concepts_of(station: dict) -> set:
+    """مفاهيمُ المحطة من مفاتيح ليتنر — الحقلُ الأول من (مفهوم × مدى × تمرين)."""
+    return {k.split("|")[0] for k in station.get("skills") or [] if k}
+
+
+def numeric(text: str):
+    """مدى المفتاح عدداً، أو None إن كان وصفياً (`abab`، `length`، `time`)."""
+    return int(text) if str(text).lstrip("-").isdigit() else None
+
+
+def label_of(station: dict) -> str:
+    return f"[{station['id']}] «{station.get('title', '')}»"
+
+
+# ————— ١) بنيةُ الجبهة —————
+
+def frontier_errors(stations: list, vocab: dict) -> list:
+    """كلُّ محطةٍ تعلن جبهةً تامّةً بحدودٍ معقولة من المعجم المُعلَن في المنهج."""
+    errors = []
+    signs_of = vocab["signs"]                 # عملية ← علامتُها
+    known_signs = set(signs_of.values())
+    seen = {}
+
+    for station in stations:
+        label = label_of(station)
+        if station["id"] in seen:
+            errors.append(f"{label}: معرّفٌ مكرَّر (محطتان بمعرّفٍ واحد ⇒ نجمةٌ تُكتب في غير موضعها)")
+        seen[station["id"]] = True
+        for field in ("type", "part", "title"):
+            if not station.get(field):
+                errors.append(f"{label}: بلا {field}")
+
+        f = station.get("frontier")
+        if not isinstance(f, dict):
+            errors.append(f"{label}: بلا جبهةٍ معلَنة — ولا محطةَ بلا جبهة (`METHOD.md §١٠.١`)")
+            continue
+        missing = [k for k in FRONTIER_FIELDS if k not in f]
+        extra = [k for k in f if k not in FRONTIER_FIELDS]
+        if missing:
+            errors.append(f"{label}: جبهةٌ ناقصةُ الحقول: {'، '.join(missing)}")
+            continue
+        if extra:
+            errors.append(f"{label}: في الجبهة حقلٌ لا يعرفه الحارس: {'، '.join(extra)}")
+
+        if f["min"] not in (0, 1):
+            errors.append(f"{label}: أدنى عددٍ {f['min']} — ولا أدنى إلا ١ أو ٠ (الصفرُ بعد محطته)")
+        if not isinstance(f["max"], int) or f["max"] < 1:
+            errors.append(f"{label}: أقصى عددٍ غيرُ صحيح: {f['max']}")
+        elif f["max"] > vocab["levelMax"]:
+            errors.append(f"{label}: أقصى عددٍ {f['max']} فوق سقف المستوى "
+                          f"({vocab['levelMax']}) — المئةُ لـ«اِحْسِبْ ٢» (ق٣)")
+        elif f["min"] > f["max"]:
+            errors.append(f"{label}: أدنى عددٍ فوق أقصاه ({f['min']} > {f['max']})")
+
+        if f["numeral"] is not None:
+            if not isinstance(f["numeral"], int) or f["numeral"] < 0:
+                errors.append(f"{label}: أقصى رمزٍ غيرُ صحيح: {f['numeral']}")
+            elif f["numeral"] > f["max"]:
+                errors.append(f"{label}: أقصى رمزٍ {f['numeral']} فوق أقصى كمّها "
+                              f"{f['max']} — الرمزُ تسميةٌ لكمٍّ حاضر (`METHOD.md §٢.١`)")
+
+        bad_ops = [o for o in f["ops"] if o not in vocab["ops"]]
+        if bad_ops:
+            errors.append(f"{label}: عمليةٌ خارج معجم المنهج: {'، '.join(bad_ops)}")
+        bad_signs = [s for s in f["signs"] if s not in known_signs]
+        if bad_signs:
+            errors.append(f"{label}: رمزُ عمليةٍ خارج معجم المنهج: {'، '.join(bad_signs)}")
+        orphan = [s for s in f["signs"] if s in known_signs
+                  and s not in {signs_of[o] for o in f["ops"] if o in signs_of}]
+        if orphan:
+            errors.append(f"{label}: رمزُ عمليةٍ بلا عمليتِه: {'، '.join(orphan)} "
+                          "— لا علامةَ لِما لا يُفعَل")
+
+        if not f["displays"]:
+            errors.append(f"{label}: بلا نمطِ عرضٍ واحد — بمَ تُعرَض الكمية؟")
+        bad_shows = [d for d in f["displays"] if d not in vocab["displays"]]
+        if bad_shows:
+            errors.append(f"{label}: نمطُ عرضٍ خارج معجم المصيِّر: {'، '.join(bad_shows)}")
+
+        # المقياس: مفاتيحُ ليتنر، أو إعفاءٌ مكتوبٌ بسببه — ولا ثالث
+        skills = station.get("skills") or []
+        exempt = station.get("exempt") or ""
+        if bool(skills) == bool(exempt):
+            errors.append(f"{label}: {'قياسٌ وإعفاءٌ معاً' if skills else 'بلا قياسٍ ولا إعفاء'} "
+                          "— لكلِّ محطةٍ مفاتيحُها **أو** إعفاؤها المكتوب")
+        if exempt and len(exempt) <= 40:
+            errors.append(f"{label}: سببُ الإعفاء كلمةٌ تُكتب للمرور لا جملةٌ تُقرأ")
+        for key in skills:
+            parts = key.split("|")
+            if len(parts) != 3 or not all(parts):
+                errors.append(f"{label}: مفتاحٌ ليس (مفهوم × مدى × تمرين): «{key}»")
+                continue
+            span = numeric(parts[1])
+            if span is not None and isinstance(f["max"], int) and span > f["max"]:
+                errors.append(f"{label}: المفتاح «{key}» مداه {span} فوق جبهة محطته ({f['max']})")
+            if span is not None and span < f["min"]:
+                errors.append(f"{label}: المفتاح «{key}» مداه {span} دون أدنى جبهته ({f['min']})")
+    return errors
+
+
+# ————— ٢) تدرّجُ الجبهة عبر الرحلة —————
+
+def order_errors(stations: list, vocab: dict) -> list:
+    """ما لا يجوز أن يسبق موضعَه — مشتقٌّ من ترتيب الرحلة لا مكتوبٌ بيد."""
+    errors = []
+    firsts = {}     # نمطُ عرضٍ ← موضعُ أول محطةٍ تُتيحه
+
+    for i, station in enumerate(stations):
+        for show in station["frontier"].get("displays", []):
+            firsts.setdefault(show, i)
+
+    # أ) الصفر: لا ينكص أدنى العدد، وأوّلُ محطةٍ تبلغه محطةُ رمزٍ بعد العشرة
+    zero_at = next((i for i, s in enumerate(stations) if s["frontier"]["min"] == 0), None)
+    if zero_at is not None:
+        late = [label_of(s) for s in stations[zero_at:] if s["frontier"]["min"] != 0]
+        if late:
+            errors.append(f"[الصفر] عاد أدنى العدد إلى ١ بعد أن بلغ ٠: {late[0]} "
+                          "— الجبهةُ لا تنكص")
+        opener = stations[zero_at]
+        if "numeral" not in concepts_of(opener):
+            errors.append(f"{label_of(opener)}: أولُ محطةٍ تبلغ الصفر وليست محطةَ رمز "
+                          "— الصفرُ يُقدَّم رمزاً لكميةِ «لا شيء» (`METHOD.md §٢.٦`)")
+        before = [s for s in stations[:zero_at]
+                  if (s["frontier"]["numeral"] or 0) >= vocab["countMax"]]
+        if not before:
+            errors.append(f"{label_of(opener)}: الصفرُ قبل العشرة — وهو متأخرٌ عمداً "
+                          "بعدها (`METHOD.md §٢.٦`)")
+
+    # ب) الرمز: لا رمزَ قبل أوّل محطةِ رمز، ولا نكوصَ إلى «بلا رمز» بعدها
+    numeral_at = next((i for i, s in enumerate(stations)
+                       if s["frontier"]["numeral"] is not None), None)
+    if numeral_at is not None:
+        blind = [label_of(s) for s in stations[numeral_at:] if s["frontier"]["numeral"] is None]
+        if blind:
+            errors.append(f"[الرمز] عادت الرحلةُ إلى «بلا رمز» بعد تقديمه: {blind[0]}")
+    else:
+        errors.append("[الرمز] لا محطةَ رمزٍ في الرحلة كلها — والمستوى يقرأ ٠–١٠ رمزاً")
+
+    # ج) رمزُ العملية: أوّلُ عمليةٍ في الرحلة تُفعَل **بلا رمز** (`METHOD.md §٣` — ٦·١)
+    op_at = next((i for i, s in enumerate(stations) if s["frontier"]["ops"]), None)
+    if op_at is None:
+        errors.append("[العمليات] لا محطةَ عمليةٍ في الرحلة — والمستوى يجمع ويطرح ضمن ٢٠")
+    elif stations[op_at]["frontier"]["signs"]:
+        errors.append(f"{label_of(stations[op_at])}: أوّلُ عمليةٍ في الرحلة ومعها رمزُها "
+                      "— والرمزُ تسميةٌ لِما فُعِل قبله (آلةُ الجمع بلا رمز، `METHOD.md §٣`)")
+
+    # د) الجسور بلا عمليةٍ ولا رمز (`METHOD.md §٣` المرحلة ٥)
+    for station in stations:
+        if "bond" in concepts_of(station) and (station["frontier"]["ops"]
+                                               or station["frontier"]["signs"]):
+            errors.append(f"{label_of(station)}: محطةُ جسورٍ فيها عمليةٌ أو رمزُها — "
+                          "جزء-جزء-كلّ **قبل** رمزَي + و− (`METHOD.md §٣`)")
+
+    # هـ) أنماطُ العرض: النردُ قبل المبعثر، وإطارُ الخمسة قبل العشرة، والعشرةُ قبل الإطارين
+    for later, earlier, why in (
+        ("scatter", "dice", "أنماطُ النرد القياسية أولاً ثم التوزيعُ المبعثر (`METHOD.md §٢.٣`)"),
+        ("ten-frame", "five-frame", "إطارُ الخمسة قبل إطار العشرة (`METHOD.md §٣` — ٣·٣ ثم ٣·٥)"),
+        ("two-frames", "ten-frame", "الإطارُ الواحد قبل الإطارين (`METHOD.md §٣` — المرحلة ٧)"),
+    ):
+        if later in firsts and (earlier not in firsts or firsts[earlier] >= firsts[later]):
+            errors.append(f"[أنماط العرض] «{later}» يظهر قبل «{earlier}» — {why}")
+
+    # و) العشرون لا تدخل إلا في محطةِ بنائها حزمةً وآحاداً
+    over = next((s for s in stations if s["frontier"]["max"] > vocab["countMax"]), None)
+    if over is not None and "teen" not in concepts_of(over):
+        errors.append(f"{label_of(over)}: أوّلُ محطةٍ تتجاوز {vocab['countMax']} وليست "
+                      "محطةَ بناءٍ (عشرةٌ وآحاد) — `METHOD.md §٣` المرحلة ٧")
+    return errors
+
+
+# ————— ٣) بواباتُ المعرفة الثلاث: كمّاً ← عدّاً ← رمزاً ← عمليةً —————
+
+def gates_errors(stations: list, vocab: dict) -> list:
+    """**لبُّ الحارس** (`METHOD.md §٢.٢`): لا يدخل عمليةً عددٌ لم يعبر بواباته.
+
+    ثلاثةُ شروطٍ تُشتقّ من ترتيب الرحلة نفسِه، فلا يُكتب أيٌّ منها بيد:
+      • **عدٌّ بعد كمّ**: ما يُعَدّ ضمن حدِّ التقدير الفوري (٥) قد قُدِّر قبله بنظرة.
+        وفوق الحدّ لا شرط: التقديرُ الفوريّ لا يمتدّ بحثياً (`METHOD.md §٢.٣`).
+      • **رمزٌ بعد عدّ**: ما يُرسَم رمزُه قد عُدّ قبله. وفوق العشرة لا شرط: الأعدادُ
+        هناك **تُبنى** حزمةً وآحاداً ولا تُعَدّ فرادى (المرحلة ٧).
+      • **عمليةٌ بعد رمز**: ما يدخل عمليةً قد قُرئ رمزُه قبلها.
+    """
+    errors = []
+    for i, station in enumerate(stations):
+        f = station["frontier"]
+        before = stations[:i]
+        label = label_of(station)
+
+        if "count" in concepts_of(station):
+            need = min(f["max"], vocab["subitizeMax"])
+            if not any("subitize" in concepts_of(s) and s["frontier"]["max"] >= need
+                       for s in before):
+                errors.append(f"{label}: يُعَدّ إلى {f['max']} ولم يُقدَّر {need} بنظرةٍ قبله "
+                              "— بوابةُ الكمّ قبل بوابة العدّ (`METHOD.md §٢.٢`)")
+
+        if f["numeral"] is not None:
+            need = min(f["numeral"], vocab["countMax"])
+            if not any("count" in concepts_of(s) and s["frontier"]["max"] >= need
+                       for s in before):
+                errors.append(f"{label}: يعرض رمزَ {f['numeral']} ولم يُعَدّ {need} قبله "
+                              "— بوابةُ العدّ قبل بوابة الرمز (`METHOD.md §٢.٢`)")
+
+        if f["ops"]:
+            if not any((s["frontier"]["numeral"] or -1) >= f["max"] for s in before):
+                errors.append(f"{label}: يُدخِل {f['max']} في عمليةٍ ولم يُقرَأ رمزُه قبلها "
+                              "— ولا يدخل عمليةً إلا عددٌ عبر الثلاث (`METHOD.md §٢.٢`)")
+    return errors
+
+
+# ————— عقدُ الرحلة: البوابات في مواضعها، والعقدُ محطةٌ أو بوابة —————
+
+def journey_errors(data: dict) -> list:
+    errors = []
+    stage_ids = [s["id"] for s in data["stages"]]
+    gates = data["gates"]
+
+    # «البواباتُ **الثلاث**» نصُّ `METHOD.md §٥` — ثابتُ منهجٍ لا عددٌ محصيّ
+    if len(gates) != 3:
+        errors.append(f"[البوابات] في الرحلة {len(gates)} بوابة، والمنهج ثلاث (`METHOD.md §٥`)")
+    for gate in gates:
+        if gate["after"] not in stage_ids:
+            errors.append(f"[بوابة {gate['id']}] موضعُها بعد مرحلةٍ مجهولة: «{gate['after']}»")
+        for field in ("title", "hint", "face"):
+            if not gate.get(field):
+                errors.append(f"[بوابة {gate['id']}]: بلا {field}")
+
+    for stage in data["stages"]:
+        if not stage["count"]:
+            errors.append(f"[{stage['id']}] مرحلةٌ بلا محطة")
+
+    gate_nodes, station_nodes = [], []
+    for section in data["sections"]:
+        if not section["nodes"]:
+            errors.append(f"[{section['id']}] قسمٌ بلا عقدة")
+        for node in section["nodes"]:
+            (gate_nodes if node["type"] == "gate" else station_nodes).append(node)
+            if node["id"] != f"{node['type']}:{node['part']}":
+                errors.append(f"[{node['id']}] المعرّفُ ليس «<النوع>:<الجزء>»")
+
+    for node in gate_nodes:
+        if node["frontier"] is not None:
+            errors.append(f"[{node['id']}] للبوابة جبهة — والبوابةُ **تقيس ولا تدرّس**: "
+                          "مادّتُها ما مضى، وجبهتُها جبهةُ ما قبلها")
+    if len(gate_nodes) != len(gates):
+        errors.append(f"[البوابات] {len(gates)} في `GATES` و{len(gate_nodes)} عقدةً في الرحلة")
+
+    known = {s["id"] for s in data["stations"]}
+    stray = [n["id"] for n in station_nodes if n["id"] not in known]
+    if stray:
+        errors.append(f"[الرحلة] عقدةٌ على الخريطة ليست محطةً في المنهج: {'، '.join(stray)}")
+    unseen = known - {n["id"] for n in station_nodes}
+    if unseen:
+        errors.append(f"[الرحلة] محطةٌ في المنهج لا تصل إلى الخريطة: {'، '.join(sorted(unseen))}")
+    return errors
+
+
+# ————— ٤+٥) المولّدات: ما تستهلكه ⊆ جبهةُ محطتها —————
+
+def usage_errors(label: str, used: dict, frontier: dict) -> list:
+    """**الحكمُ الواحد** الذي يُطبَّق على كل جولةٍ وكل إعلانِ استهلاك.
+
+    يُجرَد بالصنف والحدود: أعدادٌ · رموزٌ · عملياتٌ · رموزُ عمليات · أنماطُ عرض —
+    وكلٌّ يُقابَل بحدّه في الجبهة. وهو دالّةٌ خالصة، فيُجرَّب سالباً بلا مولّدٍ ولا متصفّح.
+    """
+    errors = []
+    for n in used.get("numbers", []):
+        if not isinstance(n, int) or n < frontier["min"] or n > frontier["max"]:
+            errors.append(f"{label}: العدد {n} خارج جبهته "
+                          f"[{frontier['min']}..{frontier['max']}]")
+    for n in used.get("numerals", []):
+        if frontier["numeral"] is None:
+            errors.append(f"{label}: يعرض رمزَ {n} ومحطتُه بلا رمزٍ البتّة")
+        elif not isinstance(n, int) or n < frontier["min"] or n > frontier["numeral"]:
+            errors.append(f"{label}: الرمز {n} فوق أقصى رمز محطته ({frontier['numeral']})")
+    for op in used.get("ops", []):
+        if op not in frontier["ops"]:
+            errors.append(f"{label}: العملية «{op}» ليست من عمليات محطته "
+                          f"({'، '.join(frontier['ops']) or 'لا عملية'})")
+    for sign in used.get("signs", []):
+        if sign not in frontier["signs"]:
+            errors.append(f"{label}: رمزُ العملية «{sign}» ليس من رموز محطته "
+                          f"({'، '.join(frontier['signs']) or 'لا رمز'})")
+    for show in used.get("displays", []):
+        if show not in frontier["displays"]:
+            errors.append(f"{label}: نمطُ العرض «{show}» ليس من أنماط محطته "
+                          f"({'، '.join(frontier['displays'])})")
+    return errors
+
+
+def generator_modules() -> list:
+    """جردُ وحدات التمارين التي تُعلن عقدَ المولّد — **الجردُ لا رايةٌ تُضبط بيد**."""
+    out = []
+    for path in sorted(APP_JS.glob("*.js")):
+        if path.name in SEED_MODULES:
+            continue
+        src = path.read_text(encoding="utf-8")
+        if CONSUMES_DECL.search(src) or PROBE_DECL.search(src):
+            out.append(path)
+    return out
+
+
+def probe(modules: list, stations: list) -> tuple:
+    """يستورد المولّدات في node ويجرد إعلانَها وجولاتِها. يُرجِع (أخطاء، محصيّ)."""
+    if not modules:
+        return [], 0
+    js = f"""
+    const paths = {json.dumps([p.as_uri() for p in modules])};
+    const stations = {json.dumps([{'id': s['id'], 'type': s['type']} for s in stations])};
+    const out = {{ consumes: {{}}, rounds: [] }};
+    for (const path of paths) {{
+      const m = await import(path);
+      for (const [type, used] of Object.entries(m.CONSUMES || {{}})) out.consumes[type] = used;
+      if (typeof m.probeRounds !== 'function') continue;
+      for (const station of stations) {{
+        for (const seed of [1, 7, 23, 101]) {{
+          const rounds = m.probeRounds(station.id, seed) || [];
+          for (const [i, used] of rounds.entries()) {{
+            out.rounds.push({{ id: station.id, seed, index: i, used }});
+          }}
+        }}
+      }}
+    }}
+    console.log(JSON.stringify(out));
+    """
+    run = subprocess.run(["node", "--input-type=module", "-e", js],
+                         capture_output=True, text=True)
+    if run.returncode != 0:
+        names = "، ".join(p.name for p in modules)
+        return ([f"[المولّدات] تعذّر استيراد ({names}) في node — ووحدةُ المولّد يجب أن "
+                 f"تكون **خالصة** لا تمسّ الـDOM ولا تستورد `main.js`:\n"
+                 + run.stderr.strip()[:300]], 0)
+
+    data = json.loads(run.stdout)
+    by_id = {s["id"]: s for s in stations}
+    errors = []
+    for type_name, used in data["consumes"].items():
+        owned = [s for s in stations if s["type"] == type_name]
+        if not owned:
+            errors.append(f"[{type_name}] مولّدٌ لنوعٍ لا محطةَ له في الرحلة")
+        for station in owned:
+            errors += usage_errors(f"[إعلان {type_name} · {station['id']}]",
+                                   used, station["frontier"])
+    for round_ in data["rounds"]:
+        station = by_id.get(round_["id"])
+        if not station:
+            continue
+        errors += usage_errors(
+            f"[جولة {round_['id']} · بذرة {round_['seed']}/{round_['index']}]",
+            round_["used"], station["frontier"])
+    return errors, len(data["rounds"])
+
+
+# ————— التشغيل —————
+
+def check(data: dict) -> int:
+    fails = 0
+    asleep = 0
+
+    def door(title, errors, count):
+        nonlocal fails
+        print(f"\n— {title} —")
+        for e in errors[:12]:
+            print("  ✗", e)
+        if len(errors) > 12:
+            print(f"  … و{len(errors) - 12} خطأً آخر")
+        if not errors:
+            print("  ✓", count)
+        fails += len(errors)
+
+    def dormant(msg):
+        nonlocal asleep
+        asleep += 1
+        print("  ⏸", f"{msg} — نائم، يستيقظ ذاتياً")
+
+    stations = data["stations"]
+    vocab = {k: data[k] for k in ("ops", "signs", "displays", "levelMax",
+                                  "subitizeMax", "countMax")}
+
+    door("قراءةُ المنهج: كلُّ محطةٍ مكتوبةٍ تصل إلى الرحلة",
+         parsed_all(data), f"{len(stations)} محطةً في الرحلة، لا واحدةَ خارجها")
+    door("١) بنيةُ الجبهة: كلُّ محطةٍ تعلن حدودَها",
+         frontier_errors(stations, vocab),
+         f"{len(stations)} جبهةً تامّةً من معجمٍ معلَن "
+         f"({len(data['displays'])} نمطَ عرض، {len(data['ops'])} عملية)")
+    door("٢) تدرّجُ الجبهة: لا شيءَ يسبق موضعَه",
+         order_errors(stations, vocab),
+         "الصفرُ والرمزُ ورمزُ العملية والإطارات كلٌّ بعد موضعه")
+    door("٣) بواباتُ المعرفة: كمّاً ← عدّاً ← رمزاً ← عمليةً",
+         gates_errors(stations, vocab),
+         "لا عددَ يدخل رمزاً قبل عدّه، ولا عمليةً قبل رمزه")
+    door("عقدُ الرحلة: البوابات في مواضعها والعقدُ محطةٌ أو بوابة",
+         journey_errors(data),
+         f"{len(data['sections'])} قسماً و{len(data['gates'])} بوابات في مواضعها")
+
+    print("\n— ٤+٥) المولّدات: ما تستهلكه ⊆ جبهةُ محطتها —")
+    modules = generator_modules()
+    if not modules:
+        dormant("لا وحدةَ تمارينَ تُعلن `CONSUMES` ولا `probeRounds` "
+                "(الجلسة ٣ تكتب أولاها)")
+    else:
+        errors, rounds = probe(modules, stations)
+        for e in errors[:12]:
+            print("  ✗", e)
+        if not errors:
+            print("  ✓", f"{len(modules)} وحدةَ مولّدٍ و{rounds} جولةً مولَّدة، "
+                         "كلُّها تحت جبهاتها")
+        fails += len(errors)
+
+    print(f"\n{fails} فشل" if fails
+          else "\nكل تمارين الرحلة تحت جبهاتها"
+               + (f" (و{asleep} نائم بقيدٍ في docs/SEED.md)" if asleep else ""))
+    return 1 if fails else 0
+
+
+# ————— فحصُ الفاحص: **مُجرَّبٌ سالباً** (شرطُ بند الجلسة ١) —————
+#
+# لا يُصدَّق حارسٌ لم يُرَ وهو يمسك. فتُصنَع المخالفاتُ من **المنهج الحيّ نفسِه**
+# (نسخةٌ عميقة تُعبَث بها) ويُطالَب الفاحصُ بأن يمسك كلَّ واحدة — فإذا رقّ يوماً
+# تحت بياناتٍ تحرّكت، سقط هنا لا في جهاز طفل.
+
+def self_test(data: dict) -> int:
+    fails = 0
+
+    def ok(cond, msg):
+        nonlocal fails
+        if cond:
+            print("  ✓", msg)
+        else:
+            fails += 1
+            print("  ✗", msg)
+
+    stations = data["stations"]
+    vocab = {k: data[k] for k in ("ops", "signs", "displays", "levelMax",
+                                  "subitizeMax", "countMax")}
+
+    def broke(mutate, checker=None):
+        """نسخةٌ من الرحلة الحيّة عُبِث بها — وتُعاد أخطاءُ الفاحص عليها."""
+        copy_ = copy.deepcopy(stations)
+        mutate(copy_)
+        return (checker or frontier_errors)(copy_, vocab)
+
+    def find(rows, needle):
+        return any(needle in row for row in rows)
+
+    print("\n— المنهج الحيّ يمرّ نظيفاً —")
+    for name, rows in (
+        ("المحلّل", parsed_all(data)),
+        ("بنيةُ الجبهة", frontier_errors(stations, vocab)),
+        ("تدرّجُ الجبهة", order_errors(stations, vocab)),
+        ("بواباتُ المعرفة", gates_errors(stations, vocab)),
+        ("عقدُ الرحلة", journey_errors(data)),
+    ):
+        ok(not rows, f"{name}: نظيف" + ("" if not rows else f" — {rows[0]}"))
+
+    print("\n— ١) بنيةُ الجبهة تُمسك المخالفات —")
+    ok(find(broke(lambda s: s[0]["frontier"].update(max=21)), "فوق سقف المستوى"),
+       "عددٌ فوق العشرين يُمسَك (ق٣)")
+    ok(find(broke(lambda s: s[0]["frontier"].update(numeral=99)), "فوق أقصى كمّها"),
+       "ورمزٌ فوق كمّ محطته يُمسَك")
+    ok(find(broke(lambda s: s[0]["frontier"].update(ops=["mul"])), "خارج معجم المنهج"),
+       "وعمليةٌ خارج معجم المستوى (الضرب) تُمسَك")
+    ok(find(broke(lambda s: s[0]["frontier"].update(signs=["+"])), "بلا عمليتِه"),
+       "ورمزُ عمليةٍ بلا عمليتِه يُمسَك (لا علامةَ لِما لا يُفعَل)")
+    ok(find(broke(lambda s: s[0]["frontier"].update(displays=["hologram"])), "خارج معجم المصيِّر"),
+       "ونمطُ عرضٍ لا يعرفه المصيِّر يُمسَك")
+    ok(find(broke(lambda s: s[0]["frontier"].pop("displays")), "ناقصةُ الحقول"),
+       "وجبهةٌ ناقصةُ حقل تُمسَك")
+    ok(find(broke(lambda s: s[0].update(skills=["subitize|9|flash"])), "فوق جبهة محطته"),
+       "ومفتاحُ ليتنر مداه فوق جبهة محطته يُمسَك")
+    ok(find(broke(lambda s: s[0].update(skills=[])), "بلا قياسٍ ولا إعفاء"),
+       "ومحطةٌ بلا قياسٍ ولا إعفاءٍ تُمسَك (لا تدريسَ بلا قياس)")
+    ok(find(broke(lambda s: s[0].update(skills=[], exempt="لا وقت")), "كلمةٌ تُكتب للمرور"),
+       "وإعفاءٌ بكلمةٍ لا بجملةٍ تُقرأ يُمسَك")
+    ok(find(broke(lambda s: s.append(copy.deepcopy(s[0]))), "معرّفٌ مكرَّر"),
+       "ومحطتان بمعرّفٍ واحد تُمسَكان (النجمةُ تُكتب في غير موضعها)")
+
+    print("\n— ٢) تدرّجُ الجبهة يُمسك السبقَ والنكوص —")
+    order = lambda mutate: broke(mutate, order_errors)  # noqa: E731
+    ok(find(order(lambda s: s[0]["frontier"].update(numeral=2)), "بلا رمز"),
+       "ورمزٌ في المرحلة الأولى يُمسَك (الكميةُ قبل الرمز)")
+    ok(find(order(lambda s: s[0]["frontier"].update(min=0)), "الصفر"),
+       "وصفرٌ قبل محطته يُمسَك (متأخرٌ عمداً بعد العشرة)")
+    ok(find(order(lambda s: [x["frontier"].update(signs=["+"])
+                             for x in s if x["frontier"]["ops"]]), "أوّلُ عمليةٍ"),
+       "وأوّلُ عمليةٍ ومعها رمزُها تُمسَك (آلةُ الجمع بلا رمز)")
+    ok(find(order(lambda s: [x["frontier"].update(ops=["add"], signs=["+"])
+                             for x in s if "bond" in concepts_of(x)]), "محطةُ جسورٍ"),
+       "ورمزُ عمليةٍ في مرحلة الجسور يُمسَك (جزء-جزء-كلّ قبل + و−)")
+    ok(find(order(lambda s: s[0]["frontier"].update(displays=["scatter"])), "أنماط العرض"),
+       "ومبعثرٌ قبل النرد يُمسَك (القياسيُّ أولاً ثم ما يمنع حفظ الصورة)")
+    ok(find(order(lambda s: s[0]["frontier"].update(max=15)), "أوّلُ محطةٍ تتجاوز"),
+       "وتجاوزُ العشرة قبل محطة بنائها حزمةً وآحاداً يُمسَك")
+
+    print("\n— ٣) بواباتُ المعرفة الثلاث تُمسك القفز —")
+    gate = lambda mutate: broke(mutate, gates_errors)  # noqa: E731
+    ok(find(gate(lambda s: s.insert(0, copy.deepcopy(
+        next(x for x in s if "count" in concepts_of(x))))), "ولم يُقدَّر"),
+       "وعدٌّ قبل أيّ تقديرٍ فوريّ يُمسَك (بوابةُ الكمّ قبل بوابة العدّ)")
+    ok(find(gate(lambda s: s.insert(0, copy.deepcopy(
+        next(x for x in s if x["frontier"]["numeral"] is not None)))), "ولم يُعَدّ"),
+       "ورمزٌ قبل عدّ عدده يُمسَك (بوابةُ العدّ قبل بوابة الرمز)")
+    ok(find(gate(lambda s: s.insert(0, copy.deepcopy(
+        next(x for x in s if x["frontier"]["ops"])))), "ولم يُقرَأ رمزُه"),
+       "وعمليةٌ قبل رمز عددها تُمسَك (ولا يدخل عمليةً إلا عددٌ عبر الثلاث)")
+
+    print("\n— عقدُ الرحلة يُمسك اختلالَ البوابات —")
+    def journey(mutate):
+        clone = copy.deepcopy(data)
+        mutate(clone)
+        return journey_errors(clone)
+    ok(find(journey(lambda d: d["gates"].pop()), "والمنهج ثلاث"),
+       "وسقوطُ بوابةٍ من الثلاث يُمسَك (`METHOD.md §٥`)")
+    ok(find(journey(lambda d: d["gates"][0].update(after="stage99")), "مرحلةٍ مجهولة"),
+       "وبوابةٌ بعد مرحلةٍ لا وجودَ لها تُمسَك")
+    ok(find(journey(lambda d: d["sections"][0]["nodes"].pop(0)), "لا تصل إلى الخريطة"),
+       "ومحطةٌ في المنهج لا تصل إلى الخريطة تُمسَك (بيانٌ ميّت)")
+    ok(find(journey(lambda d: d["sections"][0]["nodes"][0].update(id="ghost:x")),
+            "ليست محطةً في المنهج"),
+       "وعقدةٌ على الخريطة بلا محطةٍ في المنهج تُمسَك")
+    ok(find(journey(lambda d: [n.update(frontier={"min": 1}) for s in d["sections"]
+                               for n in s["nodes"] if n["type"] == "gate"]), "للبوابة جبهة"),
+       "وبوابةٌ تدّعي جبهةً تُمسَك (تقيس ولا تدرّس)")
+
+    src = CURRICULUM.read_text(encoding="utf-8")
+    ok(len(re.findall(r"\bfrontier:\s*\{", src)) == len(stations),
+       f"وحارسُ المحلّل يقابل المكتوبَ بالمقروء ({len(stations)} محطة)")
+
+    print("\n— ٤+٥) حكمُ الاستهلاك يُمسك ما فوق الجبهة —")
+    f = next(s["frontier"] for s in stations if s["frontier"]["ops"])
+    quiet = next(s["frontier"] for s in stations if s["frontier"]["numeral"] is None)
+    ok(not usage_errors("ج", {"numbers": [f["max"]], "ops": f["ops"],
+                              "signs": f["signs"], "displays": f["displays"][:1]}, f),
+       "جولةٌ تحت جبهتها تمرّ")
+    ok(find(usage_errors("ج", {"numbers": [f["max"] + 1]}, f), "خارج جبهته"),
+       "وعددٌ فوق أقصى الجبهة يُمسَك")
+    ok(find(usage_errors("ج", {"numbers": [f["min"] - 1]}, f), "خارج جبهته"),
+       "وعددٌ دون أدنى الجبهة يُمسَك (الصفرُ قبل محطته)")
+    ok(find(usage_errors("ج", {"numerals": [1]}, quiet), "بلا رمزٍ البتّة"),
+       "ورمزٌ في محطةٍ بلا رمز يُمسَك (المرحلتان ١–٢)")
+    ok(find(usage_errors("ج", {"ops": ["mul"]}, f), "ليست من عمليات محطته"),
+       "وعمليةٌ فوق عمليات المحطة تُمسَك")
+    ok(find(usage_errors("ج", {"signs": ["×"]}, f), "ليس من رموز محطته"),
+       "ورمزُ عمليةٍ فوق رموز المحطة يُمسَك")
+    ok(find(usage_errors("ج", {"displays": ["two-frames"]}, quiet), "ليس من أنماط محطته"),
+       "ونمطُ عرضٍ فوق أنماط المحطة يُمسَك")
+
+    print(f"\n{fails} فشل" if fails else "\n✓ الفاحص يمسك المخالفات كلها")
+    return 1 if fails else 0
+
+
+def main():
+    ap = argparse.ArgumentParser(description="حارسُ جبهة المحطات في «اِحْسِبْ»")
+    ap.add_argument("--self-test", action="store_true",
+                    help="فحصُ الفاحص نفسه: هل يمسك المخالفات؟")
+    args = ap.parse_args()
+    data = load_curriculum()
+    sys.exit(self_test(data) if args.self_test else check(data))
+
+
+if __name__ == "__main__":
+    main()
