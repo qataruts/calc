@@ -85,6 +85,18 @@ export function bareLetters(text) {
 export const hasDigit = (text) => /[0-9٠-٩]/.test(String(text));
 
 /**
+ * **ما يستر النصَّ من النطق الآليّ**: ملفٌّ في البنك، **أو** مكانٌ في القائمة ما زال
+ * ينتظر. ومدخلٌ `done` بلا ملفٍّ لا يستر شيئاً — بل هو أخطرُ من الغياب: القائمةُ
+ * تقول «صُرِّف» والطفلُ يسمع نطقاً آلياً. (شُدَّ في الجلسة ص يومَ صار في القائمة
+ * منجَزٌ يُقابَل به — قبلها كان كلُّ مدخلٍ منتظِراً فلا فرقَ يُقاس.)
+ */
+export function coverOf(text, banked, entry) {
+  if (banked.has(text)) return 'ملف';
+  if (!entry) return '';
+  return (entry.status ?? 'pending') === 'done' ? 'مُصرَّفٌ بلا ملف' : 'انتظار';
+}
+
+/**
  * **لا معدودٌ مقرونٌ بعدد** (ق٢ · `METHOD.md §٨`): «ثَلَاثُ تُفَّاحَاتْ» ممنوعةٌ نصّاً.
  * ويُجرَد باسم العدد متبوعاً بكلمة — لا بمعنى الجملة: لفظُ عددٍ يليه اسمٌ **إشارةٌ
  * كافية** أن يُراجَع النصّ، وهذا حارسٌ عند البوّابة لا مصحّحُ نحو.
@@ -142,10 +154,19 @@ async function main() {
   const queued = new Map(queue.map((row) => [row.text, row]));
   const banked = new Set(bank || []);
 
-  const orphan = unique.filter((t) => !queued.has(t) && !banked.has(t));
+  const cover = new Map(unique.map((t) => [t, coverOf(t, banked, queued.get(t))]));
+  const orphan = unique.filter((t) => !cover.get(t));
   ok(orphan.length === 0,
     `${unique.length} نصّاً مُعلَناً، لكلٍّ ملفُّه أو مكانُه في القائمة`
     + (orphan.length ? ` — **خارج القائمة: ${orphan.slice(0, 5).join(' · ')}**` : ''));
+
+  // **وما قيل عنه «صُرِّف» له ملفٌّ فعلاً**: قائمةٌ تقول `done` وبنكٌ خالٍ منه = طفلٌ
+  // يسمع نطقاً آلياً ولا حارسَ يشتكي — وهو عينُ الصنف الذي وُلد منه هذا الفاحص.
+  const broke = unique.filter((t) => cover.get(t) === 'مُصرَّفٌ بلا ملف');
+  const withFile = unique.filter((t) => cover.get(t) === 'ملف').length;
+  ok(broke.length === 0,
+    `ومنها ${withFile} له ملفٌّ مولَّد و${unique.length - withFile} ما زال ينتظر`
+    + (broke.length ? ` — **مُصرَّفٌ بلا ملف: ${broke.slice(0, 5).join(' · ')}**` : ''));
 
   const stale = queue.filter((row) => !unique.includes(row.text));
   ok(stale.length === 0,
@@ -196,6 +217,16 @@ function selfTest() {
   check(bareLetters('الشَّمْسْ').length === 0, 'ولامُ «ال» الشمسية أمام مشدَّدٍ تمرّ');
   check(bareLetters('خمسة').length > 0, 'ونصٌّ عارٍ يُمسَك');
   check(bareLetters('خَمْسه').length > 0, 'وحرفٌ واحدٌ عارٍ في نصٍّ مشكولٍ يُمسَك');
+
+  console.log('\n— السترُ من النطق الآليّ: ملفٌّ أو انتظارٌ، لا دعوى —');
+  const bank = new Set(['خَمْسَةْ']);
+  check(coverOf('خَمْسَةْ', bank, { status: 'done' }) === 'ملف', 'ما له ملفٌّ مستورٌ بملفه');
+  check(coverOf('رَائِعْ', bank, { status: 'pending' }) === 'انتظار',
+    'وما ينتظر التصريفَ مستورٌ باحتياط النطق مؤقتاً');
+  check(coverOf('رَائِعْ', bank, {}) === 'انتظار', 'ومدخلٌ بلا حالةٍ يُقرأ منتظِراً');
+  check(coverOf('رَائِعْ', bank, { status: 'done' }) === 'مُصرَّفٌ بلا ملف',
+    '**ومدخلٌ يقول «صُرِّف» ولا ملفَ له يُمسَك** — الأخطرُ من الغياب');
+  check(coverOf('رَائِعْ', bank, undefined) === '', 'ونصٌّ خارج القائمة والبنك لا سترَ له');
 
   console.log('\n— قيدا المنهج يُمسكان —');
   check(hasDigit('اِقْرَأْ ٣') && hasDigit('رَقْم 3'), 'الرقمُ في النصّ المنطوق يُمسَك (مشرقياً ومغربياً)');

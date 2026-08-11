@@ -236,6 +236,53 @@ function backupSection(rerender) {
   const slot = h('div', { class: 'confirm-slot' });
   const storage = h('p', { class: 'hint' }, 'التخزين على هذا الجهاز: جارٍ الفحص…');
 
+  /* ————— سطرُ الأصوات المخزونة (الجلسة ص — عاد مع بنك الصوت، `SEED.md §٢`) —————
+
+     **حالُ التحميل تُرى وتُدار** (أمر المالك في اقرأ، ١٣ أغسطس ٢٠٢٦): كان الخزنُ
+     يجري صامتاً فلا يعرف أحدٌ أتمَّ أم لا — حتى فُتح التطبيقُ بلا شبكةٍ فصمت الصوت،
+     وظُنّ العيبُ في البرنامج. فصار السطرُ **شريطاً حيّاً** يتحرّك مع كل دفعةٍ يبلّغها
+     عاملُ الخدمة، ومعه **زرٌّ يبدأ التحميل الآن** بدل انتظار مهلة الشفاء. */
+  const cached = h('p', { class: 'hint' });
+  const bar = h('div', { class: 'dl-bar' }, h('span', { class: 'dl-fill' }));
+  const fill = bar.firstChild;
+  const dlBtn = h('button', { class: 'btn' }, 'نزّل الأصوات الآن');
+  const dlRow = h('div', { class: 'dl' }, cached, bar, dlBtn);
+  dlRow.hidden = true;                 // لا سطرَ قبل أن يُعرَف أنّ ثمّ بنكاً يُخزَّن
+
+  const paint = (stored, total, busy) => {
+    if (!total) return;
+    dlRow.hidden = false;
+    const pct = Math.min(100, Math.round((stored / total) * 100));
+    fill.style.width = `${pct}%`;
+    bar.classList.toggle('dl-bar--done', stored >= total);
+    const head = `الأصوات المخزونة: ${arNum(stored)} من ${arNum(total)} (${arNum(pct)}٪)`;
+    cached.textContent = stored >= total
+      ? `${head} — كلُّها على الجهاز، فيعمل التطبيق بلا إنترنت.`
+      : busy
+        ? `${head} — يُنزَّل الآن، أبقِ التطبيق مفتوحاً.`
+        : `${head} — ما نقص يُجلَب عند سماعه، ويكتمل حين يُفتح التطبيق متصلاً.`;
+    dlBtn.hidden = stored >= total;
+    dlBtn.textContent = busy ? 'يُنزَّل…' : 'نزّل الأصوات الآن';
+    dlBtn.disabled = Boolean(busy);
+  };
+
+  /** طلبٌ صريح إلى عامل الخدمة — هو وحدَه يملك المخزن. */
+  dlBtn.onclick = () => {
+    const sw = navigator.serviceWorker?.controller;
+    if (!sw) return void toast('التحميل يبدأ بعد تثبيت التطبيق');
+    sw.postMessage({ type: 'audio-sync' });
+    dlBtn.disabled = true;
+    dlBtn.textContent = 'يُنزَّل…';
+  };
+
+  // بلاغاتُ العامل بعد كل دفعة — فالشريطُ يتحرّك بما يجري لا بتقديرٍ منّا
+  navigator.serviceWorker?.addEventListener?.('message', (e) => {
+    if (e.data?.type === 'audio-progress') paint(e.data.stored, e.data.total, e.data.busy);
+  });
+  progress.audioStored().then((count) => {
+    if (count) paint(count.stored, count.total, false);
+  });
+
   progress.persistedStorage().then((persisted) => {
     if (!storage.isConnected) return;
     storage.textContent = persisted === null
@@ -301,6 +348,7 @@ function backupSection(rerender) {
       }, 'استعِد من ملف', file),
     ),
     slot,
+    dlRow,
     storage,
     h('p', { class: 'note' },
       'في النسخة: النجوم وصناديق المراجعة ودقائق التعلّم. ولا شيء فيها يخرج من'

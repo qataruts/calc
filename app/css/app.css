@@ -159,6 +159,17 @@
 
 *, *::before, *::after { box-sizing: border-box; }
 
+/* **`hidden` يخفي فعلاً** (الجلسة ص — عيبٌ مقيسٌ في متصفّحٍ حقيقيّ):
+   قاعدةُ المتصفّح `[hidden] { display: none }` من **أصل المتصفّح**، وكلُّ قاعدةٍ من
+   أصلِنا تعلو عليها مهما ضعفت نوعيّتُها. فأيُّ عنصرٍ أعطيناه `display` صريحاً يتجاهل
+   `hidden` بصمت: قِيس `.q-cover` وهو `hidden=true` فإذا `display:grid` و**٢٤٢ بكسل
+   مرسومةً فوق كميةٍ ارتفاعُها ٢٣٠** — أي أنّ غطاء الخطف كان **لا يُرفع أبداً**،
+   فتُحجَب الكميةُ عن الطفل في «جرِّب معي» وفي العدّ أمامه بعد الخطأ. ومثلُه
+   `.beads` (`display:flex`) و`.dl` هنا.
+   والسطرُ الواحد يردّ للغة معناها، و`!important` ضرورةٌ لا زينة: بدونها تعود كلُّ
+   قاعدةٍ من أصلِنا تغلبه. ويحرسه فحصٌ في `browser_test.html` يقيس الرفعَ على الشاشة. */
+[hidden] { display: none !important; }
+
 html {
   -webkit-text-size-adjust: 100%;
   overflow-x: hidden;   /* لا تمرير أفقي أبداً */
@@ -814,6 +825,30 @@ button {
 .confirm-slot:empty { display: none; }
 .confirm { margin-top: .75rem; text-align: start; }
 .confirm .hint { margin: .35rem 0 0; }
+
+/* شريطُ خزن الصوت (الجلسة ص): حالُ التحميل **تُرى وتُدار** — فلا يفاجئ وليَّ الأمر
+   صمتٌ خارج الشبكة لا يعرف سببه. والامتلاءُ يقلب لونَه إلى لون الصواب. */
+.dl { display: flex; flex-direction: column; gap: .5rem; margin: 0 0 1.25rem; }
+.dl .hint { margin: 0; }
+.dl .btn { align-self: flex-start; }
+
+.dl-bar {
+  height: 10px;
+  border-radius: 999px;
+  background: var(--line);
+  overflow: hidden;
+}
+
+.dl-fill {
+  display: block;
+  height: 100%;
+  width: 0;
+  border-radius: 999px;
+  background: var(--accent-quantity);
+  transition: width .3s ease;
+}
+
+.dl-bar--done .dl-fill { background: var(--ok); }
 
 /* ————— أدوات التجربة والرسالة العابرة ————— */
 

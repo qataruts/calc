@@ -4,199 +4,224 @@
     "category": "number_name",
     "requestedBy": "session-3",
     "priority": 10,
-    "status": "pending",
-    "doneAt": null
+    "status": "done",
+    "doneAt": "2026-08-11",
+    "model": "gemini-3.1-flash-tts-preview"
   },
   {
     "text": "اِثْنَانْ",
     "category": "number_name",
     "requestedBy": "session-3",
     "priority": 10,
-    "status": "pending",
-    "doneAt": null
+    "status": "done",
+    "doneAt": "2026-08-11",
+    "model": "gemini-3.1-flash-tts-preview"
   },
   {
     "text": "ثَلَاثَةْ",
     "category": "number_name",
     "requestedBy": "session-3",
     "priority": 10,
-    "status": "pending",
-    "doneAt": null
+    "status": "done",
+    "doneAt": "2026-08-11",
+    "model": "gemini-3.1-flash-tts-preview"
   },
   {
     "text": "أَرْبَعَةْ",
     "category": "number_name",
     "requestedBy": "session-3",
     "priority": 10,
-    "status": "pending",
-    "doneAt": null
+    "status": "done",
+    "doneAt": "2026-08-11",
+    "model": "gemini-3.1-flash-tts-preview"
   },
   {
     "text": "خَمْسَةْ",
     "category": "number_name",
     "requestedBy": "session-3",
     "priority": 10,
-    "status": "pending",
-    "doneAt": null
+    "status": "done",
+    "doneAt": "2026-08-11",
+    "model": "gemini-3.1-flash-tts-preview"
   },
   {
     "text": "سِتَّةْ",
     "category": "number_name",
     "requestedBy": "session-3",
     "priority": 10,
-    "status": "pending",
-    "doneAt": null
+    "status": "done",
+    "doneAt": "2026-08-11",
+    "model": "gemini-3.1-flash-tts-preview"
   },
   {
     "text": "سَبْعَةْ",
     "category": "number_name",
     "requestedBy": "session-3",
     "priority": 10,
-    "status": "pending",
-    "doneAt": null
+    "status": "done",
+    "doneAt": "2026-08-11",
+    "model": "gemini-3.1-flash-tts-preview"
   },
   {
     "text": "ثَمَانِيَةْ",
     "category": "number_name",
     "requestedBy": "session-3",
     "priority": 10,
-    "status": "pending",
-    "doneAt": null
+    "status": "done",
+    "doneAt": "2026-08-11",
+    "model": "gemini-3.1-flash-tts-preview"
   },
   {
     "text": "تِسْعَةْ",
     "category": "number_name",
     "requestedBy": "session-3",
     "priority": 10,
-    "status": "pending",
-    "doneAt": null
+    "status": "done",
+    "doneAt": "2026-08-11",
+    "model": "gemini-3.1-flash-tts-preview"
   },
   {
     "text": "عَشَرَةْ",
     "category": "number_name",
     "requestedBy": "session-3",
     "priority": 10,
-    "status": "pending",
-    "doneAt": null
+    "status": "done",
+    "doneAt": "2026-08-11",
+    "model": "gemini-3.1-flash-tts-preview"
   },
   {
     "text": "كَمْ تَرَى؟",
     "category": "instruction",
     "requestedBy": "session-3",
     "priority": 20,
-    "status": "pending",
-    "doneAt": null
+    "status": "done",
+    "doneAt": "2026-08-11",
+    "model": "gemini-3.1-flash-tts-preview"
   },
   {
     "text": "شَاهِدْ ثُمَّ أَجِبْ",
     "category": "instruction",
     "requestedBy": "session-3",
     "priority": 20,
-    "status": "pending",
-    "doneAt": null
+    "status": "done",
+    "doneAt": "2026-08-11",
+    "model": "gemini-3.1-flash-tts-preview"
   },
   {
     "text": "طَابِقِ الْكَمِّيَّتَيْنْ",
     "category": "instruction",
     "requestedBy": "session-3",
     "priority": 20,
-    "status": "pending",
-    "doneAt": null
+    "status": "done",
+    "doneAt": "2026-08-11",
+    "model": "gemini-3.1-flash-tts-preview"
   },
   {
     "text": "أَيُّهُمَا أَكْثَرْ؟",
     "category": "instruction",
     "requestedBy": "session-3",
     "priority": 20,
-    "status": "pending",
-    "doneAt": null
+    "status": "done",
+    "doneAt": "2026-08-11",
+    "model": "gemini-3.1-flash-tts-preview"
   },
   {
     "text": "اِلْمَسْ وَعُدَّ",
     "category": "instruction",
     "requestedBy": "session-3",
     "priority": 20,
-    "status": "pending",
-    "doneAt": null
+    "status": "done",
+    "doneAt": "2026-08-11",
+    "model": "gemini-3.1-flash-tts-preview"
   },
   {
     "text": "كَمْ صَارَتْ كُلُّهَا؟",
     "category": "instruction",
     "requestedBy": "session-3",
     "priority": 20,
-    "status": "pending",
-    "doneAt": null
+    "status": "done",
+    "doneAt": "2026-08-11",
+    "model": "gemini-3.1-flash-tts-preview"
   },
   {
     "text": "بَعْثَرْتُهَا، فَكَمْ صَارَتْ؟",
     "category": "instruction",
     "requestedBy": "session-3",
     "priority": 20,
-    "status": "pending",
-    "doneAt": null
+    "status": "done",
+    "doneAt": "2026-08-11",
+    "model": "gemini-3.1-flash-tts-preview"
   },
   {
     "text": "أَعْطِنِي هَذَا الْعَدَدْ",
     "category": "instruction",
     "requestedBy": "session-3",
     "priority": 20,
-    "status": "pending",
-    "doneAt": null
+    "status": "done",
+    "doneAt": "2026-08-11",
+    "model": "gemini-3.1-flash-tts-preview"
   },
   {
     "text": "اِجْعَلْهُمَا سَوَاءْ",
     "category": "instruction",
     "requestedBy": "session-3",
     "priority": 20,
-    "status": "pending",
-    "doneAt": null
+    "status": "done",
+    "doneAt": "2026-08-11",
+    "model": "gemini-3.1-flash-tts-preview"
   },
   {
     "text": "اُنْظُرْ وَعُدَّ مَعِي",
     "category": "modeling",
     "requestedBy": "session-3",
     "priority": 30,
-    "status": "pending",
-    "doneAt": null
+    "status": "done",
+    "doneAt": "2026-08-11",
+    "model": "gemini-3.1-flash-tts-preview"
   },
   {
     "text": "الْآنَ جَرِّبْ مَعِي",
     "category": "modeling",
     "requestedBy": "session-3",
     "priority": 30,
-    "status": "pending",
-    "doneAt": null
+    "status": "done",
+    "doneAt": "2026-08-11",
+    "model": "gemini-3.1-flash-tts-preview"
   },
   {
     "text": "وَالْآنَ وَحْدَكْ",
     "category": "modeling",
     "requestedBy": "session-3",
     "priority": 30,
-    "status": "pending",
-    "doneAt": null
+    "status": "done",
+    "doneAt": "2026-08-11",
+    "model": "gemini-3.1-flash-tts-preview"
   },
   {
     "text": "لِنَعُدَّهَا مَعًا",
     "category": "modeling",
     "requestedBy": "session-3",
     "priority": 30,
-    "status": "pending",
-    "doneAt": null
+    "status": "done",
+    "doneAt": "2026-08-11",
+    "model": "gemini-3.1-flash-tts-preview"
   },
   {
     "text": "أَحْسَنْتْ",
     "category": "celebration",
     "requestedBy": "session-3",
     "priority": 40,
-    "status": "pending",
-    "doneAt": null
+    "status": "done",
+    "doneAt": "2026-08-11",
+    "model": "gemini-3.1-flash-tts-preview"
   },
   {
     "text": "رَائِعْ",
     "category": "celebration",
     "requestedBy": "session-3",
     "priority": 40,
-    "status": "pending",
-    "doneAt": null
+    "status": "done",
+    "doneAt": "2026-08-11",
+    "model": "gemini-3.1-flash-tts-preview"
   }
 ]

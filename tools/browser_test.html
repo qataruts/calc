@@ -32,11 +32,55 @@
     report([...out, { ok: false, msg: 'تعلّقت صفحةُ الفحص قبل تمامها (انتظارٌ لم ينتهِ)' }]);
   }, 130000);
 
+  /* ————— «لا نطقَ آليّ»: يُقاس في مسار الطفل نفسِه (الجلسة ص) —————
+
+     وعدٌ معلَن: **لا ينطق التطبيق شيئاً بصوتٍ آليّ لحظيّ** — والاحتياطُ في `audio.js`
+     كان صواباً ما دامت القائمةُ منتظِرة، فلمّا صُرِّفت وجب أن يعود الفحصُ صارماً.
+     ولا يكفي أن نجرد الشجرة (`check_speech.mjs` يفعل): نصٌّ **يُركَّب في زمن التشغيل**
+     يخالف حرفاً واحداً ما أُعلن ⇒ لا ملفَّ له ⇒ نطقٌ آليّ — ولا يراه إلا التشغيل.
+
+     فيُبدَّل في نافذة التطبيق `Audio` و`SpeechSynthesisUtterance` بشاهدين: الأولُ
+     يقيّد **مفتاحَ** كل ملفٍ شُغِّل (ولا يُنزِّل صوتاً في فحصٍ بلا سمّاعة)، والثاني
+     يقيّد كلَّ لجوءٍ إلى النطق الآليّ. والحكمُ في آخر الصفحة. */
+  const played = [];      // مفاتيحُ ملفاتٍ شُغِّلت من البنك
+  const spoken = [];      // ما لجأ إلى النطق الآليّ — يجب أن يبقى فارغاً
+  const hookAudio = (w) => {
+    if (!w || w.__audioHooked) return;
+    w.__audioHooked = true;
+    w.Audio = class extends w.EventTarget {
+      constructor(src = '') { super(); this.preload = ''; this.currentTime = 0; this.src = src; }
+      set src(v) {
+        this._src = v || '';
+        this.__key = (String(this._src).split('/').pop() || '').split('?')[0].replace('.mp3', '');
+      }
+      get src() { return this._src; }
+      play() {
+        if (this.__key) played.push(this.__key);
+        setTimeout(() => this.dispatchEvent(new w.Event('ended')), 5);
+        return Promise.resolve();
+      }
+      pause() {}
+      load() {}
+      removeAttribute() { this.src = ''; }
+    };
+    w.SpeechSynthesisUtterance = class { constructor(text) { spoken.push(text); this.text = text; } };
+  };
+
+  // فهرسُ البنك ونصوصُ القائمة المنتظِرة — وغيابُهما لا يُسقِط الصفحة: بلا بنكٍ لا
+  // ملفَ يُشغَّل، وبقائمةٍ فارغةٍ يصير الفحصُ صارماً **بلا تعديلٍ هنا**.
+  const jsonOr = async (path, fallback) => {
+    try { const r = await fetch(path); return r.ok ? await r.json() : fallback; }
+    catch { return fallback; }
+  };
+  const bank = await jsonOr('/audio/manifest.json', {});
+  const pendingAudio = new Set(await jsonOr('/__queue.json', []));
+
   try {
 
   const frame = document.getElementById('app');
   const ready = new Promise((r) => frame.addEventListener('load', r, { once: true }));
   await ready;
+  hookAudio(frame.contentWindow);
   // مهلةٌ تكفي وحداتِ ES أن تُحمَّل وتُرسَم (الوحدات غيرُ متزامنة)
   await new Promise((r) => setTimeout(r, 1200));
 
@@ -108,6 +152,26 @@
   ok(doc.querySelector('.gate .giant'), 'ولوحةُ وليّ الأمر خلف بوابةٍ حسابية');
   ok(!doc.querySelector('.audit'), 'ولا تُعرَض اللوحةُ قبل حلّها');
 
+  /* **وسطرُ الأصوات المخزونة خلفها** (الجلسة ص): تُحَلّ البوابةُ بقراءة ضربها من
+     الشاشة نفسِها — فيَظهر ما وراءها. وعلّةُ الفحص أنّ اللوحة صارت تقرأ من مخزن
+     عامل الخدمة، وشيفرةٌ تُقرأ ولا تُشغَّل قد تسقط عند أول عرض. */
+  const arDigits = (s) => Number([...String(s)].map((c) => {
+    const i = '٠١٢٣٤٥٦٧٨٩'.indexOf(c);
+    return i < 0 ? c : String(i);
+  }).join('').replace(/[^0-9]/g, ''));
+  const [ga, gb] = (doc.querySelector('.gate .giant')?.textContent || '').split('×');
+  const gateInput = doc.querySelector('.gate input');
+  if (gateInput) {
+    gateInput.value = String(arDigits(ga) * arDigits(gb));
+    doc.querySelector('.gate-go')?.click();
+    await new Promise((r) => setTimeout(r, 400));
+  }
+  const audit = doc.querySelector('.audit');
+  ok(!!audit, 'وتُفتح بحلّ ضربها فتظهر اللوحة');
+  const dl = doc.querySelector('.dl');
+  ok(!!dl, 'وفيها سطرُ خزن الأصوات بشريطه وزرِّه (فلا يفاجئ وليَّ الأمر صمتٌ لا يعرف سببه)');
+  ok(!dl || !!dl.querySelector('.dl-bar .dl-fill'), 'والشريطُ مبنيٌّ بمِلئه');
+
   /* ————— ٩) مصيِّر الكميات **على الشاشة نفسِها** (METHOD §١٠.٢ — الجلسة ٢) —————
 
      أخو `tools/check_render.mjs`: ذاك يقرأ الهندسةَ أعداداً في node، وهذا يقرأ
@@ -117,6 +181,7 @@
 
   frame.src = '/?dev=1#/render/all';
   await new Promise((r) => frame.addEventListener('load', r, { once: true }));
+  hookAudio(frame.contentWindow);
   await new Promise((r) => setTimeout(r, 1800));
 
   const gdoc = frame.contentDocument;
@@ -234,6 +299,7 @@
   const open = async (hash) => {
     frame.src = `/?preview=1&v=${++visit}${hash}`;
     await new Promise((r) => frame.addEventListener('load', r, { once: true }));
+    hookAudio(frame.contentWindow);
     await new Promise((r) => setTimeout(r, 900));
     return frame.contentDocument;
   };
@@ -276,6 +342,20 @@
   ok(digits2.length === 0,
     `ولا رقمَ على بطاقةٍ ولا تحتها${digits2.length ? ` — وُجد: ${digits2.join('، ')}` : ''}`);
 
+  /* **والغطاءُ مرفوعٌ في «جرِّب معي» — رفعاً مقيساً لا معلَناً** (عيبٌ وُجد في الجلسة
+     ص): `hidden` وعدٌ من اللغة تنقضه بصمتٍ كلُّ قاعدةِ `display` من أصلِنا (قواعدُ
+     المتصفّح أدنى في التتالي مهما ضعفت نوعيّتُنا). فكانت الشاشةُ ترفع الغطاءَ برمجياً
+     وهو يبقى مرسوماً — ٢٤٢ بكسل فوق كميةٍ ارتفاعُها ٢٣٠ — فلا يرى الطفلُ الكميةَ التي
+     يُطالَب بمطابقتها، لا هنا ولا في العدّ أمامه بعد الخطأ. **ولا يكشفه إلا القياسُ
+     بعد التنسيق**: فحصٌ يقرأ `el.hidden` يصدّق الوعدَ ولا يقيس الرسم. */
+  const guidedCover = sdoc.querySelector('.q-cover');
+  const coverShown = guidedCover
+    && sdoc.defaultView.getComputedStyle(guidedCover).display !== 'none';
+  ok(!!guidedCover && guidedCover.hidden && !coverShown,
+    `والكميةُ مكشوفةٌ في «جرِّب معي»: الغطاءُ مرفوعٌ برمجياً (${guidedCover?.hidden}) `
+    + `**وغيرُ مرسومٍ على الشاشة** (${guidedCover
+      ? sdoc.defaultView.getComputedStyle(guidedCover).display : 'لا غطاء'})`);
+
   // **الخطأ لا ينقل، وتُعَدّ الكميةُ أمامه** (METHOD §٤)
   const want = drawnOf(sdoc.querySelector('.q-stage'));
   const right = cards.find((c) => drawnOf(c) === want);
@@ -304,6 +384,15 @@
     .find((b) => b.textContent.includes('أَعِدِ الْعَرْض'));
   ok(!!cover && !!replay,
     'و«وحدك» تخطف الكميةَ ثم تغطّيها، ومعها زرُّ إعادةِ عرضٍ بلا حدّ');
+
+  // وسَوقُ المحطة إلى آخرها يمرّ بحالاتٍ يُخفي فيها التطبيقُ عناصرَ أخرى — فيُجرَد
+  // كلُّ مخفيٍّ بعد التنسيق، لا الغطاءُ وحدَه.
+  const painted = [...sdoc.querySelectorAll('[hidden]')]
+    .filter((el) => sdoc.defaultView.getComputedStyle(el).display !== 'none');
+  ok(painted.length === 0,
+    `وما أُخفي برمجياً لا يبقى مرسوماً على الشاشة (${sdoc.querySelectorAll('[hidden]').length} عنصراً مخفياً)`
+    + (painted.length ? ` — **مرسومٌ رغم إخفائه: ${painted.slice(0, 3)
+      .map((el) => `${el.className.split(' ')[0]}=${sdoc.defaultView.getComputedStyle(el).display}`).join('، ')}**` : ''));
   ok(!sdoc.querySelector('progress, .countdown, .timer'),
     'ولا عدّادَ ينزل ولا شريطَ يفرغ (لا مؤقّتَ ضغطٍ في التطبيق)');
 
@@ -364,6 +453,19 @@
     ? [...d.querySelectorAll('.qcard')] : null));
   ok(answer && answer.length >= 2 && answer.every((c) => c.querySelector('.figure [data-mark]')),
     `وبعد العدّ يُسأل «كم صارت كلها؟» وجوابُه بطاقةُ كمّ (${answer ? answer.length : 0} بطاقة)`);
+
+  // ————— ج) الصوت في مسار الطفل: من البنك لا من نطقٍ آليّ —————
+  const heard = [...new Set(played)];
+  ok(heard.length > 0, `الصوتُ يُشغَّل من البنك في مسار الطفل (${played.length} تشغيلاً، `
+    + `${heard.length} نصّاً مختلفاً)`);
+  const unknown = heard.filter((key) => !(key in bank));
+  ok(unknown.length === 0,
+    `وكلُّ ما شُغِّل له ملفٌّ في الفهرس${unknown.length ? ` — بلا ملف: ${unknown.slice(0, 5).join('، ')}` : ''}`);
+  const stray = spoken.filter((t) => !pendingAudio.has(t));
+  ok(stray.length === 0,
+    `ولا لجوءَ إلى النطق الآليّ إلا لنصٍّ ينتظر التصريف (المنتظِر في القائمة: `
+    + `${pendingAudio.size}، ولجوءٌ وقع: ${spoken.length}`
+    + `${stray.length ? `، خارجَ القائمة: ${stray.join('، ')}` : ''})`);
 
   } catch (err) {
     ok(false, `عطبٌ في صفحة الفحص: ${(err && (err.stack || err.message)) || err}`);

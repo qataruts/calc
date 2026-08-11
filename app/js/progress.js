@@ -553,6 +553,35 @@ export async function persistedStorage() {
   }
 }
 
+/**
+ * **كم من بنك الصوت على هذا الجهاز؟** (يعرضه وليّ الأمر — الجلسة ص)
+ *
+ * العلّةُ من اقرأ حرفاً: كان إخفاقُ الخزن **يُبتلَع صامتاً** — ومنه ضيقُ حصة التخزين
+ * على الأجهزة الأقدم — فتنقص ملفاتٌ ولا يعلم أحد، ثم يصمت الصوتُ في الطائرة أو
+ * السيارة فيُظنّ العيبُ في البرنامج. فالعددُ معروضٌ: يرى وليُّ الأمر النقصَ قبل أن
+ * يفاجئه.
+ *
+ * ويُقرأ **من المخزون نفسِه** لا من تقديرٍ عندنا: عاملُ الخدمة يملك المخزن، وهذه
+ * تعدّ ما فيه وتقابله ببيان البنك. و`null` تعني «لا جواب» (متصفّحٌ بلا Cache API أو
+ * تصفّحٌ خاصّ أو بنكٌ لم يُولَّد) — فيسقط السطرُ ولا ينكسر شيء.
+ */
+export async function audioStored() {
+  if (typeof caches === 'undefined') return null;
+  try {
+    const name = (await caches.keys()).find((n) => n.startsWith('ihsib-audio'));
+    if (!name) return null;
+    const app = new URL('../', import.meta.url);
+    const hit = await caches.match(new URL('audio/manifest.json', app));
+    const manifest = hit ? await hit.json() : null;
+    const total = manifest ? Object.keys(manifest).length : 0;
+    if (!total) return null;
+    const have = (await (await caches.open(name)).keys()).length;
+    return { stored: Math.min(have, total), total };
+  } catch {
+    return null;
+  }
+}
+
 // ————— إدارة —————
 
 export function snapshot() {
