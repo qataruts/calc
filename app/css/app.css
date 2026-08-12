@@ -331,12 +331,15 @@ button {
   background: linear-gradient(180deg, var(--card) 45%, color-mix(in srgb, var(--accent) 14%, var(--mix)));
 }
 
-/* معلم المحطة — زخرفة صامتة بلون المرحلة */
+/* معلم المحطة — زخرفة صامتة بلون المرحلة.
+   والرسمُ يتبع `currentColor` (`landmark` في `ui.js`)، فاللونُ يُقال هنا مرّةً:
+   على الخريطة لونُ المرحلة، وفي ميدالية الختام حبرُ القرص (أدناه). */
 .station-mark {
   position: absolute;
   inset-inline-end: .9rem;
   bottom: .5rem;
   width: 3.75rem;
+  color: var(--accent);
   opacity: .35;
   pointer-events: none;
 }
@@ -764,6 +767,16 @@ button {
   animation: none;
 }
 
+/* **ومعلمُ المرحلة في الميدالية** (حكمُ المدير — `REVIEW_IDENTITY.md §٤`): بطلُ
+   عالمنا في لحظة الاحتفال كما تضع اقرأ حرفَها. والمعلمُ هنا **حبرُ القرص** لا
+   زخرفةٌ في زاويةٍ: يستوي في وسطه، بلا موضعٍ مطلقٍ ولا خفوت. */
+.celebrate-face .station-mark {
+  position: static;
+  width: 4.4rem;
+  color: inherit;
+  opacity: 1;
+}
+
 .big-stars {
   display: flex;
   justify-content: center;
@@ -817,6 +830,33 @@ button {
 .audit-row { display: flex; flex-wrap: wrap; gap: .5rem; }
 
 .parent-tool { justify-content: flex-start; margin-top: .6rem; align-items: center; }
+
+/* ————— مفاهيمُ الحساب السبعة: **جملةٌ فعلية لا درجة** (`METHOD.md §٦`) —————
+   سطرٌ لكل مفهوم: اسمُه ثم ما يفعله — والحالُ لونُ حافةٍ لا رقمَ ولا نسبة.
+   والأقسامُ تُصَفّ عمودين على الشاشة الواسعة وعموداً على الضيقة. */
+.concepts {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(17rem, 1fr));
+  gap: .75rem 1.25rem;
+}
+
+.concept-group h4 { margin: .35rem 0 .35rem; font-size: .95rem; color: var(--ink-soft); }
+.concept-group .hint { margin: 0 0 .5rem; }
+
+.concept {
+  margin-bottom: .4rem;
+  padding: .5rem .7rem;
+  border-radius: 14px;
+  border-inline-start: 5px solid var(--chip, var(--accent));
+  background: color-mix(in srgb, var(--chip, var(--accent)) 8%, var(--mix));
+  line-height: 1.6;
+}
+
+.concept b { display: block; font-size: .95rem; }
+.concept-line { color: var(--ink-soft); }
+.concept--mastered .concept-line { color: var(--ok-text); }
+.concept--struggling .concept-line { color: var(--err-text); }
+.concept-stuck { margin-top: 1rem; }
 
 /* القائمة: هدف لمسٍ ككل أزرار اللوحة، ولا تفيض عن الشاشة الضيقة */
 .pick {

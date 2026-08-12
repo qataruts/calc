@@ -14,13 +14,15 @@
 // حتى العقدة الأخيرة. **ولا يستطيع أن يقيس الرسمَ** (لا DOM هنا) — وذاك عملُ
 // `browser_test.html` الذي يسوق الشاشاتِ لمساً؛ وهذا يقيس **البنيةَ والمادّةَ والقفل**.
 //
-// وخمسةُ أبواب:
+// وستةُ أبواب:
 //   ١) **عددُ العقد** — محسوبٌ ثلاثَ مرّاتٍ من ثلاثة مصادر مستقلّة، ويُطبَع.
 //   ٢) **البدء** — من سجلٍّ نظيف لا تُفتَح إلا العقدةُ الأولى.
 //   ٣) **المشي** — لكل عقدةٍ بانٍ يُنتج خطّتَها (أو إعفاءٌ مكتوب)، وجولاتُ «وحدك»
 //      تقيس **مفتاحاً بلغته الرحلةُ** لا مفتاحَ محطةٍ لم تأتِ بعد.
 //   ٤) **القفل** — تنفتح التاليةُ بإتمام سابقتها، ولا تنفتح قبله.
 //   ٥) **الختام** — تُبلَغ العقدةُ الأخيرة، وتكتمل الجبهةُ، ولا عقدةَ تالية.
+//   ٦) **الميدالية** — لكل محطةٍ **معلمُ مرحلتها** في ميدالية ختامها (الجلسة ٨،
+//      قيدُ الجلسة هـ): معلمٌ مرسومٌ يعرفه `ui.js`، وهو عينُ معلم قسمها على الخريطة.
 
 import { readFileSync, readdirSync } from 'node:fs';
 
@@ -41,7 +43,8 @@ globalThis.localStorage = {
 const progress = await import(new URL('progress.js', APP));
 const curriculum = await import(new URL('curriculum.js', APP));
 const gate = await import(new URL('gate.js', APP));
-const { seeded } = await import(new URL('ui.js', APP));
+const { seeded, LANDMARK_NAMES } = await import(new URL('ui.js', APP));
+const { medalOf } = await import(new URL('station.js', APP));
 
 /* **والسوابقُ المسجَّلة تُجرَد من نصّ `app/js/` كلِّه** (نظيرُ `test_nodes.mjs`) لا من
    السجلّ الحيّ: بوابةُ الإتقان تسجّلها **بذرةُ المنصة في `main.js`**، و`main.js` يمسّ
@@ -221,6 +224,65 @@ ok(progress.totalStars() === progress.maxTotalStars(),
 const skills = progress.skills();
 ok(skills.length > 0 && skills.every((s) => s.right > 0),
   `وسجلُّ ليتنر امتلأ بما لعبه (${skills.length} مفتاحاً مقيساً)`);
+
+// ————— ٦) الميدالية: لكلِّ مرحلةٍ معلمُها في ختام محطاتها —————
+//
+// **قيدُ الجلسة هـ** (حكمُ المدير — `REVIEW_IDENTITY.md §٤`): ميداليةُ الختام تحمل
+// معلمَ المرحلة **بياناً لا يداً**. فيُسأل هنا كلُّ ما يقع عليه بصرُ الطفل في لحظة
+// الاحتفال: أمعلمٌ **مرسومٌ** يعرفه `ui.js`؟ وأهو **عينُ معلم قسمها** على الخريطة؟
+// وأتمثّلت المراحلُ الثماني كلُّها؟ — والوصلةُ تُقرأ من `medalOf` نفسِها التي تناديها
+// الشاشة، فلا نسخةَ ثانيةٌ في الحارس تُصدَّق وحدَها.
+
+console.log('\n٥. الميدالية: معلمُ المرحلة في ختام محطاتها');
+
+const stationNodes = nodes.filter((n) => n.type !== 'gate');
+const medals = stationNodes.map((n) => ({
+  id: n.id, mark: medalOf(n.id), onMap: progress.sectionOf(n.id)?.mark || null,
+}));
+const blind = medals.filter((m) => !m.mark || !LANDMARK_NAMES.includes(m.mark));
+ok(blind.length === 0,
+  `${stationNodes.length} محطةً كلُّها تحمل معلماً مرسوماً يعرفه \`ui.js\``
+  + (blind.length ? ` — بلا معلم: ${blind.map((m) => m.id).slice(0, 6).join('، ')}` : ''));
+
+const split = medals.filter((m) => m.mark !== m.onMap);
+ok(split.length === 0,
+  'وهو **عينُ معلم قسمها على الخريطة** (مصدرٌ واحد لا نسختان)'
+  + (split.length ? ` — مفترقة: ${split.map((m) => m.id).slice(0, 6).join('، ')}` : ''));
+
+const byStage = curriculum.STAGES.map((stage) => ({
+  id: stage.id,
+  mark: stage.mark,
+  medals: [...new Set(stage.stations
+    .map((s) => medalOf(`${s.type}:${s.part}`)))],
+}));
+const off = byStage.filter((s) => s.medals.length !== 1 || s.medals[0] !== s.mark);
+ok(off.length === 0,
+  `و**كلُّ مرحلةٍ ميدالياتُها معلمُها هي**: ${byStage.map((s) => s.mark).join(' · ')}`
+  + (off.length ? ` — مخالفة: ${off.map((s) => s.id).join('، ')}` : ''));
+
+/* **ويُقرأ الرسمُ لا النيّة**: معلمٌ مرسومٌ بلون المرحلة على قرصٍ بلونها نفسِه
+   **يختفي** — فيُطلَب في `ui.js` أن يتبع حبرَ موضعه، وتُطلَب المناداةُ بالبيان في كل
+   شاشةٍ تحتفل. (والرسمُ نفسُه يقيسه حارسُ المتصفّح على الشاشة الحيّة.) */
+const uiSrc = src('ui.js');
+ok(/stroke="currentColor"[\s\S]{0,120}LANDMARKS\[kind\]/.test(uiSrc),
+  'ومعلمُ الميدالية يتبع حبرَ قرصها (`currentColor`) فلا يختفي على لون مرحلته');
+/* **والمسؤولُ عن ميدالية كلِّ نوعِ محطةٍ مجرودٌ لا مكتوب**: مَن سجّل الشاشةَ يملكها،
+   فإمّا أن يرسم ميداليتَه بنفسه (٨·٥ — شاشةٌ مفردةٌ بلا حلقة) وإمّا أن يفوّضها إلى
+   حلقة المحطة — وكلاهما يناديها بالبيان. (والبوابةُ خارج هذا: ميداليتُها **وجهُها
+   المعلَن** في المنهج، ومراجعةُ اليوم ليست عقدةً في الرحلة ولا مرحلةَ لها.) */
+const ownerOf = new Map(readdirSync(APP).filter((f) => f.endsWith('.js'))
+  .flatMap((f) => [...src(f).matchAll(/registerScreen\(\s*['"`]([a-z][a-z0-9-]*)['"`]/g)]
+    .map((m) => [m[1], f])));
+const byHand = [...new Set(stationNodes.map((n) => n.type))].filter((type) => {
+  const file = ownerOf.get(type);
+  if (!file) return true;
+  const body = src(file);
+  const own = /landmark\(medalOf\(/.test(body);
+  return !(own || (/stationScreen\(/.test(body) && /landmark\(medalOf\(/.test(src('station.js'))));
+});
+ok(byHand.length === 0,
+  `وميداليةُ كلِّ نوعِ محطةٍ تُبنى بالبيان (${[...new Set(stationNodes.map((n) => n.type))].length} نوعاً)`
+  + (byHand.length ? ` — بيدٍ: ${byHand.join('، ')}` : ''));
 
 progress.reset();
 

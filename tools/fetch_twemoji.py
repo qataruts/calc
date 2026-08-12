@@ -19,6 +19,16 @@
     python3 tools/fetch_twemoji.py --list     # الجرد وحده (رمز، مفتاح، مواضعه)
     python3 tools/fetch_twemoji.py --prune    # حذف ملفٍّ لم يعد له رمزٌ في المصادر
     python3 tools/fetch_twemoji.py --dry-run  # ما سيُنزَّل ومن أين، بلا طلب شبكة
+    python3 tools/fetch_twemoji.py --stage    # مرشَّحاتُ مراجعةٍ إلى tools/ (لا إلى app/)
+
+————— ولمَ `--stage` (الجلسة ٨) —————
+محتوىً يراه طفلٌ **بوابتُه عين**: مرشَّحاتُ مشاهد القياس تُعرَض على المدير مُصيَّرةً
+قبل أن تدخل التطبيق. ولا يجوز أن تُنزَّل إلى `app/emoji/` قبل إقرارها: مصدرُ ذلك
+المجلَّد **بياناتُ المنهج وشيفرةُ الشاشات** لا قائمةٌ يدوية، فملفٌّ لا رمزَ له في
+المصادر يُحمِر `--check` أو يُحذف بـ`--prune`. فتنزل المرشَّحاتُ إلى
+`tools/emoji_candidates/` — خارج شجرة النشر وخارج قشرة `sw` — بالنسخة المثبَّتة
+نفسِها وبقاعدة التسمية نفسِها، فما يراه المديرُ اليوم هو ما يراه الطفلُ إن أُقِرّ.
+وأسماؤها ومسوّغاتُها في `tools/measure_candidates.json`.
 
 يخرج بـ ١ عند نقصٍ أو خطأ، وبـ ٠ إن تمّ.
 """
@@ -35,6 +45,10 @@ ROOT = Path(__file__).resolve().parent.parent
 APP = ROOT / "app"
 OUT = APP / "emoji"
 INDEX = OUT / "index.json"
+# مرشَّحاتُ المراجعة (`--stage`): بيانُها وموضعُ تنزيلها — كلاهما في `tools/`
+TOOLS = ROOT / "tools"
+CANDIDATES = TOOLS / "measure_candidates.json"
+STAGE = TOOLS / "emoji_candidates"
 
 # نسخةٌ مثبَّتة لا `main`: ما يراجعه المالك اليوم هو ما يراه الطفل غداً.
 TWEMOJI_VERSION = "15.1.0"
@@ -150,13 +164,64 @@ def write_index(found: dict) -> None:
     }, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
 
 
+def staged() -> list:
+    """رموزُ المرشَّحات من بيانها: [(الرمز, الاسم, موضعُه في اللوحة)] — بترتيب العرض."""
+    if not CANDIDATES.exists():
+        return []
+    data = json.loads(CANDIDATES.read_text(encoding="utf-8"))
+    out = []
+    for pair in data.get("pairs", []):
+        for side in ("heavy", "light"):
+            out.append((pair[side]["glyph"], pair[side]["name"], pair["title"]))
+    for seq in data.get("sequences", []):
+        for step in seq.get("steps", []):
+            out.append((step["glyph"], step["name"], seq["title"]))
+    return out
+
+
+def stage() -> int:
+    """تنزيلُ مرشَّحات المراجعة إلى `tools/emoji_candidates/` — **لا إلى شجرة النشر**."""
+    wanted = staged()
+    if not wanted:
+        print(f"لا مرشَّحاتٍ تُجلَب: {CANDIDATES.relative_to(ROOT)} غيرُ موجود.")
+        return 1
+    STAGE.mkdir(parents=True, exist_ok=True)
+    keys = {}
+    for glyph, name, where in wanted:
+        keys.setdefault(key_of(glyph), (glyph, name, where))
+    have = {p.stem for p in STAGE.glob("*.svg")}
+    missing = [k for k in keys if k not in have]
+    print(f"مرشَّحاتُ مشاهد القياس: {len(keys)} رمزاً فريداً، {len(have)} على القرص")
+    failed = []
+    for i, key in enumerate(missing, 1):
+        glyph, name, where = keys[key]
+        try:
+            (STAGE / f"{key}.svg").write_bytes(download(key))
+            print(f"  [{i}/{len(missing)}] {glyph}  {name} ({where}) → {key}.svg")
+        except (urllib.error.URLError, urllib.error.HTTPError) as error:
+            failed.append((glyph, name, error))
+            print(f"  [{i}/{len(missing)}] ✗ {glyph} {name}: {error}", file=sys.stderr)
+    if failed:
+        print(f"\n✗ تعذّر تنزيل {len(failed)} مرشَّحاً.", file=sys.stderr)
+        return 1
+    # **ولا يُخلَط المرشَّحُ بالمنشور**: ملفٌّ في المرحلة لا يعني رمزاً في التطبيق
+    print(f"\n✓ {len(keys)} ملفاً في {STAGE.relative_to(ROOT)}/ — "
+          "تُعرَض في tools/measure_scenes.html، ولا تدخل app/ إلا بإقرار المدير.")
+    return 0
+
+
 def main() -> int:
     parser = argparse.ArgumentParser(description="جلب أيقونات Twemoji المستعمَلة وحدها")
     parser.add_argument("--check", action="store_true", help="بلا شبكة: رمزٌ بلا ملف = فشل")
     parser.add_argument("--list", action="store_true", help="الجرد وحده")
     parser.add_argument("--prune", action="store_true", help="حذف ملفٍّ بلا رمز")
     parser.add_argument("--dry-run", action="store_true", help="ما سيُنزَّل بلا طلب شبكة")
+    parser.add_argument("--stage", action="store_true",
+                        help="تنزيلُ مرشَّحات المراجعة إلى tools/emoji_candidates/")
     args = parser.parse_args()
+
+    if args.stage:
+        return stage()
 
     found = collect()
     on_disk = {p.stem for p in OUT.glob("*.svg")} if OUT.exists() else set()

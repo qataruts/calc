@@ -28,10 +28,10 @@
 
 import * as progress from './progress.js';
 import { registerScreen } from './registry.js';
-import { stationById, NUMBER_NAME, SAY, say, span } from './station.js';
+import { stationById, medalOf, NUMBER_NAME, SAY, say, span } from './station.js';
 import { paint } from './render.js';
 import {
-  h, go, topbar, mascot, starsRow, icon, arNum, latinNum, PATTERN_ACCENT,
+  h, go, topbar, mascot, starsRow, icon, landmark, arNum, latinNum, PATTERN_ACCENT,
 } from './ui.js';
 
 /** ما يُعرَض: الأرقامُ التي تعلّمها الطفلُ رمزاً (٠–٩ — منازلُ الرسم كلُّها). */
@@ -97,9 +97,12 @@ export function renderIntro(part) {
        ولا مهارةَ تُسجَّل — ويثبت الإعفاءَ بابُ الشيفرة في `test_measure.mjs`. */
     progress.setStars(station.id, 3);
     say(SAY.great);
+    /* **وميداليتُها معلمُ مرحلتها** كسائر المحطات (حكمُ المدير — الجلسة هـ §٤):
+       شاشتُها مفردةٌ عن الحلقة، **والاحتفالُ واحدٌ في الرحلة كلِّها** — ولو بقيت
+       أيقونةَ واجهةٍ هنا لَانفردت آخرُ محطةٍ في الرحلة بميداليةٍ لا معلمَ فيها. */
     body.replaceChildren(h('div', { class: 'celebrate' },
       mascot('mascot mascot--cheer'),
-      h('div', { class: 'celebrate-face' }, icon('party')),
+      h('div', { class: 'celebrate-face' }, landmark(medalOf(station.id)) || icon('party')),
       h('h2', {}, 'أَحْسَنْت!'),
       starsRow(3, 'big-stars'),
       h('p', { class: 'hint' }, 'عَرَفْتَ أنّ للأعداد رسماً آخر — ولن تُسأل عنه.'),

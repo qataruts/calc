@@ -47,7 +47,12 @@
 // `fonts/Kufam-arabic.woff2` وخرج `fonts/Marhey-arabic.woff2` وتحرّك `app.css`.
 // والرفعةُ هنا **شرطُ صحّةٍ لا تنظيم**: قشرةٌ مخزونةٌ تحمل ملفَّ الخطّ القديم تُبقي
 // جهازَ المالك يعرض علامةً أُسقطت — ويسقط الجديدُ إلى احتياطيّ لأن ملفَّه ليس فيها.
-const VERSION = 'v11';
+//
+// **وإلى `v12` في الجلسة ٨**: تحرّكت `parent.js` و`curriculum.js` و`progress.js`
+// و`station.js` و`intro.js` و`ui.js` و`app.css` (لوحةُ وليّ الأمر بعباراتها، وميداليةُ
+// الختام بمعلم مرحلتها) — **ولا ملفَّ جديد**، والرفعةُ لتصل الشيفرةُ إلى جهازٍ يحمل
+// القشرةَ القديمة: لوحةٌ تُقرأ من ليتنر لا تنفع وليَّ أمرٍ يرى نسخةً مخزونة قبلها.
+const VERSION = 'v12';
 const SHELL_CACHE = `ihsib-shell-${VERSION}`;
 const AUDIO_CACHE = 'ihsib-audio';        // ثابتٌ عمداً — لا يحمل VERSION
 const KEEP = [SHELL_CACHE, AUDIO_CACHE];

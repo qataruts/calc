@@ -6,15 +6,16 @@
 // وتوصيةُ اليوم بترتيبها، وقسمُ النسخة الاحتياطية، وتحكّمُ وليّ الأمر في الرحلة،
 // وبابُ المعاينة. وسقط ما كان يعرف حرفاً أو قصةً أو تسجيلَ صوت.
 //
-// **وقسمُ الأقسام السبعة (كمّ · عدّ · رموز · مقارنة · جسور · عمليات · أنماط) بندُ
+// **وقسمُ الأقسام السبعة (كمّ · عدّ · رموز · مقارنة · جسور · عمليات · أنماط) كُتب في
 // الجلسة ٨**: يُبنى من سجلّ ليتنر الحيّ لا من رقمٍ يُكتب بيد، و**مفهومٌ بعملية لا
-// درجة** («يقدّر حتى ٥ فوراً»، «يحتاج تثبيت جسور ١٠»). واليومَ لا سجلَّ ولا محطة،
-// فالقسمُ موضعُه معلَّمٌ أدناه ولا يُملأ بعددٍ كاذب.
+// درجة** («يقدّر حتى ٥ فوراً»، «يحتاج تثبيت جسور ١٠») — والعباراتُ **بياناتُ منهج**
+// في `curriculum.js`، وهذه الوحدةُ تُترجمها ولا تخترعها (التفصيل عند `conceptLine`).
 //
 // الشاشة لا تنطق شيئاً (لا صوت فيها أصلاً)، وتُبنى من مفردات التنسيق القائمة
 // (pill · vchip · note · chip) وتُلوَّن بمتغيّر `--accent`، فلا تحتاج تنسيقاً جديداً.
 
 import * as progress from './progress.js';
+import { CONCEPT_SECTIONS, conceptOf, rangeText, journeyConcepts } from './curriculum.js';
 import { h, go, toast, arNum, arCount, topbar, shake, PAUSE_ACCENT } from './ui.js';
 
 const ACCENT = PAUSE_ACCENT;
@@ -24,6 +25,16 @@ const DAY_NAMES = ['أحد', 'اثنين', 'ثلاثاء', 'أربعاء', 'خم
 
 /** نصيبُ اليوم لطفل ٤–٧ — بعده تُنصح الاستراحة. (أصغرُ من جمهور اقرأ فالسقف أدنى.) */
 const ENOUGH_MINUTES = 15;
+
+/**
+ * **متى يصير التعثّرُ «متكرراً أسابيع»** (`METHOD.md §١٣`) — عتبةُ عبارة «راجِع مختصاً».
+ *
+ * نصُّ الحدّ: «إن تكرّر تعثّرُ طفلك في مفهومٍ واحد **أسابيع**»، و«أسابيع» جمعُ كثرةٍ
+ * أدناه ثلاثة — فثلاثةُ أسابيع من يوم أوّل قياسٍ لتلك المهارة (`since`)، **وهي ما
+ * تزال في الصندوق الأدنى** بعدها. فلا تُقال العبارةُ لأسبوعٍ عثر فيه، ولا تُخبَّأ عن
+ * والدٍ طال تعثّرُ طفله.
+ */
+const STUCK_DAYS = 21;
 
 let unlocked = false;        // البوابة تُفتح لهذه الجلسة فقط (لا تُحفظ في التخزين)
 
@@ -436,41 +447,121 @@ function journeySection(rerender) {
   );
 }
 
-/**
- * **أقسام الحساب السبعة** (`METHOD.md §٦`) — بندُ الجلسة ٨.
- *
- * كلٌّ منها يُقرأ من سجلّ ليتنر الحيّ **بعبارة لا بدرجة**: «يقدّر حتى ٥ فوراً»،
- * «يحتاج تثبيت جسور ١٠». والوصلةُ مثبَّتةٌ هنا (`progress.conceptStats()` تعطي
- * لكل مفهومٍ صندوقَه وأخطاءه)، والترجمةُ إلى عبارةٍ تحتاج أسماءَ المفاهيم من
- * `curriculum.js` — فتُكتب يوم تُكتب المحطات.
- */
-const SECTIONS = [
-  { key: 'quantity', title: 'الكمّ' },
-  { key: 'counting', title: 'العدّ' },
-  { key: 'numerals', title: 'الرموز' },
-  { key: 'compare', title: 'المقارنة' },
-  { key: 'bonds', title: 'الجسور' },
-  { key: 'ops', title: 'العمليات' },
-  { key: 'patterns', title: 'الأنماط' },
-];
+// ————— أقسام الحساب السبعة: **مفهومٌ بعملية لا درجة** (`METHOD.md §٦`) —————
+//
+// نصُّ المنهج: «لوحة وليّ الأمر: مفهومٌ بعملية لا درجة — (يقدّر حتى ٥ فوراً)، (يحتاج
+// تثبيت جسور ١٠) — بأقسامها (كمّ · عدّ · رموز · مقارنة · جسور · عمليات · أنماط)».
+//
+// **وهذه الوحدةُ تُترجم ولا تخترع**: أسماءُ المفاهيم وعباراتُها بياناتُ منهج
+// (`CONCEPTS` في `curriculum.js` — مَن كتب مفتاحَ ليتنر يسمّيه)، **والمدى يُقرأ من
+// سجلّ ليتنر الحيّ**: أقصى ما بلغ صندوقَ الإتقان في «يفعل»، ومدى أضعف مهارةٍ في
+// «يحتاج». فلا رقمَ في هذه اللوحة مكتوبٌ بيد ولا عبارةَ تُقال بلا سجلٍّ يسندها.
+//
+// **ولا درجةَ ولا نسبة**: عددا الصواب والخطأ يبقيان في `title` لمن أراد التفصيل،
+// وما يقع عليه بصرُ الوالد **جملةٌ فعلية**.
 
-function conceptsSection() {
-  const stats = progress.conceptStats();
-  if (!stats.length) {
+/**
+ * سطرُ مفهومٍ واحد من حصيلته في ليتنر — دالّةٌ خالصة (تُختبَر بسجلٍّ مصنوع).
+ *
+ * @param {object} stat  عنصرٌ من `progress.conceptStats()` (وفيه `parts` بالأضعف أولاً)
+ * @param {number} today رقمُ اليوم — لقياس طول التعثّر (`STUCK_DAYS`)
+ * @returns {{concept, section, title, line, state, stuck}|null} و`null` لمفهومٍ لا
+ *   تعرفه بياناتُ المنهج (يُمسكه `test_parent.mjs` ولا يُعرَض للوالد مفتاحٌ خام).
+ */
+export function conceptLine(stat, today = progress.dayNumber()) {
+  const spec = conceptOf(stat.concept);
+  if (!spec) return null;
+  const parts = stat.parts || [];
+  const weakest = parts[0];                       // `conceptStats` رتّبها بالضعف
+  const done = parts.filter((s) => s.box >= progress.MASTERED_BOX);
+  /** أقصى ما أتقن: أكبرُ مدىً عدديّ، أو أسماءُ الأوجه الوصفية مجموعةً. */
+  const numeric = done.map((s) => Number(s.range)).filter(Number.isFinite);
+  const reached = numeric.length
+    ? rangeText(Math.max(...numeric))
+    : done.map((s) => rangeText(s.range)).filter(Boolean).join(' و');
+  const fill = (text, what) => text.replace('{ما}', what);
+
+  // ثلاثُ حالات: أتقن كلَّ تمارينه · تعثّر · بينهما — ولكلٍّ عبارتُها من بيانات المنهج
+  const state = stat.mastered ? 'mastered' : stat.struggling ? 'struggling' : 'learning';
+  const stuck = Boolean(stat.struggling && weakest
+    && today - (weakest.since ?? weakest.seen ?? today) >= STUCK_DAYS);
+  const learning = weakest ? `يتدرّب على ${rangeText(weakest.range)}` : '';
+  const line = state === 'mastered'
+    ? fill(spec.does, reached)
+    : state === 'struggling'
+      ? fill(spec.needs, rangeText(weakest.range))
+      // **وما أتقنه يُقال قبل ما يتدرّب عليه**: الوالدُ يقرأ تقدّمَ طفله لا نقصَه
+      : [reached && fill(spec.does, reached), learning].filter(Boolean).join('، و');
+
+  return {
+    concept: stat.concept,
+    section: spec.section,
+    title: spec.title,
+    line,
+    state,
+    stuck,
+    // للتفصيل عند الطلب (يُعرَض في `title` لا في السطر): عددا الصواب والخطأ
+    right: stat.right,
+    wrong: stat.wrong,
+  };
+}
+
+/**
+ * أسطرُ المفاهيم كلُّها من السجلّ الحيّ — **بترتيب اللوحة ثم بترتيب الرحلة**:
+ * الأقسامُ كما أعلنها المنهج، وداخلَ القسم يقرأ الوالدُ المفاهيمَ بالترتيب الذي
+ * لقيها طفلُه (التقديرُ الفوريّ قبل المطابقة) لا بترتيب حروفها اللاتينية.
+ */
+export function conceptLines(stats = progress.conceptStats(), today = progress.dayNumber()) {
+  const order = CONCEPT_SECTIONS.map((s) => s.id);
+  const flow = journeyConcepts();
+  return stats.map((stat) => conceptLine(stat, today)).filter(Boolean)
+    .sort((a, b) => order.indexOf(a.section) - order.indexOf(b.section)
+      || flow.indexOf(a.concept) - flow.indexOf(b.concept));
+}
+
+function conceptsSection(lines) {
+  if (!lines.length) {
     return h('p', { class: 'hint' },
       'لم يُقَس شيءٌ بعد — تظهر هنا مفاهيمُه السبعة (كمّ · عدّ · رموز · مقارنة ·'
       + ' جسور · عمليات · أنماط) بعباراتها حين يبدأ رحلته.');
   }
-  const chip = (s) => h('span', {
-    class: 'vchip vchip--tag',
-    css: { '--chip': s.mastered ? GOOD : s.struggling ? BAD : ACCENT },
-    title: `${s.concept} — ${arNum(s.right)} صواب، ${arNum(s.wrong)} خطأ`,
-  }, `${s.concept} · ${arNum(s.right)} ✓ · ${arNum(s.wrong)} ✗`);
-  return h('div', {},
-    h('div', { class: 'audit-row' }, stats.map(chip)),
-    h('p', { class: 'hint' },
-      'اللون لأدنى صناديق التمرين في المفهوم: من أتقن نوعاً وتعثّر في آخر لم يتقنه بعد.'),
-  );
+  const colour = (state) => (state === 'mastered' ? GOOD : state === 'struggling' ? BAD : ACCENT);
+  const row = (item) => h('div', {
+    class: `concept concept--${item.state}`,
+    css: { '--chip': colour(item.state) },
+    // **التفصيلُ عند الطلب لا في السطر**: مَن أراد العددَ وجده، ولا يزاحم العبارةَ
+    title: `${item.title}: ${arNum(item.right)} صواب، ${arNum(item.wrong)} خطأ`,
+  },
+    h('b', {}, item.title),
+    h('span', { class: 'concept-line' }, item.line));
+
+  return h('div', { class: 'concepts' }, CONCEPT_SECTIONS.map((section) => {
+    const mine = lines.filter((item) => item.section === section.id);
+    return h('div', { class: 'concept-group' },
+      h('h4', {}, section.title),
+      mine.length
+        ? mine.map(row)
+        // **وقسمٌ لم يبلغه بعدُ يقول ذلك** ولا يُخفى: الوالدُ يرى الرحلةَ كلَّها
+        : h('p', { class: 'hint' }, 'لم يبلغ هذا القسم بعد.'));
+  }));
+}
+
+/**
+ * **حدُّ النطاق في اللوحة** (`METHOD.md §١٣`): «تدريسٌ وقياس **لا تشخيص**: التعثّرُ
+ * المتكرر إشارة «راجِع مختصاً»، لا حكماً — تُكتب في لوحة وليّ الأمر بهذا اللفظ».
+ *
+ * فالسياسةُ مكتوبةٌ دائماً (أدناه في اللوحة)، **والإشارةُ تُرفَع حين تقع**: مفهومٌ
+ * تعثّر فيه ثلاثةَ أسابيع فأكثر وما زال في الصندوق الأدنى — يُسمّى باسمه، بلا لفظِ
+ * حكمٍ ولا تشخيصٍ ولا نسبة.
+ */
+function stuckNote(lines) {
+  const stuck = lines.filter((item) => item.stuck);
+  if (!stuck.length) return null;
+  return h('p', { class: 'note note--bad concept-stuck' },
+    h('b', {}, 'راجِع مختصاً — إشارةٌ لا حكم. '),
+    `تعثّر طفلك أسابيعَ متّصلة في: ${stuck.map((item) => item.title).join('، ')}.`
+    + ' وهذا التطبيق يدرّس ويقيس ولا يشخّص — فأرِ طفلك مختصاً ليطمئنّ قلبك،'
+    + ' وواصِلا اللعب معاً كما أنتما: مراجعتُه اليومية تعيد هذه المفاهيم بنفسها.');
 }
 
 function dashboard(rerender = () => {}) {
@@ -479,6 +570,7 @@ function dashboard(rerender = () => {}) {
   const today = progress.secondsOn();
   const week = progress.usageDays(7);
   const streak = progress.reviewStreak();
+  const lines = conceptLines();
   const tip = recommend({
     started: progress.totalStars() > 0,
     dueCount: due.length,
@@ -507,7 +599,8 @@ function dashboard(rerender = () => {}) {
       tip.action && h('div', { class: 'row', css: { 'justify-content': 'flex-start', 'margin-top': '.75rem' } },
         h('button', { class: 'btn btn--primary', onclick: () => go(tip.action.hash) }, tip.action.label))),
 
-    ...section(`مفاهيمُ الحساب (${arNum(SECTIONS.length)} أقسام)`, conceptsSection()),
+    ...section(`مفاهيمُ الحساب (${arNum(CONCEPT_SECTIONS.length)} أقسام)`,
+      conceptsSection(lines), stuckNote(lines)),
 
     ...section('دقائق آخر سبعة أيام',
       h('div', { class: 'audit-row' }, week.map((day) => {

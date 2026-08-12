@@ -292,11 +292,19 @@ export function icon(name) {
 /** أسماء أيقونات الواجهة — يقرؤها حارسُ «لا إيموجي في الشيفرة». */
 export const ICON_NAMES = Object.keys(ICONS);
 
-/** معلم المحطة على الخريطة — زخرفة صامتة بلون المرحلة. */
+/**
+ * معلم المحطة — زخرفةٌ صامتة تتبع **لون نصّها** (`currentColor`) كأيقونات الواجهة.
+ *
+ * **ولمَ `currentColor` لا `var(--accent)`** (حكمُ المدير على مقترح الجلسة هـ —
+ * `REVIEW_IDENTITY.md §٤`): صار للمعلم موضعان لا موضعٌ واحد — الخريطةُ حيث لونُه
+ * لونُ المرحلة (تضبطه `.station-mark` في اللوح)، **وميداليةُ الختام** حيث القرصُ
+ * نفسُه بلون المرحلة — فلو رُسم بلونها اختفى عليها. فالمعلمُ يأخذ لونَ حبر موضعه،
+ * وكلُّ موضعٍ يقول لونَه مرّةً واحدة في CSS.
+ */
 export function landmark(kind) {
   if (!LANDMARKS[kind]) return null;
   const el = h('span', { class: 'station-mark', 'aria-hidden': 'true' });
-  el.innerHTML = `<svg viewBox="0 0 64 48" fill="none" stroke="var(--accent)"
+  el.innerHTML = `<svg viewBox="0 0 64 48" fill="none" stroke="currentColor"
     stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">${LANDMARKS[kind]}</svg>`;
   return el;
 }

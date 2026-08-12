@@ -388,9 +388,10 @@
      يُطلِق `load`** — ينتقل المستندُ في مكانه فينتظر الفحصُ حدثاً لا يجيء، وتنتهي
      المهلةُ صامتة. فيُزاد وسمٌ في الاستعلام: تحميلٌ كاملٌ في كل مرة. */
   let visit = 0;
-  const open = async (hash) => {
+  /** @param {string} extra استعلامٌ زائد (`&dev=1` لأدوات التجربة) — بلا تكرار مسار. */
+  const open = async (hash, extra = '') => {
     closeOpen();           // مستندٌ يُغادَر: ما كان يعمل فيه انتهى بمغادرته
-    frame.src = `/?preview=1&v=${++visit}${hash}`;
+    frame.src = `/?preview=1${extra}&v=${++visit}${hash}`;
     await new Promise((r) => frame.addEventListener('load', r, { once: true }));
     hookAudio(frame.contentWindow);
     await new Promise((r) => setTimeout(r, 900));
@@ -1294,6 +1295,34 @@
     `وتُجتاز إلى حكمها بلا لفظ رسوب (${finalVerdict
       && !finalVerdict.classList.contains('celebrate--again') ? 'فُتِحَت' : 'لَيْسَ بَعْدُ'})`);
 
+  /* ————— ١١ح) لوحةُ وليّ الأمر **بسجلٍّ حيّ**: مفهومٌ بعملية لا درجة (الجلسة ٨) —————
+
+     الفحصُ الأول (§٨ أعلاه) رآها **فارغة** — سجلٌّ نظيف فلا مفهومَ يُترجَم. وهنا
+     تُفتَح من **المستند الذي لعب** محطاتٍ وبوابة، فتُقرأ أقسامُها السبعة وعباراتُها
+     كما يقرؤها الوالد: جملٌ فعلية («يقدّر حتى ٥ فوراً») لا نسبٌ ولا نجوم.
+     (والحسابُ نفسُه — العبارةُ من ليتنر والمدى محسوب — يقيسه `test_parent.mjs`
+     بسجلٍّ مصنوع؛ وهذا يثبت أنّ ما حُسب **وصل إلى الشاشة**.) */
+
+  mdoc8.defaultView.location.hash = '#/parent';
+  await new Promise((r) => setTimeout(r, 600));
+  const [pa, pb] = (mdoc8.querySelector('.gate .giant')?.textContent || '').split('×');
+  const parentInput = mdoc8.querySelector('.gate input');
+  if (parentInput) {
+    parentInput.value = String(arDigits(pa) * arDigits(pb));
+    mdoc8.querySelector('.gate-go')?.click();
+    await new Promise((r) => setTimeout(r, 500));
+  }
+  const groups = [...mdoc8.querySelectorAll('.concept-group h4')].map((el) => el.textContent);
+  const conceptLines = [...mdoc8.querySelectorAll('.concept')]
+    .map((el) => el.querySelector('.concept-line')?.textContent?.trim() || '');
+  ok(groups.length === 7 && conceptLines.length > 0,
+    `ولوحةُ وليّ الأمر تعرض أقسامَ الحساب السبعة (${groups.join(' · ')}) `
+    + `و${conceptLines.length} مفهوماً مقيساً ممّا لعبه في هذا الجهاز`);
+  const notPhrases = conceptLines.filter((t) => !/^ي/.test(t) || /[|0-9٪]/.test(t));
+  ok(conceptLines.length > 0 && notPhrases.length === 0,
+    `وكلُّها **جملةٌ فعلية لا درجة** (${conceptLines.slice(0, 2).join(' · ')})`
+    + (notPhrases.length ? ` — مخالفة: ${notPhrases.join('، ')}` : ''));
+
   // ————— ج) «تَعَارُفٌ: أَرْقَامٌ أُخْرَى» (٨·٥): عرضٌ بلا قياس، ورقمٌ مغربيّ فيها وحدَها —————
   const idoc = await open('#/intro/latin');
   const rows = [...idoc.querySelectorAll('.intro-row')];
@@ -1325,6 +1354,58 @@
   ok(drawnNodes === wanted,
     `والخريطةُ ترسم الرحلةَ كلَّها: **${drawnNodes} عقدة** في `
     + `${mapDoc.querySelectorAll('.station').length} قسماً — وهو ما يحسبه المنهج (${wanted})`);
+
+  /* ————— ١١ط) ميداليةُ الختام تحمل معلمَ مرحلتها — **في كل مرحلةٍ من الثماني** —————
+
+     قيدُ الجلسة هـ (حكمُ المدير — `REVIEW_IDENTITY.md §٤`): «الميداليةُ تحمل معلمَ
+     المرحلة بياناً لا يداً». و`test_journey` يثبت **الوصلة** في node (كلُّ محطةٍ تردّ
+     معلمَ مرحلتها)، وهذا يثبت **الرسم**: يُفتَح ختامُ محطةٍ من كل مرحلةٍ فيُقابَل ما
+     رُسِم في القرص بمعلم تلك المرحلة نفسِه (مقروءاً من `landmark` في `ui.js`).
+
+     **ويُقاس اللونُ أيضاً**: المعلمُ كان مرسوماً بلون المرحلة، وقرصُ الميدالية بلونها
+     نفسِه — فيختفي عليه. فيُقابَل حبرُ الرسم بخلفية القرص: لونان مختلفان أو لا معلم
+     يُرى. ويُساق الختامُ بزرّ «إنهاء المحطة الآن» (`?dev=1`) لا بلعب ثمانِ محطاتٍ كاملة. */
+
+  const stageMarks = await (async () => {
+    const c = await import('/js/curriculum.js');
+    const u = await import('/js/ui.js');
+    return c.sections().filter((s) => s.kind !== 'gate').map((s) => ({
+      title: s.title,
+      mark: s.mark,
+      node: (s.nodes || [])[0],
+      // رسمُ المعلم كما يعرفه التطبيق نفسُه — لا نسخةٌ في صفحة الفحص
+      svg: u.landmark(s.mark)?.querySelector('svg')?.innerHTML.replace(/\s+/g, ' ').trim() || '',
+    }));
+  })();
+
+  const medals = [];
+  for (const stage of stageMarks) {
+    if (!stage.node) continue;
+    const sdoc8 = await open(`#/${stage.node.type}/${encodeURIComponent(stage.node.part)}`, '&dev=1');
+    const endBtn = [...sdoc8.querySelectorAll('.dev-row .btn')]
+      .find((b) => b.textContent.includes('إنهاء المحطة'))
+      || (await until(sdoc8, (d) => d.querySelector('.station-body .next')));
+    endBtn?.click();
+    const disc = await until(sdoc8, (d) => d.querySelector('.celebrate-face'), 12000);
+    const shown = disc?.querySelector('.station-mark svg');
+    const win8 = sdoc8.defaultView;
+    medals.push({
+      title: stage.title,
+      mark: stage.mark,
+      same: !!shown && shown.innerHTML.replace(/\s+/g, ' ').trim() === stage.svg,
+      seen: !!shown && win8.getComputedStyle(shown).stroke
+        !== win8.getComputedStyle(disc).backgroundColor,
+      neutral: !!disc?.querySelector('.ui-icon'),
+    });
+  }
+
+  const blindMedals = medals.filter((m) => !m.same || !m.seen || m.neutral);
+  ok(medals.length === stageMarks.length && blindMedals.length === 0,
+    `وميداليةُ الختام تحمل معلمَ مرحلتها في المراحل الثماني كلِّها `
+    + `(${medals.map((m) => m.mark).join(' · ')}) — حبراً يفارق لونَ القرص فيُرى`
+    + (blindMedals.length
+      ? ` — مخالفة: ${blindMedals.map((m) => `${m.title}${m.neutral ? ' (أيقونةُ واجهة)'
+        : m.same ? ' (لا يُرى على القرص)' : ' (معلمٌ آخر)'}`).join('، ')}` : ''));
 
   /* ————— ١٢) **تعاقبُ الصوت**: صوتٌ واحدٌ في الجوّ، والانتقالُ بعد تمامه —————
 

@@ -35,7 +35,7 @@ import { stations } from './curriculum.js';
 import { paint, spotStyle, spanStyle } from './render.js';
 import { setBuilders } from './review.js';
 import {
-  h, icon, go, topbar, starsRow, mascot, cheer, toast, shuffle, arNum, DEV,
+  h, icon, go, topbar, starsRow, mascot, cheer, toast, shuffle, arNum, landmark, DEV,
 } from './ui.js';
 
 // ————— إيقاعُ الشاشة (بالمللي ثانية) — لا مؤقّتَ ضغطٍ في أيٍّ منها —————
@@ -201,6 +201,17 @@ export function rangesOf(station, concept, kind) {
 
 /** محطةٌ بمعرّفها من المنهج (`curriculum.js` وحدَه يملك الرحلة). */
 export const stationById = (id) => stations().find((s) => s.id === id) || null;
+
+/**
+ * **معلمُ ميدالية هذه المحطة** — معلمُ مرحلتها كما تعلنه بيانات المنهج (`mark`).
+ *
+ * (حكمُ المدير على مقترح الجلسة هـ — `REVIEW_IDENTITY.md §٤`): كانت الميداليةُ
+ * أيقونةَ واجهةٍ محايدة (`party`) بينما اقرأ تضع في ميداليتها **بطلَ عالمها** — الحرفَ
+ * الذي تعلّمه الآن — ولعالمنا ثمانيةُ معالمَ تعلنها المراحلُ بأنفسها. فتحملُه
+ * الميداليةُ **بياناً لا يداً**: لا اسمَ معلمٍ مكتوبٌ في شاشة، ولا جدولَ ثانٍ يفترق
+ * عن الخريطة — وحارسُه في `test_journey.mjs` يمشي العقدَ فيسأل كلَّ واحدةٍ عن معلمها.
+ */
+export const medalOf = (id) => stationById(id)?.mark || null;
 
 /**
  * المحطةُ التي تُبنى منها مادّةُ مهارةٍ في المراجعة.
@@ -708,9 +719,13 @@ export function stationScreen({ nodeId, title, accent, make, view, score, save }
         ? 'أتممتَ المحطة — وزلّاتُك قليلة.'
         : 'أتممتَ المحطة، وبالإعادة تزيد نجومك.';
 
+    /* **وفي الميدالية معلمُ المرحلة** (حكمُ المدير — `REVIEW_IDENTITY.md §٤`): بطلُ
+       عالم العدّ في لحظة الاحتفال، مقروءاً من `mark` المعلَن لا مكتوباً هنا.
+       و`icon('party')` تبقى **احتياطاً لا يقع**: معلمٌ لا رسمَ له يُحمِر حارسَ
+       الرحلة قبل أن يصل إلى شاشة (فلا احتفالَ بلا وجه، ولا وجهٌ يُكتب بيد). */
     body.replaceChildren(h('div', { class: 'celebrate' },
       mascot('mascot mascot--cheer'),
-      h('div', { class: 'celebrate-face' }, icon('party')),
+      h('div', { class: 'celebrate-face' }, landmark(medalOf(nodeId)) || icon('party')),
       h('h2', {}, 'أَحْسَنْت!'),
       starsRow(stars, 'big-stars'),
       h('p', { class: 'hint' }, line),

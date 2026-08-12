@@ -1,0 +1,217 @@
+<!doctype html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="utf-8">
+<title>مشاهد القياس — لوحة المرشَّحات</title>
+<!--
+  **لوحةُ مرشَّحات مشاهد القياس** (المحطتان ٨·٣ «أثقلُ وأخفّ» و٨·٤ «قبلُ وبعد») —
+  بندٌ أُلحق بالجلسة ٨ بحكم مراجعة الجلسة ٧ (البند ٤): «أزواجُ ثقلٍ حقيقية وتسلسلاتُ
+  نموٍّ زمنية من Twemoji بعقد صدق الصورة، **ومرشَّحاتُها تُعرَض على المدير مُصيَّرةً قبل
+  الدخول** — محتوىً يراه طفلٌ فبوابتُه عين».
+
+  **عُدّةٌ لا تُنشَر**: موضعُها `tools/` لا `app/`، ورسومُ المرشَّحين في
+  `tools/emoji_candidates/` (تُجلَب بـ`python3 tools/fetch_twemoji.py --stage`) —
+  فلا تدخل شجرةَ النشر ولا قشرةَ `sw` ولا جهازَ طفلٍ قبل أن يُقَرّ منها شيء.
+
+  **وهندسةُ المشاهد من المصيِّر نفسِه** (`plan('scene', n)` في `app/js/render.js`):
+  المواضعُ والمقاديرُ وخطُّ الأرض محسوبةٌ بالخوارزمية التي سترسم للطفل — فالحكمُ على
+  ما سيُرى لا على سطر عيّنة. **والفرقُ الوحيد المقترَح** أنّ أشياء المشهد تصير
+  **مختلفةً بمقدارٍ واحد** بعد أن كانت شيئاً واحداً بمقادير.
+
+  ————— التشغيل واللقطة (من جذر المستودع) —————
+      python3 tools/fetch_twemoji.py --stage
+      python3 -m http.server 8899
+      open http://127.0.0.1:8899/tools/measure_scenes.html
+  واللقطةُ في `shots/measure-scenes.png`، والمراجعةُ في `docs/REVIEW_SCENES.md`.
+-->
+<link rel="stylesheet" href="../app/css/app.css">
+<style>
+  body { background: var(--paper); color: var(--ink); padding: 1.25rem 1.5rem; }
+  .board { max-width: 1180px; margin: 0 auto; font-family: var(--font-ui); }
+  .board > h1 { font-size: 1.45rem; margin: 0 0 .4rem; }
+  .board > p { color: var(--ink-soft); max-width: 62rem; margin: 0 0 1rem; font-size: .92rem; line-height: 1.9; }
+  .board b { color: var(--ink); }
+
+  .deal { display: grid; grid-template-columns: 1fr 1fr; gap: .9rem; margin: 0 0 1.4rem; }
+  .deal > div { background: var(--card); border: 1px solid var(--line); border-radius: var(--radius);
+    padding: .8rem 1rem; font-size: .85rem; line-height: 1.9; color: var(--ink-soft); }
+  .deal h3 { margin: 0 0 .3rem; font-size: .95rem; color: var(--ink); }
+  .deal ol, .deal ul { margin: 0; padding-inline-start: 1.1rem; }
+
+  h2 { font-size: 1.05rem; margin: 1.6rem 0 .6rem; }
+  .cards { display: grid; grid-template-columns: repeat(2, 1fr); gap: 1rem; }
+  .card { background: var(--card); border: 1px solid var(--line); border-radius: var(--radius);
+    padding: .9rem 1rem 1rem; }
+  .card h3 { margin: 0 0 .1rem; font-size: 1rem; }
+  .card .names { font-size: .8rem; color: var(--ink-soft); margin: 0 0 .5rem; }
+  .card .why { font-size: .82rem; line-height: 1.8; margin: .5rem 0 0; color: var(--ink-soft); }
+  .card .risk { font-size: .82rem; line-height: 1.8; margin: .25rem 0 0; color: var(--err-text); }
+  .card .facts { font-size: .72rem; color: var(--ink-soft); margin: .45rem 0 0; letter-spacing: .2px; }
+
+  /* المشهدُ بصندوق المصيِّر نفسِه: نسبةُ العرض إلى الارتفاع من `VIEWS.scene` */
+  .scene { position: relative; width: 100%; background: var(--paper);
+    border: 1px dashed var(--line); border-radius: var(--radius-btn); }
+  .scene .ground { position: absolute; inset-inline: 2%; height: 2px; background: var(--line); }
+  .scene img { position: absolute; transform: translate(50%, 0); }
+  .scene figcaption { position: absolute; inset-block-end: -1.15rem; font-size: .62rem;
+    color: var(--ink-soft); transform: translate(50%, 0); white-space: nowrap; }
+  .pane { margin-bottom: 1.5rem; }
+  .pane > span { display: block; font-size: .72rem; color: var(--ink-soft); margin: 0 0 .35rem; }
+</style>
+</head>
+<body>
+<div class="board">
+  <h1>مشاهدُ القياس — مرشَّحاتٌ تُعرَض قبل أن تدخل</h1>
+  <p>
+    المحطتان <b>٨·٣ «أَثْقَلُ وَأَخَفّ»</b> و<b>٨·٤ «قَبْلُ وَبَعْد»</b> تُلعبان اليوم بـ<b>الشيء
+    نفسِه بمقادير</b> — والمنفَّذ صادقٌ فيما يعرضه (المقدارُ مرسومٌ ومقروءٌ من الرسم)
+    <b>وقاصرٌ عن حرفية المنهج</b>: «أثقلُ وأخفّ <b>مقارنةٌ وصفية مباشرة</b>» و«قبلُ وبعد
+    <b>ترتيبٌ زمنيّ لمشاهد من يوم الطفل</b>». وهذه اللوحةُ تعرض المرشَّحات <b>مُصيَّرةً
+    بهندسة المصيِّر نفسِها</b>، وإلى جانب كلٍّ <b>ما يراه الطفلُ اليوم</b> في المحطة نفسِها.
+    <b>ولا يدخل التطبيقَ منها شيءٌ إلا بحكم المدير</b> — ورسومُها في <code>tools/</code> لا في
+    شجرة النشر.
+  </p>
+
+  <div class="deal">
+    <div>
+      <h3>عقدُ «صدق الصورة» في مشهد القياس</h3>
+      <ol id="deal"></ol>
+    </div>
+    <div>
+      <h3>ما يتبدّل في الشيفرة إن أُقِرّت (بندٌ يُرفَع)</h3>
+      <ul>
+        <li><b>المصيِّر</b>: مشهدُ القياس اليوم <b>شيءٌ واحد بمقادير</b> بنصّ تعليقه
+          («فلو اختلف الشيئان لَقارن الطفلُ سيارةً بفراشة») — فيصير <b>أشياءَ مختلفة
+          بمقدارٍ واحد</b>، ويُعلن كلُّ شيءٍ رسمَه (<code>data-item</code>) كما يفعل الشريط.</li>
+        <li><b>الجواب</b>: يُقرأ اليوم من <code>data-size</code> المرسوم. وفي المرشَّح
+          <b>لا حكمَ في الحجم</b> — فيُقرأ <b>الرمزُ المرسوم</b> من الـDOM وتُقابَل به
+          <b>رتبةٌ مُعلَنة في بيانات المنهج</b> (ثِقَلاً أو زمناً). فيبقى «الجوابُ من
+          المرسوم» في شطره الأول (ما رُسِم لا ما نُوي)، <b>ويصير مصدرُ الحكم بياناً
+          يُقَرّ لا هندسةً تُحسَب</b> — وهذا موضعُ القرار.</li>
+        <li><b>الجبهة</b>: عناصرُ عالم الطفل تزيد بما يُقَرّ وحدَه (<code>OBJECTS</code>
+          أو جدولٌ مستقلٌّ للمشاهد)، ويجلبها <code>fetch_twemoji</code> إلى
+          <code>app/emoji/</code> بجردها المعتاد.</li>
+        <li><b>الطولُ بالمقادير يبقى كما هو</b> (حكمُ المدير) — فمحطةُ ٨·٣ تجمع وجهين:
+          طولٌ بالمقادير، وثِقَلٌ بأزواجٍ حقيقية.</li>
+      </ul>
+    </div>
+  </div>
+
+  <h2 id="pairs-head">أزواجُ الثِّقَل (٨·٣) — <span></span></h2>
+  <div class="cards" id="pairs"></div>
+
+  <h2 id="seqs-head">تسلسلاتُ الزمن (٨·٤) — <span></span></h2>
+  <div class="cards" id="seqs"></div>
+
+  <h2>ما سقط قبل العرض</h2>
+  <div class="card"><ul id="dropped"></ul></div>
+</div>
+
+<script type="module">
+import { plan, GEOM, OBJECTS } from '../app/js/render.js';
+import { h } from '../app/js/ui.js';
+
+const data = await (await fetch('measure_candidates.json')).json();
+const key = (glyph) => [...(glyph.includes('‍') ? glyph : glyph.replaceAll('️', ''))]
+  .map((ch) => ch.codePointAt(0).toString(16)).join('-');
+
+/**
+ * مشهدٌ مُصيَّرٌ بهندسة `render.js`: مواضعُ الخانات ومقاديرُها وخطُّ الأرض من
+ * `plan('scene', n)` نفسِها — فلا رقمَ هندسيٌّ مكتوبٌ في هذه اللوحة.
+ *
+ * @param {string[]} glyphs الرموزُ بترتيب العرض (من اليمين)
+ * @param {boolean}  equal  أمقدارٌ واحد للكلّ (المرشَّح) أم مقاديرُ متدرّجة (المنفَّذ اليوم)؟
+ * @param {string}   dir    مجلَّدُ الرسوم
+ */
+function sceneEl(glyphs, { equal, dir, names = [] }) {
+  const fig = plan('scene', glyphs.length, { seed: 11 });
+  const { view, marks } = fig;
+  const base = view.h - GEOM.PAD;
+  const big = Math.max(...marks.map((m) => m.r));
+  const box = h('div', { class: 'scene' });
+  box.style.aspectRatio = `${view.w} / ${view.h}`;
+  const ground = h('div', { class: 'ground' });
+  ground.style.bottom = `${(GEOM.PAD / view.h) * 100}%`;
+  box.append(ground);
+  for (const [i, glyph] of glyphs.entries()) {
+    const m = marks[i];
+    const r = equal ? big : m.r;
+    const img = h('img', { src: `${dir}/${key(glyph)}.svg`, alt: names[i] || '' });
+    img.style.width = `${((2 * r) / view.w) * 100}%`;
+    img.style.right = `${((view.w - m.x) / view.w) * 100}%`;
+    img.style.bottom = `${((view.h - base) / view.h) * 100}%`;
+    box.append(img);
+    if (names[i]) {
+      const cap = h('figcaption', {}, names[i]);
+      cap.style.right = `${((view.w - m.x) / view.w) * 100}%`;
+      box.append(cap);
+    }
+  }
+  return box;
+}
+
+/** لوحُ المقارنة: المرشَّحُ فوق، وما يراه الطفلُ اليوم تحته — بمقياسٍ واحد. */
+function panes(glyphs, names, at = 0) {
+  // **والمنفَّذُ اليوم يُصيَّر بعنصرٍ من عالم الطفل نفسِه** (لا بمرشَّحٍ لم يدخل بعد)،
+  // ويدور على عناصره بترتيب البطاقات فلا تُقرأ لوحةٌ كلُّها بعنصرٍ واحد صدفةً.
+  const today = OBJECTS[at % OBJECTS.length].glyph;
+  return [
+    h('div', { class: 'pane' },
+      h('span', {}, 'المرشَّح — أشياءُ مختلفة بمقدارٍ واحد (الحكمُ في الشيء لا في الحجم)'),
+      sceneEl(glyphs, { equal: true, dir: 'emoji_candidates', names })),
+    h('div', { class: 'pane' },
+      h('span', {}, 'وما يراه الطفلُ اليوم — الشيءُ نفسُه بمقادير (الحكمُ في الحجم)'),
+      sceneEl(glyphs.map(() => today), { equal: false, dir: '../app/emoji' })),
+  ];
+}
+
+/** ما تحسبه اللوحةُ بنفسها: أموجودٌ رسمُه؟ وكم وزنُه؟ — لا وصفَ بلا قياس. */
+async function factsOf(glyphs) {
+  const rows = await Promise.all(glyphs.map(async (glyph) => {
+    const res = await fetch(`emoji_candidates/${key(glyph)}.svg`);
+    const text = res.ok ? await res.text() : '';
+    return { key: key(glyph), ok: res.ok && text.includes('<svg'), bytes: text.length };
+  }));
+  const total = rows.reduce((n, r) => n + r.bytes, 0);
+  const missing = rows.filter((r) => !r.ok);
+  return `${rows.length} رسماً من Twemoji ١٥٫١ (${Math.round(total / 1024)} كب)`
+    + (missing.length ? ` — **ناقصٌ: ${missing.map((m) => m.key).join('، ')}**` : '')
+    + ` · مفاتيحُ الملفات: ${rows.map((r) => r.key).join('، ')}`;
+}
+
+const card = async (item, glyphs, names, at = 0) => {
+  const el = h('div', { class: 'card' },
+    h('h3', {}, item.title),
+    h('p', { class: 'names' }, names.join(' · ')),
+    ...panes(glyphs, names, at),
+    h('p', { class: 'why' }, item.why),
+    item.risk && h('p', { class: 'risk' }, `ما يُنظَر فيه: ${item.risk}`),
+    h('p', { class: 'facts' }, await factsOf(glyphs)));
+  return el;
+};
+
+document.getElementById('deal').append(
+  ...data['العقد'].map((line) => h('li', {}, line)));
+
+const pairs = data.pairs;
+document.querySelector('#pairs-head span').textContent = `${pairs.length} مرشَّحات`;
+for (const [at, pair] of pairs.entries()) {
+  document.getElementById('pairs').append(
+    await card(pair, [pair.heavy.glyph, pair.light.glyph],
+      [`${pair.heavy.name} (الأثقل)`, `${pair.light.name} (الأخفّ)`], at));
+}
+
+const seqs = data.sequences;
+document.querySelector('#seqs-head span').textContent = `${seqs.length} مرشَّحات`;
+for (const [at, seq] of seqs.entries()) {
+  document.getElementById('seqs').append(
+    await card(seq, seq.steps.map((s) => s.glyph),
+      seq.steps.map((s, i) => `${s.name} (${['الأول', 'الثاني', 'الآخِر'][i] || i + 1})`),
+      at + pairs.length));
+}
+
+document.getElementById('dropped').append(
+  ...data['سقط قبل العرض'].map((line) => h('li', {}, line)));
+</script>
+</body>
+</html>

@@ -40,7 +40,7 @@ function blank() {
   return {
     v: VERSION,
     stars: {},        // معرّف عقدة ← نجوم
-    skills: {},       // «مفهوم|مدى|تمرين» ← {right, wrong, box, due, seen}
+    skills: {},       // «مفهوم|مدى|تمرين» ← {right, wrong, box, due, seen, since}
     days: {},         // «YYYY-MM-DD» ← ثوانٍ من الاستعمال الفعلي
     reviews: {},      // «YYYY-MM-DD» ← {tries, right, at}
     seconds: 0,
@@ -247,7 +247,7 @@ export function getSkill(key) {
   return state.skills[key] || null;
 }
 
-/** كل المهارات المسجّلة: [{key, concept, range, kind, right, wrong, box, due, seen}] */
+/** كل المهارات المسجّلة: [{key, concept, range, kind, right, wrong, box, due, seen, since}] */
 export function skills() {
   return Object.entries(state.skills).map(([key, s]) => ({ key, ...parseSkillKey(key), ...s }));
 }
@@ -263,7 +263,13 @@ export function skills() {
 export function recordAttempt(concept, range, kind, correct, today = dayNumber()) {
   if (!concept || !kind) return null;
   const key = skillKey(concept, range, kind);
-  const s = state.skills[key] || { right: 0, wrong: 0, box: 0, due: today, seen: today };
+  const s = state.skills[key]
+    || { right: 0, wrong: 0, box: 0, due: today, seen: today, since: today };
+  /* **و`since` أوّلُ يومٍ قِيست فيه هذه المهارة** (الجلسة ٨): لوحةُ وليّ الأمر تقول
+     «راجِع مختصاً» عند تعثّرٍ **أسابيع** (`METHOD.md §١٣`)، ومدّةُ التعثّر لا تُعرَف
+     من الصندوق ولا من `seen` (وهو آخرُ يوم) — فتُقيَّد بدايتُها يومَ تبدأ.
+     وسجلٌّ قديم بلا `since` يبدأ عدُّه من اليوم: لا نخترع له ماضياً لم نقِسه. */
+  if (s.since === undefined) s.since = today;
   if (correct) {
     s.right++;
     s.box = Math.min(MAX_BOX, s.box + 1);
@@ -308,17 +314,21 @@ export function conceptStats() {
   const byConcept = new Map();
   for (const s of skills()) {
     const acc = byConcept.get(s.concept)
-      || { concept: s.concept, right: 0, wrong: 0, minBox: MAX_BOX, kinds: 0, seen: 0 };
+      || { concept: s.concept, right: 0, wrong: 0, minBox: MAX_BOX, kinds: 0, seen: 0, parts: [] };
     acc.right += s.right;
     acc.wrong += s.wrong;
     acc.minBox = Math.min(acc.minBox, s.box);
     acc.kinds++;
     acc.seen = Math.max(acc.seen, s.seen);
+    acc.parts.push(s);
     byConcept.set(s.concept, acc);
   }
   return [...byConcept.values()]
     .map((a) => ({
       ...a,
+      // **ومهاراتُ المفهوم بالأضعف أوّلاً** (الجلسة ٨): منها تُبنى عبارةُ اللوحة —
+      // أقصى ما أتقن، وما يحتاج تثبيتَه — بترتيب الضعف نفسِه الذي تبني به المراجعة.
+      parts: a.parts.sort(byWeakness),
       attempts: a.right + a.wrong,
       mastered: a.minBox >= MASTERED_BOX,
       struggling: a.wrong >= 2 && a.minBox <= 1,
