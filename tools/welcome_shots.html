@@ -50,12 +50,58 @@ Object.defineProperty(navigator, 'serviceWorker', {
  */
 import * as progress from './js/progress.js';
 
-// صوتٌ لا ينتهي: الحالةُ المعروضة تتجمّد فلا تنتقل الخطوةُ تلقائياً قبل اللقطة
-window.Audio = class { play() { return new Promise(() => {}); } pause() {} load() {} };
-Element.prototype.scrollIntoView = () => {};
-
 const params = new URLSearchParams(location.search);
 const screen = params.get('screen') || 'map';
+
+/* ————— السَّوقُ إلى الحالة التي تمثّل المدى (الجلسة و — `FIELD.md §٣`) —————
+
+   كانت كلُّ لقطةٍ تتجمّد على **أول لحظة** من خطوة «شاهِدْ» (صوتٌ لا ينتهي يوقف
+   التعاقب) — فخرجت الرحلةُ كلُّها عدَّ نقاط: لا رمزٌ يُكشَف ولا جملةُ عمليةٍ تُرى،
+   **فكذبت اللقطاتُ على مدى التطبيق بتمثيلها أوّلَه وحدَه**. فصار لكل شاشةٍ «مشهدُها»:
+
+   - `freeze`: الصوتُ لا يتمّ فتقف الشاشةُ على أول حالتها (لقطاتُ الكمّ والخريطة).
+   - `model`:  الصوتُ يتمّ فوراً فتكتمل النمذجةُ ويُرى كشفُها (الرمزُ فوق الكمية،
+               رمزا المقارنة، مواقعُ القفز على الخطّ) — ويُنتظَر زرُّ «تَابِعْ» ولا يُنقَر.
+   - `guided`: بعد تمام النمذجة يُنقَر «تَابِعْ» فتقف الشاشةُ على جولة «جَرِّبْ مَعِي»
+               — جملةُ العملية بالرموز وخانةُ السؤال وكمّيتُها عوناً.
+   - `finish`: يُنقَر زرُّ الإنهاء من أدوات التجربة (`?dev=1`) فتُرى شاشةُ الختام
+               بميدالية معلم المرحلة.
+
+   **والمشهدُ حتميٌّ في القياس والالتقاط معاً**: البذرةُ مجمَّدة (`Date.now` ثابتة
+   و`Math.random` مبذور) فالجولةُ التي قيست هي عينُها التي تُلتقَط — وعليها يقوم
+   صدقُ بيان اللقطات (`shots/manifest.json`) الذي يحرسه `test_welcome.mjs`. */
+
+const SCENES = {
+  numeral: 'model', compare: 'model', teen: 'model', skip: 'model',
+  // لوحُ الآلة (مجموعتان فوق وحصيلتُهما تحتهما) لوحُ **جولتها** — نمذجتُها كمٌّ واحد
+  machine: 'guided',
+  add: 'guided', sub: 'guided', diff: 'guided',
+  medal: 'finish',
+};
+const scene = SCENES[screen] || 'freeze';
+
+if (scene === 'freeze') {
+  // صوتٌ لا ينتهي: الحالةُ المعروضة تتجمّد فلا تنتقل الخطوةُ تلقائياً قبل اللقطة
+  window.Audio = class { play() { return new Promise(() => {}); } pause() {} load() {} };
+} else {
+  // صوتٌ يتمّ فوراً: التعاقبُ يمضي بمهله (`wait`) حتى يقف على مشهد اللقطة —
+  // و`--virtual-time-budget` في المولّد يطوي تلك المُهَلَ طيّاً.
+  window.Audio = class extends EventTarget {
+    play() {
+      setTimeout(() => this.dispatchEvent(new Event('ended')), 30);
+      return Promise.resolve();
+    }
+    pause() {}
+    load() {}
+  };
+}
+Element.prototype.scrollIntoView = () => {};
+
+// بذرةٌ مجمّدة: كلُّ ما يُبذَر من الزمن أو القرعة يثبت، فتُبنى الجولةُ نفسُها في
+// كل تشغيل — والثابتُ اختير بعد معاينة اللقطات بالعين (جملةُ الصدر ونحوها).
+Date.now = () => 1786525200000;   // ٢٠٢٦-٠٨-١٢ — يومُ اعتماد التشكيلة
+let lcg = 42 >>> 0;
+Math.random = () => ((lcg = (lcg * 1664525 + 1013904223) >>> 0) / 2 ** 32);
 
 // ————— تقدُّمُ طفلٍ في أواخر الرحلة —————
 //
@@ -106,16 +152,55 @@ const ROUTES = {
   numeral: '#/numeral/six-seven',
   compare: '#/compare/ten',
   bond: '#/bond/ten',
+  machine: '#/add/machine',
   add: '#/add/ten',
+  sub: '#/sub/ten',
+  diff: '#/diff/ten',
   teen: '#/teen/fifteen',
+  skip: '#/skip/twenty',
   pattern: '#/pattern/abab',
   measure: '#/measure/size',
   gate: '#/gate/quantity',
   parent: '#/parent',
+  // ميداليةُ الختام: محطةُ أصدقاء العشرة تُنهى (بأداة التجربة) فتُرى ميداليةُ معلمِ
+  // مرحلتها — والمولّد يفتح هذه اللقطةَ بـ`dev=1` ليكون زرُّ الإنهاء في الشجرة.
+  medal: '#/bond/ten',
 };
 
 location.hash = ROUTES[screen] || ROUTES.map;
 await import('./js/main.js');
+
+/* ————— سَوقُ المشهد (انظر `SCENES` أعلاه) —————
+   الانتظارُ على ما تراه العين لا على مُهَل: زرُّ «تَابِعْ» لا يظهر إلا بعد تمام
+   النمذجة وكشفِها، فوجودُه هو شهادةُ اكتمال المشهد. */
+
+const until = (find, timeout = 55000) => new Promise((resolve, reject) => {
+  const t0 = performance.now();
+  (function poll() {
+    const got = find();
+    if (got) return resolve(got);
+    if (performance.now() - t0 > timeout) return reject(new Error('لم يكتمل المشهد'));
+    setTimeout(poll, 120);
+  })();
+});
+const settle = (ms) => new Promise((r) => setTimeout(r, ms));
+
+if (scene === 'model' || scene === 'guided') {
+  const next = await until(() => document.querySelector('.next'));
+  if (scene === 'guided') {
+    next.click();
+    // جولةُ «جَرِّبْ مَعِي» تقف تنتظر لمسةَ الطفل — وهي المشهد
+    await until(() => !document.querySelector('.next'));
+    await settle(900);
+  }
+}
+if (scene === 'finish') {
+  const done = await until(() => [...document.querySelectorAll('.dev-row button')]
+    .find((b) => b.textContent.includes('إنهاء')));
+  done.click();
+  await until(() => document.querySelector('.celebrate'));
+  await settle(400);
+}
 
 /* **وبوابةُ وليّ الأمر تُجاز بالحساب لا بالتفافٍ عليها**: اللوحةُ خلف سؤالٍ ضربيّ
    (`parent.js` — قفلُ جلسةٍ لا يُحفَظ في تخزين)، فلو لم تُجَز لَخرجت «لقطةُ اللوحة»
@@ -144,8 +229,13 @@ if (params.get('measure')) {
   await new Promise((r) => setTimeout(r, 900));
   const app = document.getElementById('app');
   const height = Math.ceil(app.getBoundingClientRect().bottom + 16);
-  navigator.sendBeacon('/result', new Blob([JSON.stringify([{ screen, height }])],
-    { type: 'text/plain' }));
+  /* **ونصُّ ما تراه العينُ يُقاس مع الطول**: `innerText` يُسقط المخفيَّ (ومنه شريط
+     أدوات التجربة)، فهو نصُّ الصورة الملتقطة نفسِها — والبذرةُ المجمّدة تضمن أنّ
+     ما قيس هنا هو عينُ ما سيُلتقَط. عليه يقوم بيانُ اللقطات الذي يحرس المدى. */
+  navigator.sendBeacon('/result', new Blob([JSON.stringify([{
+    screen, height, route: ROUTES[screen] || ROUTES.map,
+    text: app.innerText.replace(/\s+/g, ' ').trim(),
+  }])], { type: 'text/plain' }));
 }
 </script>
 </body>

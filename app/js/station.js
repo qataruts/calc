@@ -842,7 +842,10 @@ function fillersOf(rnd = Math.random) {
     for (const key of station.skills || []) {
       const [concept, range, kind] = key.split('|');
       if (!EXERCISES.has(kind)) continue;
-      out.push(() => itemFor({ concept, range: Number(range), kind }, rnd));
+      // **والمدى بقاعدة `spanOf` لا بـ`Number`** (الجلسة و — آخرُ مواضع صنف NaN):
+      // `Number('weight')` يعطي `NaN` فيسقط التطابقُ التامّ في `stationForSkill`
+      // ويُبنى **أولُ وجهٍ** بدل الوجه المعلَن — فيراجع الطفلُ الطولَ وقد أتمّ الثِّقَل.
+      out.push(() => itemFor({ concept, range: spanOf(range), kind }, rnd));
     }
   }
   return shuffle(out, rnd);

@@ -51,7 +51,7 @@ globalThis.localStorage = {
 };
 const JS = new URL('js/', APP);
 const progress = await import(new URL('progress.js', JS));
-const { STAGES, GATES, LEVEL_MAX, CONCEPT_SECTIONS, stations } = await import(new URL('curriculum.js', JS));
+const { STAGES, GATES, LEVEL_MAX, CONCEPT_SECTIONS, SIGNS, stations } = await import(new URL('curriculum.js', JS));
 const emojiIndex = JSON.parse(read('emoji/index.json', APP));
 // **بنكُ الصوت يُحسب من بيانه لا يُقدَّر**: بصمةٌ لكل ملفٍّ مولَّد في `versions.json`،
 // فدفعةٌ جديدة تُسقِط الفحصَ يومَ تُصرَّف — وذاك الحارسُ يعمل لا عيبٌ فيه.
@@ -345,6 +345,80 @@ ok(rows.length > 0 && shownRows === rows.length,
 for (const needle of ['أصعب إدراكاً', 'فوق إدراك', 'يُعاد النظر']) {
   ok(flat(method).includes(needle), `وسببُ القرار منقولٌ لا محذوف: «${needle}»`);
 }
+
+// ————— ٩. حارسُ المدى: اللقطاتُ تمثّل مدى التطبيق لا أوّلَه —————
+//
+// **البلاغ ٣** (`FIELD.md §٣`): كلُّ ما نُشر كان من أول الرحلة (عدَّ نقاطٍ بلا رمز)
+// فقرأ الناظرُ التطبيقَ أدنى من مداه — عيبُ صدقٍ من جنس «صدق الصورة». والقاعدةُ
+// المرقّاة: **صورُ التعريف تمثّل مدى التطبيق** — من كل عائلة مراحل لقطة، وفيها
+// الرمزُ العدديّ ورمزا العمليتين **معروضةً في الصور فعلاً** لا في نصّ الصفحة وحده.
+//
+// والمقيسُ بيانُ اللقطات (`shots/manifest.json`): يكتبه المولّد من الشاشة الحيّة
+// (نصُّ ما تراه العين، ببذرةٍ مجمّدة تجعل ما قيس عينَ ما التُقط)، ويُربَط بصوره
+// بالأبعاد — فبيانٌ قديمٌ أو مبدَّلٌ بيدٍ لا يطابق ترويسات PNG فيحمرّ قبل أن يكذب.
+
+console.log('\n٩. حارس المدى — اللقطات تعبر الرحلة');
+
+const manifest = JSON.parse(read('shots/manifest.json')).shots;
+const pngSize = (name) => {
+  const buf = readFileSync(new URL(`shots/${name}.png`, WELCOME));
+  return buf.length >= 24 && buf.readUInt32BE(0) === 0x89504e47
+    ? [buf.readUInt32BE(16), buf.readUInt32BE(20)] : null;
+};
+
+// البيانُ وصورُه صنوان: بندٌ لكل صورة وصورةٌ لكل بند، والأبعادُ من ترويسة PNG نفسِها
+const entries = Object.keys(manifest);
+ok(entries.length === shotFiles.length && shotFiles.every((f) => entries.includes(f.replace('.png', ''))),
+  `بيانُ اللقطات يعدّ ما على القرص (${entries.length} بنداً لـ${shotFiles.length} صورة)`);
+const misfit = entries.filter((k) => {
+  const size = pngSize(k);
+  return !size || size[0] !== manifest[k].w || size[1] !== manifest[k].h;
+});
+ok(misfit.length === 0,
+  'وأبعادُ كل بندٍ أبعادُ صورته من ترويسة PNG (فلا بيانَ يصف صوراً غيرَ هذه)'
+  + (misfit.length ? ` — خالف: ${misfit.join('، ')}` : ''));
+
+// وما تعرضه الصفحاتُ بأبعاده المحسوبة من البيان — لا برقمٍ كُتب يوماً وبقي
+const badDims = [];
+for (const [name, text] of Object.entries(PAGES)) {
+  for (const m of text.matchAll(/<img[^>]*src="shots\/([a-z]+)\.png"[^>]*>/g)) {
+    const shot = manifest[m[1]];
+    const w = Number(/width="(\d+)"/.exec(m[0])?.[1]);
+    const h = Number(/height="(\d+)"/.exec(m[0])?.[1]);
+    if (!shot || w !== shot.w || h !== shot.h) badDims.push(`${name}:${m[1]}`);
+  }
+}
+ok(badDims.length === 0,
+  'وأبعادُ الصور في الصفحات أبعادُ البيان نفسُها'
+  + (badDims.length ? ` — خالف: ${badDims.join('، ')}` : ''));
+
+// **من كل عائلة مراحل لقطة**: مسارُ اللقطة `#/نوع/جزء` يُرَدّ إلى محطته ومرحلتها
+const stageOf = (route) => {
+  const m = /^#\/([a-z-]+)\/([a-z-]+)$/.exec(route || '');
+  if (!m) return null;
+  return STAGES.find((s) => s.stations.some((st) => st.type === m[1] && st.part === m[2])) || null;
+};
+const coveredStages = new Set(entries.map((k) => stageOf(manifest[k].route)?.id).filter(Boolean));
+const bare = STAGES.filter((s) => !coveredStages.has(s.id)).map((s) => s.title);
+ok(bare.length === 0,
+  `لكل مرحلةٍ من الثماني لقطةٌ من محطةٍ من محطاتها (${coveredStages.size} من ${STAGES.length})`
+  + (bare.length ? ` — بلا لقطة: ${bare.join('، ')}` : ''));
+
+// **والرموزُ والعملياتُ معروضةٌ في الصور فعلاً**: نصُّ البيان نصُّ الشاشة الملتقطة
+// (`innerText` وقتَ القياس) لا نصُّ الصفحة المرافق — فما هنا رآه الناظرُ في الصورة.
+const allText = entries.map((k) => manifest[k].text || '').join(' ');
+for (const [op, sign] of Object.entries(SIGNS)) {
+  ok(allText.includes(sign),
+    `رمزُ «${sign}» (${op}) معروضٌ في لقطةٍ من اللقطات`);
+}
+ok(/[٠-٩]/.test(allText), 'ورمزٌ عدديّ مشرقيّ معروضٌ في اللقطات');
+
+// **والصدرُ يقول المدى**: أولُ صورةٍ تراها العينُ في الرئيسة جملةُ عمليةٍ
+// بالرموز وخانةُ سؤال — لا عدُّ نقاط.
+const heroShot = /class="w-hero-shot">\s*<img[^>]*src="shots\/([a-z]+)\.png"/.exec(html)?.[1];
+const heroText = manifest[heroShot]?.text || '';
+ok(Boolean(heroShot) && heroText.includes(SIGNS.add) && heroText.includes('؟') && /[٠-٩]/.test(heroText),
+  `وصدرُ الرئيسة («${heroShot || 'لا صورة'}») فيه جملةُ جمعٍ بالرموز المشرقية وخانةُ السؤال`);
 
 console.log(fails ? `\n${fails} فشل` : '\nكل اختبارات «المرجع التعريفي» ناجحة');
 process.exit(fails ? 1 : 0);

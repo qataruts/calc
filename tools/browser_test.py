@@ -21,8 +21,10 @@
 import argparse
 import http.server
 import json
+import os
 import re
 import shutil
+import signal
 import socketserver
 import subprocess
 import sys
@@ -145,6 +147,49 @@ def make_server(port: int, results: list):
         # **أحمرَ بلا سببٍ مقروء** ويُظنّ عطباً في الشيفرة وهو منفذٌ يشغله جارٌ لحظةً.
         sys.exit(f"تعذّر فتحُ خادم الفحص على المنفذ {port}: {e}\n"
                  f"  — منفذٌ مشغولٌ الآن (فحصٌ آخر يعمل؟). جرّب: --port {port + 1}")
+
+
+# سوابقُ حظائرنا — كلُّ `user-data-dir` تصنعه هذه الأداة يبدأ بواحدةٍ منها،
+# **وبها يصير التنظيفُ الذاتيّ آمناً بالبناء** (بلاغ العائلة: نسخةٌ باسم صاحبها).
+OUR_PROFILES = ("ihsib-browser-", "ihsib-shot-", "ihsib-device-")
+
+
+def sweep_stale(prefixes=OUR_PROFILES) -> list:
+    """نظافةُ الحظيرة عند الإقلاع — بلاغُ العائلة `2026-08-12-stale-headless-chrome.md`.
+
+    نسخُ كروم الخفية التي خلّفتها جولاتٌ ماتت (جلسةٌ قُتلت، فحصٌ قوطع) تبقى قائمةً
+    بلا نوافذ، **وماك يوجّه نقرةَ أيقونة كروم إليها فيبدو كروم المالك معطّلاً وهو
+    مخطوف**. والخروجُ النظيف وحده لا يكفي — فيُكنَس الأثرُ عند الإقلاع لا عند الخروج.
+
+    **ولا يُقتل إلا يتيمُنا نحن**: شرطان معاً — `user-data-dir` بسابقةٍ من سوابقنا
+    (فلا تُقرَب نسخُ الجيران كـ`write-browser-*` ولا متصفّحُ المالك الحيّ الذي لا
+    سابقةَ له أصلاً)، **ووالدُه ماتَ** (`ppid == 1`) — فنسخةُ جولةٍ حيّةٍ تعمل الآن
+    والدُها بايثونُها القائم، ولا تُمَسّ.
+    """
+    try:
+        rows = subprocess.run(["ps", "-axo", "pid=,ppid=,command="],
+                              capture_output=True, text=True).stdout
+    except OSError:
+        return []
+    swept = []
+    for row in rows.splitlines():
+        parts = row.strip().split(None, 2)
+        if len(parts) < 3:
+            continue
+        pid, ppid, cmd = parts
+        hit = re.search(r"--user-data-dir=(\S+)", cmd)
+        if not hit or not Path(hit.group(1)).name.startswith(prefixes):
+            continue
+        if ppid != "1":
+            continue          # والدُه حيّ: جولةٌ قائمةٌ الآن — جارُنا في الزمن لا يُمَسّ
+        try:
+            os.kill(int(pid), signal.SIGKILL)
+            swept.append(f"{pid} ({Path(hit.group(1)).name})")
+        except (OSError, ValueError):
+            pass
+    if swept:
+        print(f"  🧹 كُنست {len(swept)} نسخة كروم يتيمة من جولات سابقة: {'، '.join(swept)}")
+    return swept
 
 
 def run_chrome(url: str, profile: Path, extra: list, show: bool):
@@ -376,6 +421,11 @@ def main() -> int:
 
     if args.self_test:
         return self_test()
+
+    # **التنظيفُ عند الإقلاع لا عند الخروج وحده** (بلاغ العائلة): كلُّ مسارٍ يُطلق
+    # كروم يكنس أولاً يتائمَنا من جولاتٍ ماتت — و`--self-test` فوقه بلا كروم أصلاً.
+    sweep_stale()
+
     if args.render_shots:
         if not args.shots:
             sys.exit("--render-shots يحتاج --shots DIR (مجلَّدُ اللقطات)")

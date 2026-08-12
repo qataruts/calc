@@ -261,6 +261,31 @@ ok(/sessionItems\s*\(/.test(gateSrc) && /weakestSkills\s*\(/.test(gateSrc),
 ok(!/export\s+const\s+SPOKEN\b/.test(gateSrc),
   'ولا تُعلن نصّاً منطوقاً خاصاً بها (فلا سطرَ يُضاف إلى قائمة الصوت)');
 
+// ————— ٧) تنويعُ المراجعة بمفتاحٍ وصفيّ (الجلسة و — آخرُ مواضع صنف NaN) —————
+//
+// `fillersOf` في `station.js` كان يحوّل المدى بـ`Number` — فمفتاح المرحلة ٨ الوصفيّ
+// (`measure|weight|pick`) يصير مدَاه `NaN`: يسقط التطابقُ التامّ في `stationForSkill`
+// ويسقط `MEASURE[NaN]` في `single` فيُبنى **أولُ وجهٍ** (`length`) بدل المعلَن —
+// **إحلالٌ صامت**: يراجع الطفلُ الطولَ وقد أتمّ محطةَ الثِّقَل، ولا حمرةَ في شيء.
+// فيُمتحَن هنا: تُتمَّم محطةُ ٨·٤ (`measure|length|pick` و`measure|weight|pick`)
+// ويُطلَب حوضُ التنويع كلُّه — أيبني وجهَ الثِّقَل بعينه أم يستبدل به أولَ الوجوه؟
+
+console.log('\n— ٧) حوضُ التنويع يبني وجهَ المفتاح الوصفيّ نفسَه (لا أولَ وجهٍ بالإحلال) —');
+if (!builders.length) {
+  dormant('لا وحدةَ تمارينَ تسجّل بانياً بعد');
+} else {
+  progress.setStars('measure:size', 3);
+  // `due` فارغةٌ عمداً: كلُّ ما يعود فمن حوض التنويع (`fillers`) وحدَه — وحجمٌ يسع
+  // الحوضَ كلَّه كي لا يضيع الوجهُ المطلوب بقرعة الخلط.
+  const pool = review.sessionItems([], 200, seeded(13));
+  const picks = pool.filter((i) => i.kind === 'pick').map((i) => i.range);
+  ok(picks.includes('weight'),
+    `تنويعُ «أثقل وأخفّ» يبني وجهَ الثِّقَل المعلَن (وجوهُ pick في الحوض: ${
+      [...new Set(picks)].join('، ') || 'لا شيء'})`);
+  ok(pool.every((i) => String(i.range) !== 'NaN'),
+    'ولا تمرينَ في الحوض مدَاه NaN — «المدى عدداً إن كان عدداً» مصدرُها `spanOf` وحدَه');
+}
+
 console.log(fails
   ? `\n${fails} فشل`
   : `\nكل اختبارات البوابة ناجحة${asleep ? ` (و${asleep} نائم بقيدٍ في docs/SEED.md)` : ''}`);
