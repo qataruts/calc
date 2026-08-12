@@ -21,10 +21,16 @@
 //
 // ————— والقياسُ الوصفيّ مقارنةٌ بالعين لا عدٌّ —————
 //
-// «أطولُ وأقصر · أثقلُ وأخفّ» (٨·٣) و«قبلُ وبعد» (٨·٤): مشهدٌ فيه **الشيءُ نفسُه
-// بمقادير** واقفاً على خطٍّ واحد — فالفرقُ ارتفاعٌ يُرى لا موضعٌ يخدع، والمقارنةُ على
-// المقدار لا على الصنف. **والمقدارُ المرسوم مُعلَنٌ** (`data-size`) فتقرأ الشاشةُ منه
-// الأطولَ والأقصر — امتدادُ «الجوابُ من المرسوم» إلى ما ليس كمّاً.
+// «أطولُ وأقصر · أثقلُ وأخفّ» (٨·٣) و«قبلُ وبعد» (٨·٤): مشهدٌ واقفٌ على خطٍّ واحد
+// — فالفرقُ يُرى لا موضعٌ يخدع — وله وجهان (الجلسة ٨ب، `REVIEW_SCENES.md §٦`):
+//
+//   **الطولُ بالمقادير** (باقٍ بحكم المدير): الشيءُ نفسُه بأحجامٍ مختلفة، والمقدارُ
+//   المرسوم مُعلَنٌ (`data-size`) فتقرأ الشاشةُ منه الأطولَ والأقصر.
+//
+//   **الثِّقَلُ والزمنُ بأشياءَ حقيقية**: أشياءُ مختلفة بمقدارٍ واحد من جدول `SCENES`
+//   في المنهج — الرمزُ المرسوم يُقرأ من الـDOM (`data-item`) **وتُقابَل به رتبتُه
+//   المعلَنة** (`sceneRank`): «الفيلُ أثقل» بيانُ منهجٍ لا هندسةُ رسم، وشطرُ
+//   «ما رُسِم لا ما نُوِي» باقٍ بحرفه — امتدادُ «الجوابُ من المرسوم» إلى ما ليس كمّاً.
 //
 // ————— وثلاثةُ عهودٍ أخرى —————
 //
@@ -34,6 +40,7 @@
 // ٣) **لا مؤقّتَ ولا عقاب**، والخيارُ الخاطئ لا ينقل.
 
 import * as progress from './progress.js';
+import { SCENES, sceneRank } from './curriculum.js';
 import { registerScreen } from './registry.js';
 import { OBJECTS } from './render.js';
 import { h, pick, shuffle, seeded, shake, pop, PATTERN_ACCENT } from './ui.js';
@@ -146,33 +153,51 @@ function patternRound(station, rnd, { face, aided = false } = {}) {
 // ————— بناءُ جولات القياس الوصفيّ —————
 
 /**
- * جولةُ قياسٍ: مشهدٌ فيه الشيءُ نفسُه بمقادير — **والسؤالُ أطولُ أم أقصر** (أو أثقل
- * وأخفّ: الشيءُ الواحد كلّما كبر ثقُل، وهي مقارنةٌ مباشرة كما ينصّ المنهج).
+ * جولةُ قياسٍ بوجهين (`REVIEW_SCENES.md §٦`):
  *
- * **و«قبلُ وبعد» ترتيبٌ لا اختيار**: المقاديرُ الثلاثةُ مشهدُ شيءٍ **ينمو**، فيُرتَّب
- * من الأول إلى الآخر — الأصغرُ أوّلُ ما كان.
+ * **الطولُ** مشهدُ الشيء الواحد بمقادير — والسؤالُ أطولُ أم أقصر، والحكمُ من
+ * `data-size` المرسوم. **والثِّقَلُ** زوجٌ حقيقيّ من `SCENES` (سيارةٌ وبالون…)
+ * بمقدارٍ واحد — والحكمُ رتبةُ الرمز المقروء من الرسم. **والزمنُ ترتيبٌ لا اختيار**:
+ * تسلسلُ مشهدٍ من يوم الطفل أو نموِّه، يُرتَّب من الأول إلى الآخر برتبه المعلَنة.
+ *
+ * **والزوجُ الفاصلُ يتصدّر** (حكم المدير): جولاتُ كلِّ وجهٍ تدور على مشاهده
+ * **بترتيب الجدول** (`nth`) — فأولُ ثِقَلٍ يلقاه الطفلُ سيارة/بالون، الوحيدُ الذي
+ * يفصل الثِّقَلَ عن الحجم، ثم تدور المشاهدُ كلُّها فلا يُترَك واحد.
  */
-function measureRound(station, rnd, { face, aided = false } = {}) {
+function measureRound(station, rnd, { face, aided = false, nth = null } = {}) {
   const skill = skillOf(station, 'measure', MEASURE[face].count > 2 ? 'sort' : 'pick');
   const next = seeder(rnd);
   const { count } = MEASURE[face];
-  const ranks = shuffle(Array.from({ length: count }, (_, i) => i + 1), rnd);
-  const glyph = pick(OBJECTS, rnd).glyph;
-  const scene = { display: 'scene', count, seed: next(), glyph, ranks };
   const big = face !== 'time' && rnd() < 0.5;
+
+  let scene;
+  let sig;
+  if (face === 'length') {
+    const ranks = shuffle(Array.from({ length: count }, (_, i) => i + 1), rnd);
+    const glyph = pick(OBJECTS, rnd).glyph;
+    scene = { display: 'scene', count, seed: next(), glyph, ranks };
+    sig = `${station.id}|${face}|${ranks.join('')}|${scene.seed}`;
+  } else {
+    const pool = SCENES[face];
+    const data = pool[(nth ?? Math.floor(rnd() * pool.length)) % pool.length];
+    // ترتيبُ العرض قرعةٌ، والرتبةُ ثابتةٌ في المنهج — فالشاشةُ تقرأ ما رُسم وتحكم به
+    const items = shuffle(data.items.map((i) => i.glyph), rnd);
+    scene = { display: 'scene', count, seed: next(), items };
+    sig = `${station.id}|${face}|${data.id}|${items.join('')}|${scene.seed}`;
+  }
 
   return {
     kind: skill.kind, concept: skill.concept, range: face, mode: face === 'time' ? 'sort' : 'pick',
     aided,
     ask: face === 'time' ? ASK.order : ASK[big ? MEASURE[face].big : MEASURE[face].small],
     hint: face === 'time'
-      ? 'اِلْمَسِ الأَصْغَرَ أَوَّلًا — فَهُوَ مَا كَانَ قَبْل'
+      ? 'اِلْمَسِ الأَوَّلَ أَوَّلًا — ثُمَّ مَا يَلِيه'
       : 'قَارِنْ بِعَيْنِكْ، ثُمَّ الْمَسْ',
-    // **المطلوبُ أكبرُ المقادير أم أصغرُها** — والحكمُ من `data-size` في الرسم
+    // **المطلوبُ أقصى القيم أم أدناها** — والقيمةُ مقدارٌ مرسوم أو رتبةٌ معلَنة
     big,
     scene,
     figures: [scene],
-    sig: `${station.id}|${face}|${ranks.join('')}|${scene.seed}`,
+    sig,
   };
 }
 
@@ -183,10 +208,10 @@ function stationFaces(station) {
     : [...facesOf(station, 'measure', 'pick'), ...facesOf(station, 'measure', 'sort')];
 }
 
-/** جولةُ وجهٍ بعينه. */
-const roundFor = (station, rnd, face, aided) => (station.type === 'pattern'
+/** جولةُ وجهٍ بعينه — و`nth` ترتيبُ الجولة في وجهها (به يتصدّر الزوجُ الفاصل). */
+const roundFor = (station, rnd, face, aided, nth) => (station.type === 'pattern'
   ? patternRound(station, rnd, { face, aided })
-  : measureRound(station, rnd, { face, aided }));
+  : measureRound(station, rnd, { face, aided, nth }));
 
 /**
  * **نمذجةُ المحطة درسُها هي**: النمطُ يُرى تامّاً ثم يُكشَف ما يأتي بعده، والمشهدُ
@@ -220,23 +245,37 @@ function modelOf(station, rnd) {
   }
 
   /* **والمشهدُ يُنمذَج غيرَ مرتَّبٍ ثم يُكشَف مرتَّباً**: فالدرسُ هو الترتيبُ نفسُه —
-     من الأصغر إلى الأكبر — وهو جوابُ «أيُّهما أطول» وجوابُ «قبلُ وبعد» معاً.
-     **ولا يُترَك للقرعة**: رتبٌ مبعثرةٌ قد تقع مرتَّبةً فيتطابق الكشفُ والمشهد فلا
-     يُرى شيء (أظهرته المراجعةُ البصرية) — فتُدار الرتبُ دورةً واحدة، وهي **أبداً
-     غيرُ المرتَّبة** مهما كان العدد. */
+     وهو جوابُ «أيُّهما أطول» وجوابُ «قبلُ وبعد» معاً. **ولا يُترَك للقرعة**: ترتيبٌ
+     مبعثرٌ قد يقع مرتَّباً فيتطابق الكشفُ والمشهد فلا يُرى شيء (أظهرته المراجعةُ
+     البصرية) — فيُدار الترتيبُ دورةً واحدة، وهو **أبداً غيرُ المرتَّب** مهما كان العدد.
+
+     **ونمذجةُ الزمن أولُ تسلسلات الجدول** (البيضةُ فالكتكوتُ فالدجاجة): مشهدٌ حقيقيّ
+     من `SCENES` يُرتَّب برتبه المعلَنة، والكشفُ **من الأول إلى الآخر** لا من الأصغر
+     إلى الأكبر — فليس في يوم الطفل أصغرُ وأكبر. */
   const { count } = MEASURE[face];
+  const rotate = (list) => [...list.slice(1), list[0]];
+  if (face === 'time') {
+    const steps = SCENES.time[0].items.map((i) => i.glyph);       // مرتَّبةٌ رتبةً رتبة
+    return {
+      title: ASK.order,
+      hint: 'يَمْضِي شَيْئًا فَشَيْئًا — فَالأَوَّلُ كَانَ قَبْل',
+      range: face,
+      figures: [{ display: 'scene', count, seed: next(), items: rotate(steps) }],
+      count: (figs, alive) => walkScene(figs[0], worthOf(face), alive),
+      reveal: {
+        say: SAY.revealFirst,
+        figures: [{ display: 'scene', count, seed: next(), items: steps }],
+      },
+    };
+  }
   const glyph = pick(OBJECTS, rnd).glyph;
-  const sorted = face === 'time';
   const ranks = Array.from({ length: count }, (_, i) => i + 1);   // الأصغرُ يمنة
   return {
-    title: sorted ? ASK.order : ASK.taller,
-    hint: sorted
-      ? 'يَكْبَرُ شَيْئًا فَشَيْئًا — فَالأَصْغَرُ كَانَ قَبْل'
-      : 'نَنْظُرُ إِلَيْهَا مَعًا، فَنَرَى أَيُّهَا أَطْوَل',
-    figures: [{
-      display: 'scene', count, seed: next(), glyph, ranks: [...ranks.slice(1), ranks[0]],
-    }],
-    count: (figs, alive) => walkScene(figs[0], alive),
+    title: ASK.taller,
+    hint: 'نَنْظُرُ إِلَيْهَا مَعًا، فَنَرَى أَيُّهَا أَطْوَل',
+    range: face,
+    figures: [{ display: 'scene', count, seed: next(), glyph, ranks: rotate(ranks) }],
+    count: (figs, alive) => walkScene(figs[0], worthOf(face), alive),
     reveal: {
       say: SAY.revealOrder,
       figures: [{ display: 'scene', count, seed: next(), glyph, ranks }],
@@ -269,16 +308,26 @@ const clearStrip = (fig) => {
   for (const cell of fig.cells) cell.classList.remove('is-counted');
 };
 
-/** أشياءُ المشهد بمقاديرها المرسومة — **من الـDOM لا من الطلب**. */
+/** أشياءُ المشهد كما رُسمت — **من الـDOM لا من الطلب**: رمزُ كلٍّ ومقدارُه إن أُعلن. */
 const sceneItems = (fig) => [...fig.el.querySelectorAll('[data-item]')]
-  .map((el) => ({ el, size: Number(el.dataset.size) }));
+  .map((el) => ({ el, glyph: el.dataset.item, size: Number(el.dataset.size) }));
 
 /**
- * **يُضاء المشهدُ من الأصغر إلى الأكبر** — فيُرى التدرّجُ نفسُه: هو جوابُ «أيُّهما
- * أطول» وجوابُ «قبلُ وبعد» معاً، ويُقرأ من المقادير المرسومة لا من رتبةٍ نويناها.
+ * **قيمةُ الشيء في مشهده — وبها يُحكَم**: في الطول مقدارُه المرسوم (`data-size`)،
+ * وفي الثِّقَل والزمن **رتبتُه المعلَنة في المنهج** برمزه المقروء من الرسم
+ * (`sceneRank` — حكمُ المدير: مصدرُ الحكم بيانٌ يُقَرّ لا هندسةٌ تُحسَب).
  */
-async function walkScene(fig, alive = () => true) {
-  const items = sceneItems(fig).sort((a, b) => a.size - b.size);
+const worthOf = (face) => (item) => (face === 'length'
+  ? item.size
+  : sceneRank(face, item.glyph));
+
+/**
+ * **يُضاء المشهدُ بترتيب قيمته** — فيُرى الدرسُ نفسُه: تدرّجُ المقادير في الطول،
+ * وخفيفٌ فثقيلٌ في الثِّقَل، وأولٌ فآخرٌ في الزمن. والقيمةُ من `worth` الوجهِ نفسِه
+ * الذي تحكم به الشاشة — فما يُضاء هو عينُ ما يُحكَم به.
+ */
+async function walkScene(fig, worth, alive = () => true) {
+  const items = sceneItems(fig).sort((a, b) => worth(a) - worth(b));
   for (const { el } of items) el.classList.remove('is-counted');
   for (const { el } of items) {
     if (!alive()) return false;
@@ -303,9 +352,16 @@ export function buildStation(stationId, seed) {
   if (!faces.length) return null;
 
   /* **والأوجهُ تدور على الجولات كلِّها**: محطةُ ٨·٢ وجهان (أ ب ج · أ أ ب ب) ومحطةُ
-     ٨·٣ وجهان (طولٌ وثِقَل)، فلو بُنيت بالقرعة لَجاز أن يُمتحَن في وجهٍ ويُترَك آخر. */
-  const step = (count, aided) => Array.from({ length: count },
-    (_, i) => roundFor(station, rnd, faces[i % faces.length], aided));
+     ٨·٣ وجهان (طولٌ وثِقَل)، فلو بُنيت بالقرعة لَجاز أن يُمتحَن في وجهٍ ويُترَك آخر.
+     **ومشاهدُ الوجه تدور بترتيب جدولها** (`nth` يُعَدّ عبر المحطة كلِّها): فأولُ
+     ثِقَلٍ سيارة/بالون — الزوجُ الفاصلُ يتصدّر — ثم سائرُ المشاهد فلا يُترَك واحد. */
+  const seen = {};
+  const step = (count, aided) => Array.from({ length: count }, (_, i) => {
+    const face = faces[i % faces.length];
+    const nth = seen[face] ?? 0;
+    seen[face] = nth + 1;
+    return roundFor(station, rnd, face, aided, nth);
+  });
 
   return { model: modelOf(station, rnd), guided: step(GUIDED, true), solo: step(SOLO, false) };
 }
@@ -400,40 +456,46 @@ function measureView(round, hooks) {
   const items = sceneItems(scene);
   const board = h('div', { class: 'q-solve q-solve--measure' }, scene.box);
   board.dataset.mode = round.mode;
-  const order = [...items].sort((a, b) => a.size - b.size);
-  // **الحكمُ من المقدار المرسوم**: أكبرُ ما رُسِم أو أصغرُه — لا رتبةٌ نويناها
+  /* **الحكمُ بقيمة الوجه على ما رُسِم**: في الطول المقدارُ المرسوم، وفي الثِّقَل
+     والزمن رتبةُ الرمز المقروء من الرسم (`worthOf`) — واللوحُ يعلن المطلوبَ باسمه:
+     مقداراً في الطول، **ورمزَ الشيء نفسِه** فيما سواه (فلا حجمَ يحمل حكماً). */
+  const worth = worthOf(round.range);
+  const nameOf = (item) => (round.range === 'length' ? String(item.size) : item.glyph);
+  const order = [...items].sort((a, b) => worth(a) - worth(b));
   const want = round.mode === 'sort' ? order : [round.big ? order[order.length - 1] : order[0]];
-  board.dataset.answer = String(want[0].size);
+  board.dataset.answer = nameOf(want[0]);
   let placed = 0;
   let locked = false;
 
-  const taps = items.map(({ el, size }) => {
+  const taps = items.map((item) => {
     const btn = h('button', {
       class: 'q-pickspot',
       'aria-label': 'هَذَا',
-      'data-size': String(size),
-      onclick: () => choose(btn, el, size),
+      onclick: () => choose(btn, item),
     });
+    // الزرُّ يحمل ما يعلنه المرسوم تحته — مقداراً أو رمزاً — فيُقرأ لا يُصدَّق
+    if (round.range === 'length') btn.dataset.size = String(item.size);
+    else btn.dataset.item = item.glyph;
     // زرٌّ يسكن موضعَ الشيء نفسِه — مقاسُه ومكانُه من المصيِّر لا من حسابٍ ثانٍ
     for (const key of ['--x', '--y', '--d']) {
-      btn.style.setProperty(key, el.style.getPropertyValue(key));
+      btn.style.setProperty(key, item.el.style.getPropertyValue(key));
     }
     scene.box.append(btn);
     return btn;
   });
 
-  async function choose(btn, el, size) {
+  async function choose(btn, item) {
     if (locked || btn.disabled) return;
-    const correct = size === want[placed].size;
+    const correct = worth(item) === worth(want[placed]);
     hooks.attempt(round, correct);
     if (correct) {
       btn.classList.add('good');
-      el.classList.add('is-counted');
+      item.el.classList.add('is-counted');
       pop(btn);
       placed++;
       if (placed < want.length) {
         btn.disabled = true;
-        board.dataset.answer = String(want[placed].size);
+        board.dataset.answer = nameOf(want[placed]);
         say(SAY.bravo);
         return;
       }
@@ -444,12 +506,12 @@ function measureView(round, hooks) {
     btn.classList.add('bad');
     shake(btn);
     locked = true;
-    // **الخطأُ يُرى**: يُضاء المشهدُ من الأصغر إلى الأكبر فيُدرَك التدرّجُ بالعين
+    // **الخطأُ يُرى**: يُضاء المشهدُ بترتيب قيمته فيُدرَك التدرّجُ أو التعاقبُ بالعين
     await say(SAY.together);
     if (!hooks.alive()) return;
     await new Promise((r) => setTimeout(r, BEAT / 2));
     if (!hooks.alive()) return;
-    if (!(await walkScene(scene, hooks.alive))) return;
+    if (!(await walkScene(scene, worth, hooks.alive))) return;
     clearScene(scene);
     for (const tap of taps) {
       tap.classList.remove('bad', 'good');
@@ -457,7 +519,7 @@ function measureView(round, hooks) {
     }
     for (const item of items) item.el.classList.remove('is-counted');
     placed = 0;
-    board.dataset.answer = String(want[0].size);
+    board.dataset.answer = nameOf(want[0]);
     locked = false;
   }
 

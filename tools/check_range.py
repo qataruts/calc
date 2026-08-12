@@ -62,7 +62,7 @@ def load_curriculum() -> dict:
     js = f"""
     const m = await import({json.dumps(CURRICULUM.as_uri())});
     console.log(JSON.stringify({{
-      ops: m.OPS, signs: m.SIGNS, displays: m.DISPLAYS,
+      ops: m.OPS, signs: m.SIGNS, displays: m.DISPLAYS, scenes: m.SCENES,
       levelMax: m.LEVEL_MAX, subitizeMax: m.SUBITIZE_MAX, countMax: m.COUNT_MAX,
       stages: m.STAGES.map((s) => ({{ id: s.id, count: s.stations.length }})),
       gates: m.GATES,
@@ -195,6 +195,82 @@ def frontier_errors(stations: list, vocab: dict) -> list:
                 errors.append(f"{label}: المفتاح «{key}» مداه {span} فوق جبهة محطته ({f['max']})")
             if span is not None and span < f["min"]:
                 errors.append(f"{label}: المفتاح «{key}» مداه {span} دون أدنى جبهته ({f['min']})")
+    return errors
+
+
+# ————— ١ب) مشاهدُ القياس: لكلِّ رمزٍ رتبتُه، ولا رتبتين متساويتين —————
+#
+# **حكمُ المدير في مصدر الجواب** (`REVIEW_SCENES.md §٦`، و`METHOD.md §٣` المعدَّل):
+# مشهدُ الثِّقَل والزمن أشياءُ مختلفة بمقدارٍ واحد، **والحكمُ رتبةٌ معلَنة في بيانات
+# المنهج** يُقابَل بها الرمزُ المقروء من الـDOM. وهو تبديلٌ في مصدر الحكم من هندسةٍ
+# تُحسَب إلى بيانٍ يُقَرّ — فشرطاه هنا صريحان:
+#
+#   • **كلُّ رمزِ مشهدٍ له رتبة**: رمزٌ يُرسَم في مشهدٍ ولا رتبةَ له في `SCENES`
+#     يجعل الشاشةَ تحكم بـ`null` — تمرّ الجولةُ صامتةً بجوابٍ لا معنى له.
+#   • **ولا رتبتين متساويتين في سؤال**: الحدُّ القائم في المصيِّر بمعناه الجديد —
+#     شيئان سواءٌ لا يُسأل عن أثقلهما، ولا عن أوّلهما.
+#
+# ويُفحص الشرطان في موضعين: **جدولُ المنهج نفسُه** (بنيةً)، و**كلُّ جولةٍ مولَّدة**
+# (بجردها في `usedOf` — `scenes`).
+
+def scene_table_errors(scenes: dict) -> list:
+    """بنيةُ جدول `SCENES`: مشهدٌ من شيئين فصاعداً، ولكلِّ رمزٍ اسمٌ ورتبةٌ مفردة."""
+    errors = []
+    if not scenes:
+        return ["[المشاهد] لا مشهدَ قياسٍ واحداً في المنهج — والمحطتان ٨·٣ و٨·٤ تُقارنان أشياء"]
+    for face, table in scenes.items():
+        if not table:
+            errors.append(f"[المشاهد · {face}] وجهٌ بلا مشهدٍ واحد")
+        for scene in table:
+            at = f"[المشاهد · {face} · {scene.get('id', '؟')}]"
+            items = scene.get("items") or []
+            if len(items) < 2:
+                errors.append(f"{at}: {len(items)} شيئاً — والقياسُ مقارنة، والواحدُ لا يُقارَن")
+                continue
+            ranks = [i.get("rank") for i in items]
+            if any(not isinstance(r, int) for r in ranks):
+                errors.append(f"{at}: رمزٌ بلا رتبةٍ صحيحة — والرتبةُ هي الحكم")
+                continue
+            if sorted(ranks) != list(range(1, len(items) + 1)):
+                errors.append(f"{at}: الرتبُ {ranks} وليست ١..{len(items)} كلَّها مرّةً واحدة "
+                              "— ولا رتبتين متساويتين في سؤال")
+            for item in items:
+                if not item.get("glyph"):
+                    errors.append(f"{at}: شيءٌ بلا رمزٍ مرسوم")
+                if not item.get("name") or len(item["name"]) < 3:
+                    errors.append(f"{at}: «{item.get('glyph', '؟')}» بلا اسمٍ يُراجَع")
+    seen = {}
+    for face, table in scenes.items():
+        for scene in table:
+            for item in scene.get("items") or []:
+                key = (face, item.get("glyph"))
+                if key in seen:
+                    errors.append(f"[المشاهد · {face}] الرمز «{item.get('glyph')}» في مشهدين "
+                                  "من وجهٍ واحد — فرتبتُه تختلف باختلاف مشهده")
+                seen[key] = True
+    return errors
+
+
+def scene_usage_errors(label: str, used: dict, scenes: dict) -> list:
+    """جولةٌ ترسم مشهدَ أشياء: كلُّ رمزٍ له رتبةٌ في وجهه، ولا رتبتين متساويتين فيها."""
+    errors = []
+    for scene in used.get("scenes", []):
+        face = scene.get("face")
+        table = scenes.get(face)
+        if table is None:
+            errors.append(f"{label}: مشهدٌ لوجهٍ لا مشاهدَ له في المنهج («{face}»)")
+            continue
+        ranks = {}
+        for glyph in scene.get("items", []):
+            rank = next((i["rank"] for s in table for i in s["items"] if i["glyph"] == glyph), None)
+            if rank is None:
+                errors.append(f"{label}: الرمز «{glyph}» في مشهد «{face}» بلا رتبةٍ معلَنة "
+                              "— والحكمُ رتبةٌ تُقرأ من المنهج (`REVIEW_SCENES.md §٦`)")
+                continue
+            if rank in ranks:
+                errors.append(f"{label}: «{glyph}» و«{ranks[rank]}» برتبةٍ واحدة ({rank}) "
+                              "في سؤالٍ واحد — ولا يُسأل عن أثقل سواءين")
+            ranks[rank] = glyph
     return errors
 
 
@@ -409,7 +485,7 @@ def generator_modules() -> list:
     return out
 
 
-def probe(modules: list, stations: list) -> tuple:
+def probe(modules: list, stations: list, scenes: dict) -> tuple:
     """يستورد المولّدات في node ويجرد إعلانَها وجولاتِها. يُرجِع (أخطاء، محصيّ)."""
     if not modules:
         return [], 0
@@ -454,9 +530,9 @@ def probe(modules: list, stations: list) -> tuple:
         station = by_id.get(round_["id"])
         if not station:
             continue
-        errors += usage_errors(
-            f"[جولة {round_['id']} · بذرة {round_['seed']}/{round_['index']}]",
-            round_["used"], station["frontier"])
+        label = f"[جولة {round_['id']} · بذرة {round_['seed']}/{round_['index']}]"
+        errors += usage_errors(label, round_["used"], station["frontier"])
+        errors += scene_usage_errors(label, round_["used"], scenes)
     return errors, len(data["rounds"])
 
 
@@ -492,6 +568,10 @@ def check(data: dict) -> int:
          frontier_errors(stations, vocab),
          f"{len(stations)} جبهةً تامّةً من معجمٍ معلَن "
          f"({len(data['displays'])} نمطَ عرض، {len(data['ops'])} عملية)")
+    door("١ب) مشاهدُ القياس: لكلِّ رمزٍ رتبتُه، ولا رتبتين متساويتين",
+         scene_table_errors(data["scenes"]),
+         f"{sum(len(t) for t in data['scenes'].values())} مشهداً في "
+         f"{len(data['scenes'])} وجهاً، كلُّ رمزٍ فيها برتبةٍ معلَنة مفردة")
     door("٢) تدرّجُ الجبهة: لا شيءَ يسبق موضعَه",
          order_errors(stations, vocab),
          "الصفرُ والرمزُ ورمزُ العملية والإطارات كلٌّ بعد موضعه")
@@ -508,7 +588,7 @@ def check(data: dict) -> int:
         dormant("لا وحدةَ تمارينَ تُعلن `CONSUMES` ولا `probeRounds` "
                 "(الجلسة ٣ تكتب أولاها)")
     else:
-        errors, rounds = probe(modules, stations)
+        errors, rounds = probe(modules, stations, data["scenes"])
         for e in errors[:12]:
             print("  ✗", e)
         if not errors:
@@ -559,6 +639,7 @@ def self_test(data: dict) -> int:
         ("تدرّجُ الجبهة", order_errors(stations, vocab)),
         ("بواباتُ المعرفة", gates_errors(stations, vocab)),
         ("عقدُ الرحلة", journey_errors(data)),
+        ("مشاهدُ القياس", scene_table_errors(data["scenes"])),
     ):
         ok(not rows, f"{name}: نظيف" + ("" if not rows else f" — {rows[0]}"))
 
@@ -639,6 +720,42 @@ def self_test(data: dict) -> int:
     src = CURRICULUM.read_text(encoding="utf-8")
     ok(len(re.findall(r"\bfrontier:\s*\{", src)) == len(stations),
        f"وحارسُ المحلّل يقابل المكتوبَ بالمقروء ({len(stations)} محطة)")
+
+    print("\n— ١ب) مشاهدُ القياس تُمسك الرتبةَ الغائبة والمكرَّرة —")
+    scenes = data["scenes"]
+
+    def scened(mutate):
+        clone = copy.deepcopy(scenes)
+        mutate(clone)
+        return scene_table_errors(clone)
+
+    face = next(iter(scenes))
+    ok(find(scened(lambda s: s[face][0]["items"][0].pop("rank")), "بلا رتبةٍ صحيحة"),
+       "رمزٌ في الجدول بلا رتبةٍ يُمسَك (والرتبةُ هي الحكم)")
+    ok(find(scened(lambda s: s[face][0]["items"][0].update(
+        rank=s[face][0]["items"][1]["rank"])), "ولا رتبتين متساويتين"),
+       "ورتبتان متساويتان في مشهدٍ واحد تُمسَكان (لا يُسأل عن أثقل سواءين)")
+    ok(find(scened(lambda s: s[face][0]["items"].pop()), "والواحدُ لا يُقارَن"),
+       "ومشهدٌ بشيءٍ واحد يُمسَك (القياسُ مقارنة)")
+    ok(find(scened(lambda s: s[face][0]["items"][0].update(name="")), "بلا اسمٍ يُراجَع"),
+       "ورمزٌ بلا اسمٍ يُراجَع يُمسَك (صدقُ الصورة يُراجَع بالاسم)")
+    ok(find(scened(lambda s: s[face].append(copy.deepcopy(s[face][0]))), "في مشهدين"),
+       "ورمزٌ في مشهدين من وجهٍ واحد يُمسَك (رتبتُه تختلف باختلاف مشهده)")
+
+    real = scenes[face][0]["items"]
+    ok(not scene_usage_errors("ج", {"scenes": [
+        {"face": face, "items": [i["glyph"] for i in real]}]}, scenes),
+       "وجولةٌ ترسم مشهداً من الجدول تمرّ")
+    ok(find(scene_usage_errors("ج", {"scenes": [
+        {"face": face, "items": [real[0]["glyph"], "🛸"]}]}, scenes), "بلا رتبةٍ معلَنة"),
+       "**ورمزٌ يُرسَم في مشهدٍ ولا رتبةَ له في المنهج يُمسَك**")
+    ok(find(scene_usage_errors("ج", {"scenes": [
+        {"face": face, "items": [real[0]["glyph"], real[0]["glyph"]]}]}, scenes),
+            "برتبةٍ واحدة"),
+       "ورتبتان متساويتان في جولةٍ واحدة تُمسَكان")
+    ok(find(scene_usage_errors("ج", {"scenes": [
+        {"face": "hologram", "items": []}]}, scenes), "لا مشاهدَ له في المنهج"),
+       "ومشهدٌ لوجهٍ لا يعرفه المنهج يُمسَك")
 
     print("\n— ٤+٥) حكمُ الاستهلاك يُمسك ما فوق الجبهة —")
     f = next(s["frontier"] for s in stations if s["frontier"]["ops"])

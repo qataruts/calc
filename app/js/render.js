@@ -25,6 +25,7 @@
 // تبنيه الرحلة لتهدمه. ولذلك تُرسم الأشكالُ كلُّها بوحدةٍ واحدة (`--unit` في CSS).
 
 import { h, faceEl, seeded, shuffle, arNum, latinNum, icon, go, topbar, brandMark } from './ui.js';
+import { SCENES } from './curriculum.js';
 
 // ————— المقاييس (بوحدات الرسم — و`--unit` في `app.css` يحوّلها إلى بكسل) —————
 
@@ -266,15 +267,21 @@ function patternPlan(count, rnd, view, opts) {
   };
 }
 
-// ————— مشهدُ القياس الوصفيّ: **أشياءُ الشيء الواحد بأحجامٍ مختلفة** (٨·٣ و٨·٤) —————
+// ————— مشهدُ القياس الوصفيّ: وجهان (٨·٣ و٨·٤) —————
 //
 // «أطولُ وأقصر · أثقلُ وأخفّ · قبلُ وبعد» قياسٌ **وصفيّ** لا عدديّ (`METHOD.md §٣`):
-// لا كمّيةَ تُعَدّ هنا وإنما مقدارٌ يُقارَن بالعين. فالمشهدُ صفٌّ من خاناتٍ **من
-// اليمين**، في كلٍّ منها الشيءُ نفسُه بمقدارٍ مختلف، **وكلُّها تقف على خطٍّ واحد**
-// (فالفرقُ ارتفاعٌ يُرى، لا موضعٌ يخدع)، **ولكلٍّ رتبتُه** (`ranks` — ١ أصغرُها).
+// لا كمّيةَ تُعَدّ هنا وإنما مقارنةٌ بالعين. والمشهدُ صفٌّ من خاناتٍ **من اليمين**،
+// كلُّها تقف على خطٍّ واحد (فالفرقُ يُرى، لا موضعٌ يخدع) — وله وجهان:
 //
-// **والمقدارُ المرسوم يُعلَن** (`data-size`) فتقرأ الشاشةُ منه أيُّها الأطول — فلا
-// تدّعي شاشةٌ طولاً لم يُرسَم، وهو عقدُ «الجوابُ من المرسوم» على ما ليس كمّاً.
+//   **مقاديرُ الشيء الواحد** (الطول): الشيءُ نفسُه بأحجامٍ مختلفة، **ولكلٍّ رتبتُه**
+//   (`ranks` — ١ أصغرُها) والمقدارُ يتبعها. **والمقدارُ المرسوم يُعلَن** (`data-size`)
+//   فتقرأ الشاشةُ منه أيُّها الأطول — عقدُ «الجوابُ من المرسوم» على ما ليس كمّاً.
+//
+//   **أشياءُ مختلفة بمقدارٍ واحد** (الثِّقَلُ والزمن — الجلسة ٨ب، `REVIEW_SCENES.md
+//   §٦`): `items` رموزٌ من جدول `SCENES` في المنهج تُرسَم سواءً في الحجم — **فالحكمُ
+//   في الشيء لا في الحجم**: الرمزُ المرسوم يُعلَن (`data-item`) فتقرؤه الشاشةُ
+//   وتقابل به **رتبتَه المعلَنة في بيانات المنهج** — «الفيلُ أثقل» بيانُ منهجٍ
+//   يُقَرّ لا هندسةُ رسمٍ تُحسَب، وشطرُ «ما رُسِم لا ما نُوِي» باقٍ بحرفه.
 
 /** أكثرُ ما يقف في مشهدٍ واحد: ثلاثةٌ لترتيب «قبلُ وبعد»، والرابعةُ سَعةُ احتياط. */
 const SCENE_MAX = 4;
@@ -287,23 +294,30 @@ const SCENE_SLOT = 2 * SCENE_R + GAP;
 const defaultRanks = (count) => Array.from({ length: count }, (_, i) => count - i);
 
 function scenePlan(count, rnd, view, opts) {
-  const ranks = opts.ranks || defaultRanks(count);
   // **وصندوقُ المشهد بمقاس أشيائه** (كالشريط): مشهدُ شيئين في صندوق أربعةٍ يزيح
   // الشيئين إلى طرفه فيُقرآن غيرَ متوسّطين — وهو ما أظهرته المراجعةُ البصرية.
   const box = { w: 2 * PAD + count * SCENE_SLOT, h: view.h };
   const base = box.h - PAD;                       // خطُّ الأرض: الكلُّ يقف عليه
+  const at = (i) => box.w - PAD - i * SCENE_SLOT - SCENE_SLOT / 2;
+
+  // **وجهُ الأشياء المختلفة بمقدارٍ واحد** (٨·٣ ثِقَلاً و٨·٤ زمناً): كلُّ رمزٍ بحجم
+  // أكبر المشهد سواءً — فلا يقول الرسمُ حكماً، والرتبةُ بيانُ منهجٍ تقرؤه الشاشة.
+  if (opts.items) {
+    return {
+      view: box,
+      items: [...opts.items],
+      marks: opts.items.map((glyph, i) => ({ glyph, r: SCENE_R, x: at(i), y: base - SCENE_R })),
+    };
+  }
+
+  const ranks = opts.ranks || defaultRanks(count);
   return {
     view: box,
     ranks,
     // المقدارُ من الرتبة: أصغرُها نصفُ أكبرها تقريباً — فارقٌ يُرى بلا أن يختفي الصغير
     marks: ranks.map((rank, i) => {
       const r = SCENE_R * (0.5 + (0.5 * rank) / count);
-      return {
-        rank,
-        r,
-        x: box.w - PAD - i * SCENE_SLOT - SCENE_SLOT / 2,
-        y: base - r,
-      };
+      return { rank, r, x: at(i), y: base - r };
     }),
   };
 }
@@ -421,15 +435,32 @@ export function plan(display, count, opts = {}) {
   // **ومادّةُ الشريط تُقابَل بطوله وبصدق الصورة**: خانةٌ زائدة أو ناقصة أو رمزٌ من
   // خارج عناصر عالم الطفل **يُرمى ولا يُقرَّب** — كما تُرمى كمّيةٌ خارج المدى.
   if (opts.items !== undefined) {
-    if (painter.kind !== 'pattern') {
-      throw new RangeError(`«${display}» ليس شريطَ نمطٍ — ولا مادّةَ خاناتٍ لِما لا خانةَ له`);
+    if (painter.kind !== 'pattern' && painter.kind !== 'scene') {
+      throw new RangeError(`«${display}» لا شريطَ ولا مشهدَ — ولا مادّةَ رموزٍ لِما لا يحملها`);
     }
     if (!Array.isArray(opts.items) || opts.items.length !== count) {
-      throw new RangeError(`مادّةُ الشريط ${opts.items?.length} خانةً وطولُه ${count}`);
+      throw new RangeError(`مادّةُ «${display}» ${opts.items?.length} رمزاً والمقصود ${count}`);
     }
-    const alien = opts.items.filter((g) => g !== null && !OBJECTS.some((o) => o.glyph === g));
-    if (alien.length) {
-      throw new RangeError(`رمزٌ خارج عناصر عالم الطفل في الشريط: «${alien[0]}»`);
+    if (painter.kind === 'pattern') {
+      const alien = opts.items.filter((g) => g !== null && !OBJECTS.some((o) => o.glyph === g));
+      if (alien.length) {
+        throw new RangeError(`رمزٌ خارج عناصر عالم الطفل في الشريط: «${alien[0]}»`);
+      }
+    } else {
+      // **ومادّةُ المشهد من جدول `SCENES` وحدَه** (الجلسة ٨ب): رمزٌ بلا رتبةٍ معلَنة
+      // في المنهج لا يدخل مشهداً — «صدق الصورة» عقدٌ، والحكمُ بيانٌ يُقَرّ.
+      const known = new Set(Object.values(SCENES).flat()
+        .flatMap((scene) => scene.items.map((i) => i.glyph)));
+      const alien = opts.items.filter((g) => !known.has(g));
+      if (alien.length) {
+        throw new RangeError(`رمزٌ خارج جدول مشاهد المنهج: «${alien[0]}» — لا رتبةَ له تُقرأ`);
+      }
+      if (new Set(opts.items).size !== opts.items.length) {
+        throw new RangeError('رمزٌ مكرَّر في مشهدٍ واحد — شيئان سواءٌ لا يُسأل عن أثقلهما');
+      }
+      if (opts.ranks !== undefined) {
+        throw new RangeError('مشهدُ الأشياء لا يرسم رتباً — الرتبةُ بيانُ منهجٍ تُقرأ لا مقدارٌ يُرسَم');
+      }
     }
   }
   // **ورتبُ المشهد مقاديرُ مختلفة**: رتبتان متساويتان تُريان شيئين سواءً، ولا يُسأل
@@ -455,9 +486,10 @@ export function plan(display, count, opts = {}) {
 
   const view = VIEWS[display];
   const rnd = seeded((opts.seed ?? 0) >>> 0);
-  // **ومشهدُ القياس شيءٌ واحد بمقادير**: المقارنةُ على المقدار لا على الصنف، فلو
-  // اختلف الشيئان لَقارن الطفلُ سيارةً بفراشة — والمقصودُ أكبرُ وأصغر لا أيُّهما أثقل حقاً.
-  const glyph = display === 'objects' || display === 'scene'
+  // **ومشهدُ المقادير شيءٌ واحد**: في وجه الطول المقارنةُ على المقدار لا على الصنف —
+  // فلو اختلف الشيئان لَقارن الطفلُ سيارةً بفراشة والمقصودُ أطولُ وأقصر. وأمّا
+  // «أيُّهما أثقل حقاً» فوجهُ الأشياء المختلفة (`items`) ورتبتُه بيانُ منهج.
+  const glyph = display === 'objects' || (display === 'scene' && !opts.items)
     ? (opts.glyph || OBJECTS[Math.floor(rnd() * OBJECTS.length)].glyph)
     : null;
 
@@ -602,17 +634,22 @@ function paintPattern(figure) {
 }
 
 /**
- * **مشهدُ القياس**: الشيءُ نفسُه بمقادير، كلُّه واقفٌ على خطٍّ واحد — **والمقدارُ
- * المرسوم مُعلَنٌ** (`data-size` قطراً بوحدات الرسم، و`data-rank` رتبتُه) فتقرأ
- * الشاشةُ منه الأطولَ والأقصر، ولا تدّعي طولاً لم يُرسَم.
+ * **مشهدُ القياس** واقفٌ كلُّه على خطٍّ واحد، ولكلِّ وجهٍ إعلانُه:
+ * مقاديرُ الشيء الواحد تُعلن مقدارَها المرسوم (`data-size` قطراً بوحدات الرسم،
+ * و`data-rank` رتبتُه) فتقرأ الشاشةُ منه الأطولَ ولا تدّعي طولاً لم يُرسَم؛
+ * والأشياءُ المختلفةُ بمقدارٍ واحد تُعلن **رمزَها المرسوم** (`data-item` وحدَه —
+ * لا `data-size` عمداً: لا حكمَ في الحجم) فتقابل به الشاشةُ رتبتَه من المنهج.
  */
 function paintScene(figure) {
   const el = h('div', {});
   for (const m of figure.marks) {
-    const mark = markEl(figure.glyph, m, figure.view);
-    mark.dataset.item = figure.glyph;
-    mark.dataset.size = String(Math.round(2 * m.r));
-    mark.dataset.rank = String(m.rank);
+    const glyph = m.glyph || figure.glyph;
+    const mark = markEl(glyph, m, figure.view);
+    mark.dataset.item = glyph;
+    if (m.rank !== undefined) {
+      mark.dataset.size = String(Math.round(2 * m.r));
+      mark.dataset.rank = String(m.rank);
+    }
     el.append(mark);
   }
   return el;

@@ -421,18 +421,24 @@ if (progress.PREVIEW) {
     h('a', { class: 'btn btn--ghost', href: './' }, 'اخرج إلى تجربة الطفل')));
 }
 
-// **والعودةُ من الخلفية بمقياس ١** (منقولُ اقرأ الميدانيّ `read@9220ab1` — الجلسة م٢):
-// iPadOS يسترجع التطبيقَ المثبَّت بعد زيارة تطبيقٍ آخر **مكبَّراً** أحياناً — عيبُ
-// استرجاعٍ معروف في المنصّة لا في شيفرتنا. الميتا تمنع التكبير أصلاً (`maximum-scale=1`
-// في `index.html`)، وإعادةُ إعلانها **نفسِها** عند العودة تُلزم WebKit بإعادة تطبيقها
-// حيث يتلكّأ. وطفلُ الرابعة لا يعرف كيف يردّ شاشةً كُبِّرت، فيبقى فيها حتى يأتيه بالغ.
+// **العودةُ من الخلفية بمقياس ١، والقرصةُ حرةٌ فيما سواها** (منقولُ اقرأ الميدانيّ
+// `read@7f18bf0` — الجلسة م٣): بلاغان متعاقبان من ميدان اقرأ. الأولُ — iPadOS يسترجع
+// المثبَّتَ بعد تطبيقٍ آخر **مكبَّراً** أحياناً (عيبُ منصّةٍ لا شيفرة)، وطفلُ الرابعة
+// لا يعرف كيف يردّ شاشةً كُبِّرت. **والثاني نقض علاجَه**: قفلُ الميتا الشامل حرم
+// الطفلَ قرصةً كان يكبّر بها ليرى جيداً — تحويطٌ أوسعُ من عيبه. فصار العلاجُ في موضع
+// العيب وحدَه: عند العودة للواجهة يُشدّ المقياسُ إلى ١ لحظةً (`maximum-scale=1`) ثم
+// **تُرَدّ الحريةُ** بعد ٨٠ مللي — فتزول بقايا الاسترجاع المعيب وبقايا تكبيرِ ما قبل
+// الخلفية معاً، وتبقى القرصةُ أثناء الاستعمال حقّاً. **بلاغُ الميدان فوق الحارس.**
 const viewportMeta = document.querySelector('meta[name="viewport"]');
-const reassertViewport = () => {
-  if (viewportMeta) viewportMeta.setAttribute('content', viewportMeta.getAttribute('content'));
+const viewportFree = viewportMeta && viewportMeta.getAttribute('content');
+const resetZoom = () => {
+  if (!viewportMeta) return;
+  viewportMeta.setAttribute('content', `${viewportFree}, maximum-scale=1`);
+  setTimeout(() => viewportMeta.setAttribute('content', viewportFree), 80);
 };
-window.addEventListener('pageshow', reassertViewport);
+window.addEventListener('pageshow', resetZoom);
 document.addEventListener('visibilitychange', () => {
-  if (document.visibilityState === 'visible') reassertViewport();
+  if (document.visibilityState === 'visible') resetZoom();
 });
 
 window.addEventListener('hashchange', render);

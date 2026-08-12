@@ -584,13 +584,14 @@
       const want = strip.dataset.answer;
       return cardsOf(d).find((c) => c.querySelector('img.emoji')?.dataset.emoji === want);
     }
-    /* **ومشهدُ القياس يُلمَس فيه الشيءُ نفسُه**: اللوحُ يعلن **مقدارَ** المطلوب مقروءاً
-       من الرسم، فيُلمَس الزرُّ الذي يسكن ذلك المقدار. */
+    /* **ومشهدُ القياس يُلمَس فيه الشيءُ نفسُه**: اللوحُ يعلن المطلوبَ مقروءاً من
+       الرسم — **مقداراً** في الطول (`data-size`) **ورمزَ الشيء** في الثِّقَل والزمن
+       (`data-item`، الجلسة ٨ب: لا حكمَ في الحجم) — فيُلمَس الزرُّ الذي يحمله. */
     const scene = d.querySelector('.q-solve--measure');
     if (scene) {
       const want = scene.dataset.answer;
       return [...d.querySelectorAll('.q-pickspot')]
-        .find((s) => s.dataset.size === want && !s.disabled);
+        .find((s) => (s.dataset.size === want || s.dataset.item === want) && !s.disabled);
     }
     const solve = d.querySelector('.q-solve');
     if (solve) {
@@ -1275,22 +1276,102 @@
   ok(Number(wantSize) === extreme,
     `و**المطلوبُ من المقدار المرسوم**: «${askOf(mdoc8)}» ⇒ ${wantSize} `
     + `(والمنتظَر ${extreme})`);
+
+  /* ————— ب٢) مشاهدُ الأشياء الحقيقية: **الحكمُ في الشيء لا في الحجم** (٨ب) —————
+
+     **وجدولُ الحقيقة مكتوبٌ هنا بيدٍ عمداً**: هذا الحارسُ عينٌ ثانيةٌ مستقلّة عن
+     بيانات المنهج — لو انقلبت رتبةٌ في `curriculum.js` (فصار البالونُ أثقلَ من
+     السيارة) لَمرّت على `check_range` (بنيتُها سليمة) ورآها الطفل. فتُكتب الحقيقةُ
+     هنا **من عالم الطفل لا من ملفّنا**: كلُّ صفٍّ من الأخفّ إلى الأثقل، أو من الأول
+     إلى الآخر. **ومشهدٌ لا صفَّ له هنا يُحمِر باسمه** — محتوىً يراه طفلٌ بوابتُه عين. */
+  const SCENE_TRUTH = [
+    ['🎈', '🚗'],            // بالونٌ أخفُّ من سيارة — الزوجُ الفاصلُ بين الثِّقَل والحجم
+    ['🪶', '🐘'],            // ريشةٌ أخفُّ من فيل
+    ['🍓', '🍉'],            // فراولةٌ أخفُّ من بطيخة
+    ['🥚', '🐣', '🐔'],      // بيضةٌ قبل كتكوتٍ قبل دجاجة
+    ['🌅', '☀️', '🌙'],      // شروقٌ قبل نهارٍ قبل ليل
+    ['🌰', '🌱', '🌳'],      // بذرةٌ قبل برعمٍ قبل شجرة
+  ];
+  const plain = (g) => (g || '').replace(/️/g, '');
+  const truthRow = (glyphs) => SCENE_TRUTH.find((row) => row.length === glyphs.length
+    && row.map(plain).slice().sort().join('') === glyphs.map(plain).slice().sort().join(''));
+
+  /* يسوق المحطةَ إلى أول جولةٍ مشهدُها أشياءُ مختلفة (بلا `data-size`)، ويقيسها.
+     **والجردُ من داخل الشكل وحدَه** (`.figure`): أزرارُ اللمس تسكن فوقه في صندوقه
+     وتحمل ما يحمله (`data-item`) — فجردٌ على الصندوق يعدّ كلَّ شيءٍ مرّتين. */
+  const realScene = async (d, steps = 24) => {
+    for (let i = 0; i < steps && !d.querySelector('.celebrate'); i++) {
+      const things = [...d.querySelectorAll('.q-solve--measure .figure [data-item]')];
+      if (things.length && things.every((t) => !t.dataset.size)) return things;
+      (answerOf(d) || d.querySelector('.station-body .next'))?.click();
+      await new Promise((r) => setTimeout(r, 480));
+    }
+    return null;
+  };
+
+  const heavy = await realScene(mdoc8);
+  const heavyGlyphs = (heavy || []).map((t) => t.dataset.item);
+  const heavyBoxes = (heavy || []).map(rectOf);
+  const sameSize = heavyBoxes.length > 1
+    && heavyBoxes.every((b) => Math.abs(b.width - heavyBoxes[0].width) < 2)
+    && heavyBoxes.every((b) => Math.abs(b.bottom - heavyBoxes[0].bottom) < 2);
+  ok(heavyGlyphs.length >= 2 && new Set(heavyGlyphs).size === heavyGlyphs.length && sameSize,
+    `ومشهدُ الثِّقَل **أشياءُ مختلفة بمقدارٍ واحد** (${heavyGlyphs.join(' و')}) `
+    + 'واقفةٌ على خطٍّ واحد — **فلا حكمَ في الحجم**');
+  const heavyRow = truthRow(heavyGlyphs);
+  const heavyAsk = bare(askOf(mdoc8));
+  const heavyWant = mdoc8.querySelector('.q-solve--measure')?.dataset.answer;
+  ok(!!heavyRow && plain(heavyWant) === plain(heavyAsk.includes('أخف')
+    ? heavyRow[0] : heavyRow[heavyRow.length - 1]),
+  `و**المطلوبُ رتبةُ الشيء المرسوم لا حجمُه**: «${askOf(mdoc8)}» ⇒ ${heavyWant} `
+    + (heavyRow ? `(وحقيقةُ عالم الطفل: ${heavyRow.join(' ← ')})`
+      : '— **ومشهدٌ لا صفَّ له في جدول الحقيقة**'));
   const meaDone = await play(mdoc8, 90);
-  ok(!!meaDone, 'ومحطةُ «أطولُ وأقصر» تُجتاز كاملةً لمساً حتى الاحتفال');
+  ok(!!meaDone, 'ومحطةُ «أطولُ وأقصر · أثقلُ وأخفّ» تُجتاز كاملةً لمساً حتى الاحتفال');
+
+  /* ————— ب٣) «قَبْلُ وَبَعْد» (٨·٤): تسلسلُ مشهدٍ يُرتَّب من الأول إلى الآخر —————
+     **وتُساق بتبديل العنوان في المستند نفسِه** لا بفتح مستندٍ جديد: `open()` يغادر
+     ما قبله، **وسجلُّ ليتنر لا يعبر من مستندٍ إلى مستند** في وضع المعاينة — فبوابةُ
+     الختام ولوحةُ وليّ الأمر بعدها تُسَاقان من الذي لعب. (وهي القاعدةُ نفسُها التي
+     تسوق بها البوابةُ أدناه — وقد أمسك الحارسُ خرقَها حين فُتح مستندٌ جديد هنا.) */
+  const seqdoc = mdoc8;
+  seqdoc.defaultView.location.hash = '#/measure/time';
+  await new Promise((r) => setTimeout(r, 1300));
+  (await onward(seqdoc))?.click();
+  const steps8 = await realScene(seqdoc);
+  const stepGlyphs = (steps8 || []).map((t) => t.dataset.item);
+  const timeRow = truthRow(stepGlyphs);
+  ok(stepGlyphs.length === 3 && !!timeRow,
+    `ومشهدُ «قَبْلُ وَبَعْد» ثلاثةُ مشاهدَ من يوم الطفل أو نموِّه (${stepGlyphs.join(' ')})`
+    + (timeRow ? '' : ' — **لا صفَّ له في جدول الحقيقة**'));
+  const timeWant = seqdoc.querySelector('.q-solve--measure')?.dataset.answer;
+  ok(!!timeRow && plain(timeWant) === plain(timeRow[0]),
+    `و**أوّلُ ما يُلمَس أوّلُ التسلسل**: المطلوب ${timeWant} `
+    + (timeRow ? `(والأول ${timeRow[0]})` : ''));
+  const timeDone = await play(seqdoc, 90);
+  ok(!!timeDone, 'ومحطةُ «قَبْلُ وَبَعْد» تُجتاز كاملةً لمساً حتى الاحتفال');
 
   /* ————— ١١ز) 🚪 بوابة ٣ «ختامُ التأسيس»: من أضعف الرحلة كلِّها —————
      **وتُساق من داخل مستند القياس نفسِه** كأختيها: وضعُ المعاينة لا يكتب على القرص،
-     فسجلُّ ليتنر لا يعبر من مستندٍ إلى مستند — ويُساق من الذي لعب محطةً كاملة. */
-  mdoc8.defaultView.location.hash = '#/gate/final';
+     فسجلُّ ليتنر لا يعبر من مستندٍ إلى مستند — ويُساق من الذي لعب محطةً كاملة.
+
+     **وبقاءُ المستند نفسِه شرطٌ يُقاس لا يُفترَض**: مستندٌ أُعيد تحميلُه في أثناء
+     السَّوقة يمحو السجلَّ (وضعُ المعاينة في الذاكرة لا على القرص)، فتُقاس البوابةُ
+     ولوحةُ الوالد على سجلٍّ فارغ. وكان ذلك يقع **عطباً بلا اسم** (`defaultView` صار
+     `null`) — فصار سطراً أحمرَ يسمّي نفسَه. */
+  const gdoc8 = frame.contentDocument;
+  ok(gdoc8 === mdoc8 && !!mdoc8.defaultView,
+    'ومستندُ محطتَي القياس هو نفسُه بعدهما — فسجلُّ ليتنر الذي بُني فيهما باقٍ للبوابة');
+  gdoc8.defaultView.location.hash = '#/gate/final';
   await new Promise((r) => setTimeout(r, 1300));
-  const finalDots = mdoc8.querySelectorAll('.dots .dot').length;
-  ok(!!mdoc8.querySelector('.gate-head') && finalDots > 0 && finalDots <= 10,
+  const finalDots = gdoc8.querySelectorAll('.dots .dot').length;
+  ok(!!gdoc8.querySelector('.gate-head') && finalDots > 0 && finalDots <= 10,
     `بوابةُ «خِتَامُ التَّأْسِيس» تُرسَم بجلسةٍ من سجلّ ما لعبه الطفل (${finalDots} تمريناً)`);
-  for (let i = 0; i < 60 && !mdoc8.querySelector('.celebrate'); i++) {
-    (answerOf(mdoc8) || mdoc8.querySelector('.station-body .next'))?.click();
+  for (let i = 0; i < 60 && !gdoc8.querySelector('.celebrate'); i++) {
+    (answerOf(gdoc8) || gdoc8.querySelector('.station-body .next'))?.click();
     await new Promise((r) => setTimeout(r, 460));
   }
-  const finalVerdict = mdoc8.querySelector('.celebrate');
+  const finalVerdict = gdoc8.querySelector('.celebrate');
   ok(!!finalVerdict && !/رسوب|فشل|خطأ/.test(shownIn(finalVerdict)),
     `وتُجتاز إلى حكمها بلا لفظ رسوب (${finalVerdict
       && !finalVerdict.classList.contains('celebrate--again') ? 'فُتِحَت' : 'لَيْسَ بَعْدُ'})`);
@@ -1303,17 +1384,17 @@
      (والحسابُ نفسُه — العبارةُ من ليتنر والمدى محسوب — يقيسه `test_parent.mjs`
      بسجلٍّ مصنوع؛ وهذا يثبت أنّ ما حُسب **وصل إلى الشاشة**.) */
 
-  mdoc8.defaultView.location.hash = '#/parent';
+  gdoc8.defaultView.location.hash = '#/parent';
   await new Promise((r) => setTimeout(r, 600));
-  const [pa, pb] = (mdoc8.querySelector('.gate .giant')?.textContent || '').split('×');
-  const parentInput = mdoc8.querySelector('.gate input');
+  const [pa, pb] = (gdoc8.querySelector('.gate .giant')?.textContent || '').split('×');
+  const parentInput = gdoc8.querySelector('.gate input');
   if (parentInput) {
     parentInput.value = String(arDigits(pa) * arDigits(pb));
-    mdoc8.querySelector('.gate-go')?.click();
+    gdoc8.querySelector('.gate-go')?.click();
     await new Promise((r) => setTimeout(r, 500));
   }
-  const groups = [...mdoc8.querySelectorAll('.concept-group h4')].map((el) => el.textContent);
-  const conceptLines = [...mdoc8.querySelectorAll('.concept')]
+  const groups = [...gdoc8.querySelectorAll('.concept-group h4')].map((el) => el.textContent);
+  const conceptLines = [...gdoc8.querySelectorAll('.concept')]
     .map((el) => el.querySelector('.concept-line')?.textContent?.trim() || '');
   ok(groups.length === 7 && conceptLines.length > 0,
     `ولوحةُ وليّ الأمر تعرض أقسامَ الحساب السبعة (${groups.join(' · ')}) `

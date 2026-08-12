@@ -24,7 +24,7 @@
 import { readdirSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import * as render from '../app/js/render.js';
-import { DISPLAYS, LEVEL_MAX, stations } from '../app/js/curriculum.js';
+import { DISPLAYS, LEVEL_MAX, SCENES, stations } from '../app/js/curriculum.js';
 import { isEmoji, emojiSrc } from '../app/js/ui.js';
 
 const EMOJI_DIR = new URL('../app/emoji/', import.meta.url);
@@ -352,12 +352,19 @@ function patternErrors(name, figure, want) {
   return [...errors, ...placeErrors(name, figure.marks || [], figure.view)];
 }
 
-// ————— ٣هـ) مشهدُ القياس: مقاديرُ تُقارَن على خطٍّ واحد (الجلسة ٧) —————
+// ————— ٣هـ) مشهدُ القياس: يُقارَن على خطٍّ واحد (الجلستان ٧ و٨ب) —————
 //
-// «أطولُ وأقصر» قياسٌ بالعين، وشرطُه أربعةٌ: **الأشياءُ عددُ المشهد** · **رتبُها
-// ١..العدد كلُّها مرّةً واحدة** (فلا سواءان يُسأل عن أطولهما) · **والمقدارُ يتبع
-// الرتبة** (الأكبرُ رتبةً أكبرُ مقداراً — وإلّا كذب المشهدُ على عينه) · **وكلُّها
-// تقف على خطٍّ واحد** فيكون الفرقُ ارتفاعاً يُرى لا موضعاً يخدع.
+// وله وجهان، ولكلٍّ شرطُ صدقه:
+//
+// **مقاديرُ الشيء الواحد** (الطول): الأشياءُ عددُ المشهد · **رتبُها ١..العدد كلُّها
+// مرّةً واحدة** (فلا سواءان يُسأل عن أطولهما) · **والمقدارُ يتبع الرتبة** (الأكبرُ
+// رتبةً أكبرُ مقداراً — وإلّا كذب المشهدُ على عينه).
+//
+// **وأشياءُ مختلفة بمقدارٍ واحد** (الثِّقَلُ والزمن — الجلسة ٨ب): **مقاديرُها سواءٌ
+// كلُّها** فلا يحمل الحجمُ حكماً (والحكمُ رتبةٌ في المنهج يقرؤها `check_range`)،
+// **ولكلٍّ رمزُه المعلَن** ولا رمزَ مكرَّرٌ — شيئان سواءٌ لا يُسأل عن أثقلهما.
+//
+// **وكلاهما يقف على خطٍّ واحد** فيكون الفرقُ يُرى لا موضعاً يخدع، ويمضي إلى اليسار.
 
 function sceneErrors(name, figure, want) {
   const errors = [];
@@ -366,16 +373,33 @@ function sceneErrors(name, figure, want) {
     errors.push(`${name}: في المشهد ${marks.length} شيئاً والمقصود ${want}`);
     return errors;
   }
-  const ranks = marks.map((m) => m.rank);
-  const wanted = Array.from({ length: want }, (_, i) => i + 1).join('،');
-  if ([...ranks].sort((a, b) => a - b).join('،') !== wanted) {
-    errors.push(`${name}: الرتبُ (${ranks.join('، ')}) وليست ١..${want} كلَّها مرّةً واحدة `
-      + '— ولا يُسأل «أيُّهما أطول» عن سواءين');
-    return errors;
-  }
-  const bySize = [...marks].sort((a, b) => a.r - b.r);
-  if (bySize.some((m, i) => m.rank !== i + 1)) {
-    errors.push(`${name}: المقدارُ لا يتبع الرتبة — **المرسومُ ليس هو المقيس**`);
+  if (figure.items && figure.items.length) {
+    const drawn = marks.map((m) => m.glyph);
+    if (drawn.join('') !== figure.items.join('')) {
+      errors.push(`${name}: أُعلن (${figure.items.join('، ')}) ورُسم (${drawn.join('، ')}) `
+        + '— **المرسومُ ليس هو المُعلَن**');
+    } else if (new Set(drawn).size !== drawn.length) {
+      errors.push(`${name}: رمزٌ مكرَّر في المشهد — ولا يُسأل عن أثقل سواءين`);
+    }
+    if (marks.some((m) => Math.abs(m.r - marks[0].r) > EPS)) {
+      errors.push(`${name}: أشياءُ المشهد بمقاديرَ مختلفة — **والحكمُ في الشيء لا في `
+        + 'الحجم** (`REVIEW_SCENES.md §٦`)');
+    }
+    if (marks.some((m) => m.rank !== undefined)) {
+      errors.push(`${name}: مشهدُ أشياءَ يرسم رتبةً — والرتبةُ بيانُ منهجٍ تُقرأ لا مقدارٌ يُرسَم`);
+    }
+  } else {
+    const ranks = marks.map((m) => m.rank);
+    const wanted = Array.from({ length: want }, (_, i) => i + 1).join('،');
+    if ([...ranks].sort((a, b) => a - b).join('،') !== wanted) {
+      errors.push(`${name}: الرتبُ (${ranks.join('، ')}) وليست ١..${want} كلَّها مرّةً واحدة `
+        + '— ولا يُسأل «أيُّهما أطول» عن سواءين');
+      return errors;
+    }
+    const bySize = [...marks].sort((a, b) => a.r - b.r);
+    if (bySize.some((m, i) => m.rank !== i + 1)) {
+      errors.push(`${name}: المقدارُ لا يتبع الرتبة — **المرسومُ ليس هو المقيس**`);
+    }
   }
   const base = marks[0].y + marks[0].r;
   if (marks.some((m) => Math.abs(m.y + m.r - base) > EPS)) {
@@ -410,6 +434,26 @@ function objectErrors() {
     }
   }
   if (!render.OBJECTS.length) errors.push('[صدق الصورة] لا عنصرَ واحداً يُعَدّ');
+  /* **وأشياءُ المشاهد صورٌ كسائرها** (الجلسة ٨ب): تُقارَن ولا تُعَدّ — فجدولُها
+     مستقلٌّ — **وعقدُ «رسمٌ واحدٌ لكل طفل» يسري عليها**: رمزٌ في `SCENES` بلا ملفِّ
+     Twemoji محليّ يُسلَّم لخطّ النظام فيراه كلُّ جهازٍ رسماً، والحكمُ بُني على رسمٍ
+     رآه المدير بعينه. */
+  for (const [face, table] of Object.entries(SCENES)) {
+    for (const scene of table) {
+      for (const { glyph, name } of scene.items) {
+        const at = `[مشهد ${face} · «${name}»]`;
+        if (!isEmoji(glyph)) {
+          errors.push(`${at}: ليس رمزاً مصوَّراً بقاعدة يونيكود — فيُسلَّم لخطّ النظام`);
+          continue;
+        }
+        const file = emojiSrc(glyph).split('/').pop();
+        if (!files.has(file)) {
+          errors.push(`${at}: لا ملفَ Twemoji محليّ (${file}) — `
+            + 'شغِّل `python3 tools/fetch_twemoji.py`');
+        }
+      }
+    }
+  }
   return errors;
 }
 
@@ -464,10 +508,15 @@ function stationErrors(painted) {
 
 // ————— التشغيل على المصيِّر الحيّ —————
 
+/** مشاهدُ المنهج كلُّها بترتيب رسمٍ ممكن — مادّةُ كنسِ وجهِ الأشياء المختلفة. */
+const sceneMaterial = () => Object.values(SCENES).flat()
+  .map((scene) => scene.items.map((i) => i.glyph));
+
 function sweep() {
   const errors = [];
   let figures = 0;
   let splits = 0;
+  let scenes = 0;
   const painted = render.displays();
 
   for (const display of painted) {
@@ -527,6 +576,33 @@ function sweep() {
     }
   }
 
+  /* **ووجهُ الأشياء المختلفة يُكنَس بمشاهد المنهج نفسِها** (الجلسة ٨ب): كلُّ مشهدٍ
+     في `SCENES` يُرسَم بكل ترتيبٍ يمكن أن تقرعه الشاشةُ (دوراتُه)، فيُقابَل المرسومُ
+     بالمُعلَن رمزاً رمزاً — والحكمُ لا يقع في الحجم لأنّ المقاديرَ سواءٌ كلُّها. */
+  for (const items of sceneMaterial()) {
+    for (let turn = 0; turn < items.length; turn++) {
+      const order = [...items.slice(turn), ...items.slice(0, turn)];
+      const figure = render.plan('scene', order.length, { seed: turn * 13 + 3, items: order });
+      scenes++;
+      errors.push(...sceneErrors(`[مشهد ${order.join('')}]`, figure, order.length));
+    }
+  }
+  // **ولا يُرسَم في مشهدٍ رمزٌ خارج جدول المنهج، ولا رمزان سواء، ولا رتبةٌ معه**
+  const some = sceneMaterial()[0];
+  for (const [bad, why] of [
+    [{ items: [some[0], '🛸'] }, 'رمزٌ خارج جدول مشاهد المنهج'],
+    [{ items: [some[0], some[0]] }, 'رمزٌ مكرَّرٌ في مشهدٍ واحد'],
+    [{ items: [...some], ranks: some.map((_, i) => i + 1) }, 'رتبٌ مع رموزٍ في مشهدٍ واحد'],
+    [{ items: [some[0]] }, 'مادّةٌ لا تطابق العدد'],
+  ]) {
+    if (!throws(() => render.plan('scene', some.length, { ...bad }))) {
+      errors.push(`[المشاهد] قَبِل ما لا يجوز: ${why}`);
+    }
+  }
+  if (!throws(() => render.plan('objects', 2, { items: [some[0], some[1]] }))) {
+    errors.push('[المشاهد] كمّيةٌ قَبِلت مادّةَ مشهدٍ — ولا رموزَ لِما يُعَدّ');
+  }
+
   // **خارجَ المدى يُرمى لا يُقرَّب**: كميةٌ لا يستطيع النمطُ رسمَها خطأُ برمجةٍ يصرخ
   for (const display of painted) {
     const { min, max } = render.rangeOf(display);
@@ -553,7 +629,7 @@ function sweep() {
       errors.push(`[${display}] قَبِل شقّاً وهو لا يُعَدّ عناصرَ — لا يُقسَم ما ليس كمّاً`);
     }
   }
-  return { errors, figures, splits };
+  return { errors, figures, splits, scenes };
 }
 
 const throws = (fn) => { try { fn(); return false; } catch { return true; } };
@@ -572,24 +648,29 @@ function check() {
   const dormant = (msg) => { asleep++; console.log('  ⏸', `${msg} — نائم، يستيقظ ذاتياً`); };
 
   const painted = render.displays();
-  const { errors, figures, splits } = sweep();
+  const { errors, figures, splits, scenes } = sweep();
   const covered = painted.map((d) => render.rangeOf(d));
 
   const byKind = (kind) => painted.filter((d) => render.kindOf(d) === kind);
   door('١) المرسومُ هو المقصود — كمّاً يُعَدّ ورمزاً يُقرأ وخطّاً يمتدّ وشريطاً يتكرّر',
     errors,
-    `${figures} شكلاً و${splits} شقّاً (${painted.length} نمطاً × مداه × ${SEEDS.length} بذور): `
+    `${figures} شكلاً و${splits} شقّاً و${scenes} مشهدَ أشياءَ حقيقية `
+    + `(${painted.length} نمطاً × مداه × ${SEEDS.length} بذور): `
     + `${byKind('quantity').length} نمطَ كمّيةٍ رسم عددَه بلا تراكبٍ ولا خروجٍ عن صندوقه `
     + `وانشقّ شقّين بترتيب رسمه، `
     + `و${byKind('numeral').length} بطاقةَ رمزٍ كتبت رقمَها المشرقيّ، `
     + `و${byKind('line').length} خطّاً علاماتُه مدىً وواحدةً متساويةَ التباعد من اليمين، `
     + `و${byKind('pattern').length} شريطَ نمطٍ خاناتُه طولُه ومادّتُه ما أُعلن، `
-    + `و${byKind('scene').length} مشهدَ قياسٍ مقاديرُه تتبع رتبَها على خطٍّ واحد`);
+    + `و${byKind('scene').length} مشهدَ قياسٍ مقاديرُه تتبع رتبَها على خطٍّ واحد، `
+    + '**وأشياءُ المشاهد الحقيقية سواءٌ في الحجم** فلا حكمَ فيه');
 
-  door('٢) صدق الصورة: عناصرُ عالم الطفل من Twemoji المحلية',
+  const sceneGlyphs = Object.values(SCENES).flat().flatMap((s) => s.items);
+  door('٢) صدق الصورة: عناصرُ عالم الطفل وأشياءُ المشاهد من Twemoji المحلية',
     objectErrors(),
     `${render.OBJECTS.length} عنصراً معدوداً، لكلٍّ ملفُّه المحليّ واسمُه: `
-    + render.OBJECTS.map((o) => o.name).join('، '));
+    + render.OBJECTS.map((o) => o.name).join('، ')
+    + `؛ و${sceneGlyphs.length} شيئاً في المشاهد تُقارَن ولا تُعَدّ: `
+    + sceneGlyphs.map((i) => i.name).join('، '));
 
   door('٣) المعجم: ما يرسمه المصيِّر يعرفه المنهج',
     vocabErrors(painted, DISPLAYS),
@@ -806,6 +887,36 @@ function selfTest() {
     && throws(() => render.plan('scene', 3, { ranks: [1, 2] }))
     && throws(() => render.plan('objects', 3, { ranks: [1, 2, 3] })),
   'ورتبٌ مكرَّرةٌ أو ناقصةٌ أو على نمطٍ لا يُقارَن مقدارُه تُرمى');
+
+  console.log('\n— ٣و) مشهدُ الأشياء المختلفة: **لا حكمَ في الحجم** (الجلسة ٨ب) —');
+  const real = sceneMaterial()[0];
+  const seq = sceneMaterial().find((s) => s.length === 3) || real;
+  const things = render.plan('scene', real.length, { seed: 2, items: real });
+  const trioScene = render.plan('scene', seq.length, { seed: 6, items: seq });
+  ok(!sceneErrors('ش', things, real.length).length
+    && !sceneErrors('ش', trioScene, seq.length).length,
+  `مشهدا ${real.join('')} و${seq.join('')} نظيفان — أشياءُ مختلفة بمقدارٍ واحد على خطٍّ واحد`);
+  ok(found(sceneErrors('ش', broke(things, (f) => { f.marks[0].r /= 2; }), real.length),
+    'الحكمُ في الشيء لا في'),
+  '**ومشهدٌ رسم شيئاً أصغرَ من أخيه يُمسَك** — لو حمل الحجمُ حكماً لَعاد القياسُ حجماً');
+  ok(found(sceneErrors('ش', broke(things, (f) => { f.marks[1].glyph = f.marks[0].glyph; }),
+    real.length), 'المرسومُ ليس هو المُعلَن'),
+  '**ورمزٌ رُسم غيرَ ما أُعلن يُمسَك** — والشاشةُ تحكم بما قرأت من الرسم');
+  ok(found(sceneErrors('ش', broke(things, (f) => {
+    f.marks[0].glyph = f.marks[1].glyph; f.items[0] = f.items[1];
+  }), real.length), 'مكرَّر'),
+  'ورمزان سواءٌ في مشهدٍ واحد يُمسَكان (لا يُسأل عن أثقلهما)');
+  ok(found(sceneErrors('ش', broke(things, (f) => { f.marks[0].rank = 1; }), real.length),
+    'بيانُ منهجٍ تُقرأ'),
+  'ورتبةٌ رُسمت في مشهد أشياءَ تُمسَك — الرتبةُ تُقرأ من المنهج ولا تُرسَم');
+  ok(found(sceneErrors('ش', broke(things, (f) => { f.marks[1].y -= 20; }), real.length),
+    'خطٍّ واحد'),
+  'وشيءٌ رُفع عن خطّ الأرض في مشهد الأشياء يُمسَك كذلك');
+  ok(throws(() => render.plan('scene', 2, { items: [real[0], '\u{1F6F8}'] }))
+    && throws(() => render.plan('scene', 2, { items: [real[0], real[0]] }))
+    && throws(() => render.plan('scene', real.length, { items: real, ranks: [1, 2] }))
+    && throws(() => render.plan('objects', 2, { items: [real[0], real[1]] })),
+  'ورمزٌ خارج جدول المشاهد أو مكرَّرٌ أو معه رتبٌ أو على نمطٍ يُعَدّ — كلُّه يُرمى');
 
   console.log('\n— ٤) صدق الصورة والمعجم: يُمسَك ما لا صورةَ له —');
   ok(found(vocabErrors(['dice', 'hologram'], DISPLAYS), 'ولا يعرفه المنهج'),
