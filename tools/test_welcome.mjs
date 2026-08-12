@@ -20,6 +20,8 @@
 //      وقراراتُ المنهج تُقرأ وقتَ الفحص من مصادرها ويُقابَل بها ما في الصفحة.
 
 import { readFileSync, existsSync, readdirSync } from 'node:fs';
+import { execFileSync } from 'node:child_process';
+import { fileURLToPath } from 'node:url';
 
 const ROOT = new URL('../', import.meta.url);
 const APP = new URL('app/', ROOT);
@@ -269,6 +271,19 @@ ok(shotFiles.length > 0 && shotFiles.every((f) => shown.has(f.replace('.png', ''
   `و${shotFiles.length} لقطةً كلُّها معروضةٌ وموجودة (لا يتيمةَ ولا مفقودة)`);
 ok([...cur.matchAll(/<div class="w-pair">/g)].length >= 8,
   'ولبطاقات المحطات الكبرى لقطاتُها بجوارها في صفحة المنهج');
+
+/* **واللقطاتُ متتبَّعةٌ في المستودع** — لا على القرص وحدَه (عيبٌ وقع في الجلسة ٩):
+   `.gitignore` يستثني `shots/` (لقطاتُ المراجعة المحلّية عدّةُ عملٍ لا تُنشَر) فابتلع
+   معها `app/welcome/shots/` — **وهي أصولٌ تُنشَر للناس**. فمضت أوّلُ دفعةٍ بصفحاتٍ بلا
+   صورةٍ واحدة، ولم يمسكه إلا `check_live.py` **بعد النشر**. وهذا البابُ يمسكه قبله:
+   «على القرص» ليست «ملتزَمة»، كما أنّ «ملتزَمة» ليست «منشورة». */
+const tracked = new Set(execFileSync('git', ['ls-files', 'app/welcome/shots'],
+  { cwd: fileURLToPath(ROOT), encoding: 'utf8' }).split('\n').filter(Boolean)
+  .map((p) => p.split('/').pop()));
+const untracked = shotFiles.filter((f) => !tracked.has(f));
+ok(untracked.length === 0,
+  `وكلُّها متتبَّعةٌ في المستودع فتصل المنشورَ (${tracked.size} ملفاً)`
+  + (untracked.length ? ` — على القرص ولا يعرفها git: ${untracked.join('، ')}` : ''));
 
 // رموزُ الصفحات صورُ `app/emoji/` نفسِها لا محارفُ خطّ نظام
 const faces = Object.values(PAGES)
