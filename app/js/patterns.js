@@ -1,6 +1,9 @@
-// **المرحلة ٨ — الأَنْمَاطُ وَالقِيَاسُ الوَصْفِيّ** (`METHOD.md §٣`): أربعُ محطاتٍ بشاشتين.
+// **المرحلة ٨ — الأَنْمَاطُ وَالقِيَاسُ الوَصْفِيّ** (`METHOD.md §٣`): خمسُ محطاتٍ بشاشتين.
 //
-//   `pattern`  «نَمَطُ (أ ب أ ب)» ثم «أَنْمَاطُ (أ ب ج) وَ(أ أ ب ب)» — إكمالُ النمط
+//   `pattern`  «نَمَطُ (أ ب أ ب)» ثم «أَنْمَاطُ (أ ب ج) وَ(أ أ ب ب)» — إكمالُ النمط،
+//              **ثم «النَّمَطُ العَدَدِيّ»** (الجلسة ك): مادّتُه أعدادٌ لا أشياء —
+//              شريطُ قفزاتٍ يوافق «اِعْدُدْ قَفْزاً» بمصدرٍ واحد، فالمقيسُ واحد
+//              (`extend`) واللوحُ لوحان (بطاقاتُ رمزٍ بدل بطاقات الأشياء)
 //   `measure`  «أَطْوَلُ وَأَقْصَر · أَثْقَلُ وَأَخَفّ» ثم «قَبْلُ وَبَعْد»
 //
 // ————— هذه المرحلةُ لا تُقاس بعدد، وذلك أصلُها لا استثناؤها —————
@@ -40,13 +43,13 @@
 // ٣) **لا مؤقّتَ ولا عقاب**، والخيارُ الخاطئ لا ينقل.
 
 import * as progress from './progress.js';
-import { SCENES, sceneRank } from './curriculum.js';
+import { SCENES, sceneRank, SKIP_STEPS } from './curriculum.js';
 import { registerScreen } from './registry.js';
-import { OBJECTS } from './render.js';
-import { h, pick, shuffle, seeded, shake, pop, PATTERN_ACCENT } from './ui.js';
+import { OBJECTS, rangeOf } from './render.js';
+import { h, pick, shuffle, seeded, shake, pop, latinNum, PATTERN_ACCENT } from './ui.js';
 import {
-  BEAT, SAY, say, praiseThen, seeder, skillOf, facesOf,
-  stationById, stationForSkill, figureBox, quantityCard, usedOf,
+  BEAT, NUMBER_NAME, SAY, say, praiseThen, span, nearOptions, seeder, skillOf, facesOf,
+  stationById, stationForSkill, figureBox, numeralCard, quantityCard, usedOf,
   registerExercise, stationScreen,
 } from './station.js';
 
@@ -63,6 +66,16 @@ const TYPES = new Set(['pattern', 'measure']);
  * ولا وجهَ في هذه القائمة لا مفتاحَ له، ولا مفتاحَ لا وحدةَ له (يفحصهما `test_measure`).
  */
 const UNITS = { abab: 'ab', abc: 'abc', aabb: 'aabb' };
+
+/**
+ * **وجهٌ رابع لا وحدةَ رموزٍ له: النمطُ العدديّ** (`pattern|num|extend` — الجلسة ك).
+ * مادّتُه أعدادٌ تقفز بقفزةٍ من `SKIP_STEPS`، فإيقاعُه **زيادةٌ ثابتة** لا وحدةٌ
+ * تتكرّر — ولذلك جولتُه ومُصيِّرُه غيرُ جولة الرموز، والمقيسُ واحد (`extend`).
+ */
+const NUMBER_FACE = 'num';
+
+/** وجوهُ النمط كلُّها ← مادّتُها: وحدةُ رموزٍ تتكرّر، أو قفزةٌ عدديّة. */
+const FACES = { ...UNITS, [NUMBER_FACE]: NUMBER_FACE };
 
 /** أوجهُ القياس ← سؤالاها ووجهُ المشهد — والوجهُ من المفتاح (`measure|length|pick`). */
 const MEASURE = {
@@ -95,9 +108,11 @@ export const SPOKEN = Object.values(ASK);
 // فالمحطةُ تُقاس بالوجه لا بالعدد — و`numerals` فارغةٌ عمداً.
 
 export const CONSUMES = {
+  // **والإعلانُ ما تشترك فيه محطاتُ النوع كلُّها**: عناصرُ عالم الطفل لمحطتَي الرموز
+  // وحدَهما (النمطُ العدديّ مادّتُه أعداد)، فتُجرَد **جولةً جولة** على جبهة محطتها.
   pattern: {
     numbers: [1, 5, 7, 9], numerals: [], ops: [], signs: [],
-    displays: ['objects', 'pattern'],
+    displays: ['pattern'],
   },
   measure: {
     numbers: [2, 3], numerals: [], ops: [], signs: [],
@@ -147,6 +162,42 @@ function patternRound(station, rnd, { face, aided = false } = {}) {
     options,
     figures: [strip, ...options],
     sig: `${station.id}|${face}|${glyphs.join('')}|${strip.seed}`,
+  };
+}
+
+/**
+ * جولةُ «النَّمَطُ العَدَدِيّ» (٨·٣ — تعديلُ «التكثيف المستهدف»): شريطُ أرقامٍ يبدأ من
+ * الصفر ويقفز قفزةً واحدة، وآخرُ خاناته سؤال.
+ *
+ * **والقفزةُ من المنهج** (`SKIP_STEPS`) لا من هذه الشاشة — وهي قفزاتُ «اِعْدُدْ قَفْزاً»
+ * نفسُها، فيوافق النمطُ العدَّ بمصدرٍ واحد. **وطولُ الشريط محبوسٌ بالجبهة**: آخرُ خانةٍ
+ * لا تجاوز سقفَ المحطة، فلا يخرج عددٌ عن ق٣ ولو في خانةٍ واحدة.
+ * **والجوابُ من الشريط المرسوم**: تُقرأ أرقامُ خاناته من الـDOM فتُعرَف قفزتُه.
+ */
+function numberRound(station, rnd, { aided = false } = {}) {
+  const f = station.frontier;
+  const skill = skillOf(station, 'pattern', 'extend');
+  const next = seeder(rnd);
+  const strip = rangeOf('pattern');
+  const step = pick(SKIP_STEPS, rnd);
+  const most = Math.min(strip.max, Math.floor(f.max / step) + 1);
+  const length = pick(span(strip.min, Math.max(strip.min, most)), rnd);
+  const items = Array.from({ length }, (_, i) => (i === length - 1 ? null : i * step));
+  const answer = (length - 1) * step;
+  const bar = { display: 'pattern', count: length, seed: next(), items };
+  const options = shuffle(
+    [answer, ...nearOptions(answer, span(f.min, f.numeral), OPTIONS - 1, rnd)], rnd)
+    .map((v) => ({ display: 'numeral', count: v, seed: next() }));
+
+  return {
+    kind: 'extend', concept: skill.concept, range: NUMBER_FACE, mode: 'number', aided,
+    ask: ASK.extend,
+    hint: 'كُلُّ خَانَةٍ تَزِيدُ بِالقَدْرِ نَفْسِه — فَمَا العَدَدُ التَّالِي؟',
+    step,
+    strip: bar,
+    options,
+    figures: [bar, ...options],
+    sig: `${station.id}|${NUMBER_FACE}|${step}|${length}|${bar.seed}`,
   };
 }
 
@@ -208,9 +259,14 @@ function stationFaces(station) {
     : [...facesOf(station, 'measure', 'pick'), ...facesOf(station, 'measure', 'sort')];
 }
 
+/** جولةُ نمطٍ بوجهها: وحدةُ رموزٍ تتكرّر، أو **قفزةٌ عدديّة** (الجلسة ك). */
+const patternFor = (station, rnd, opts = {}) => (opts.face === NUMBER_FACE
+  ? numberRound(station, rnd, opts)
+  : patternRound(station, rnd, opts));
+
 /** جولةُ وجهٍ بعينه — و`nth` ترتيبُ الجولة في وجهها (به يتصدّر الزوجُ الفاصل). */
 const roundFor = (station, rnd, face, aided, nth) => (station.type === 'pattern'
-  ? patternRound(station, rnd, { face, aided })
+  ? patternFor(station, rnd, { face, aided })
   : measureRound(station, rnd, { face, aided, nth }));
 
 /**
@@ -224,6 +280,25 @@ const roundFor = (station, rnd, face, aided, nth) => (station.type === 'pattern'
 function modelOf(station, rnd) {
   const next = seeder(rnd);
   const face = stationFaces(station)[0];
+
+  /* **ونمذجةُ النمط العدديّ قراءتُه قفزاً**: يُضاء رقمُ الخانة بعد الرقم **باسم عدده**
+     — فيُسمَع الإيقاعُ كما يُرى — ثم يُكشَف الشريطُ تامّاً بما يأتي بعده. وهو عينُ
+     «اِعْدُدْ قَفْزاً» على الشريط، فجملةُ كشفه جملتُها (`SAY.revealNext`). */
+  if (station.type === 'pattern' && face === NUMBER_FACE) {
+    const round = numberRound(station, rnd, { aided: true });
+    const done = [...round.strip.items];
+    done[done.length - 1] = (done.length - 1) * round.step;
+    return {
+      title: ASK.extend,
+      hint: 'نَقْرَأُ الشَّرِيطَ قَفْزَةً قَفْزَة، ثُمَّ نَرَى مَا يَأْتِي بَعْدَه',
+      figures: [round.strip],
+      count: (figs, alive) => walkNumbers(figs[0], alive),
+      reveal: {
+        say: SAY.revealNext,
+        figures: [{ display: 'pattern', count: round.strip.count, seed: next(), items: done }],
+      },
+    };
+  }
 
   if (station.type === 'pattern') {
     const round = patternRound(station, rnd, { face, aided: true });
@@ -307,6 +382,32 @@ async function walkStrip(fig, period, alive = () => true) {
 const clearStrip = (fig) => {
   for (const cell of fig.cells) cell.classList.remove('is-counted');
 };
+
+/**
+ * **أرقامُ الشريط كما رُسمت** — من الـDOM لا من نيّة المولّد: عددُ كل خانةٍ مقروءاً من
+ * رقمها المشرقيّ، و`null` لخانة السؤال. وبها يُحكَم في النمط العدديّ.
+ */
+const stripNumbers = (fig) => stripItems(fig)
+  .map((text) => (text === null ? null : Number(latinNum(text))));
+
+/**
+ * **يُقرأ الشريطُ العدديُّ قفزةً قفزة** — تُضاء الخانةُ ويُسمّى **عددُها المرسوم**، فيقع
+ * الاسمُ على رقمه كما يقع اسمُ العدد على معدوده في الكمّيات. وهو عدُّ درسِ هذه المحطة
+ * (لا إضاءةُ دورةٍ دورة: ليس في الشريط العدديّ وحدةٌ تتكرّر، وإنما زيادةٌ ثابتة).
+ */
+async function walkNumbers(fig, alive = () => true) {
+  clearStrip(fig);
+  const numbers = stripNumbers(fig);
+  for (const [i, value] of numbers.entries()) {
+    if (value === null) continue;                 // خانةُ السؤال: لا رقمَ فيها يُقرأ
+    if (!alive()) return false;
+    fig.cells[i].classList.add('is-counted');
+    await say(NUMBER_NAME[value]);
+    if (!alive()) return false;
+    await new Promise((r) => setTimeout(r, BEAT));
+  }
+  return alive();
+}
 
 /** أشياءُ المشهد كما رُسمت — **من الـDOM لا من الطلب**: رمزُ كلٍّ ومقدارُه إن أُعلن. */
 const sceneItems = (fig) => [...fig.el.querySelectorAll('[data-item]')]
@@ -449,6 +550,80 @@ function extendView(round, hooks) {
     choices);
 }
 
+// ————— شاشةُ «النَّمَطُ العَدَدِيّ»: شريطُ أرقامٍ وبطاقاتُ رمز —————
+//
+// **والجوابُ من الشريط المرسوم** كأخيه: تُقرأ أرقامُ الخانات من الـDOM، **فقفزتُه فرقُ
+// خانتين مرسومتين**، والجوابُ ما بعد آخرها بقفزةٍ واحدة — لا `step` الذي ولّده المولّد.
+// (ولو رسم المصيِّرُ رقماً غيرَ ما أُعلن لتبدّل الجوابُ معه ولم تكذب الشاشةُ على الطفل.)
+
+function numberView(round, hooks) {
+  const strip = figureBox(round.strip, 'q-strip');
+  const numbers = stripNumbers(strip);
+  const blank = numbers.indexOf(null);
+  const drawn = numbers.filter((v) => v !== null);
+  const step = drawn.length > 1 ? drawn[1] - drawn[0] : round.step;
+  const want = drawn[drawn.length - 1] + step;
+  const board = h('div', { class: 'q-solve q-solve--pattern' }, strip.box);
+  board.dataset.mode = 'number';
+  board.dataset.answer = String(want);
+  board.dataset.step = String(step);
+  const choices = h('div', { class: 'q-choices' });
+  let locked = false;
+
+  // **العونُ المرئيّ في «جرِّب معي»**: خانتان أُوليان مُعلَّمتان فتُرى القفزةُ ابتداءً
+  if (round.aided) {
+    for (const cell of strip.cells.slice(0, 2)) cell.classList.add('is-open');
+  }
+
+  for (const spec of round.options) {
+    let cell = null;
+    const choose = async () => {
+      if (locked) return;
+      // **ما رسمته البطاقةُ لا ما طُلب منها**: الرقمُ مقروءٌ من نصّها في الـDOM
+      const correct = cell.drawn === want;
+      hooks.attempt(round, correct);
+      if (correct) {
+        locked = true;
+        cell.btn.classList.add('good');
+        pop(cell.btn);
+        // تتمّ الخانةُ **بما رُسِم على البطاقة** — فيُرى الشريطُ تامّاً
+        const shown = cell.btn.querySelector('[data-numeral]');
+        strip.cells[blank].querySelector('.fig-ask')?.remove();
+        if (shown) {
+          const copy = shown.cloneNode(true);
+          copy.className = 'fig-strip-num num';
+          strip.cells[blank].append(copy);
+        }
+        strip.cells[blank].classList.add('is-full');
+        await praiseThen(hooks);
+        return;
+      }
+      cell.btn.classList.add('bad');
+      shake(cell.btn);
+      locked = true;
+      // **الخطأُ يُقرأ ولا يُلقَّن**: يُقرأ الشريطُ قفزةً قفزة فيُدرَك الإيقاعُ عدداً
+      await say(SAY.together);
+      if (!hooks.alive()) return;
+      await new Promise((r) => setTimeout(r, BEAT / 2));
+      if (!hooks.alive()) return;
+      if (!(await walkNumbers(strip, hooks.alive))) return;
+      clearStrip(strip);
+      cell.btn.classList.remove('bad');
+      locked = false;
+    };
+    cell = numeralCard(spec.count, spec.seed, { label: 'هَذَا الرَّمْز', onclick: choose });
+    choices.append(cell.btn);
+  }
+
+  say(round.ask);
+
+  return h('div', {},
+    h('h2', {}, round.ask),
+    h('p', { class: 'hint' }, round.hint),
+    board,
+    choices);
+}
+
 // ————— شاشةُ القياس الوصفيّ: يُلمَس الشيءُ نفسُه في المشهد —————
 
 function measureView(round, hooks) {
@@ -531,8 +706,12 @@ function measureView(round, hooks) {
     board);
 }
 
-const VIEWS = { extend: extendView, pick: measureView, sort: measureView };
-const viewOf = (round, hooks) => VIEWS[round.kind](round, hooks);
+/* **والمُصيِّرُ يُنتقى بوجه الجولة لا بنوع قياسها** (الجلسة ك): النمطُ العدديّ مقيسٌ
+   بـ`extend` كأخيه — المهارةُ واحدة — ولوحُه غيرُ لوحه: شريطُ أرقامٍ وبطاقاتُ رمز. */
+const VIEWS = {
+  extend: extendView, number: numberView, pick: measureView, sort: measureView,
+};
+const viewOf = (round, hooks) => VIEWS[round.mode](round, hooks);
 
 // ————— التسجيل في الموجِّه وفي المراجعة —————
 
@@ -569,6 +748,6 @@ const single = (build, table) => (skill, rnd) => {
   return face ? build(station, rnd, { face }) : null;
 };
 
-registerExercise('extend', { build: single(patternRound, UNITS), view: viewOf });
+registerExercise('extend', { build: single(patternFor, FACES), view: viewOf });
 registerExercise('pick', { build: single(measureRound, MEASURE), view: viewOf });
 registerExercise('sort', { build: single(measureRound, MEASURE), view: viewOf });

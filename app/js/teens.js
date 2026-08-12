@@ -1,9 +1,12 @@
-// **المرحلة ٧ — العَشَرَةُ وَمَا بَعْدَهَا ١١–٢٠** (`METHOD.md §٣`): ستُّ محطاتٍ بثلاث شاشات.
+// **المرحلة ٧ — العَشَرَةُ وَمَا بَعْدَهَا ١١–٢٠** (`METHOD.md §٣`): إحدى عشرةَ محطة.
 //
 //   `teen`    «حُزْمَةُ العَشَرَة» ثم «١١–١٥» ثم «١٦–١٩» ثم «العِشْرُونَ وَخَطُّ ٠–٢٠»
-//   `bridge`  «اِصْنَعْ عَشَرَةً أَوَّلًا» — الجمعُ بالعبور صعوداً
-//   `sub`     «اِطْرَحْ ضِمْنَ ٢٠» — عبوراً نازلاً، **وتملكها `ops.js`** بحكم `curriculum.js`
-//             (نوعُ الشاشة واحدٌ ونوعُ التمرين واحد، والمحطةُ تقرأ جبهتَها هناك)
+//   `bridge`  «اِصْنَعْ عَشَرَةً أَوَّلًا» ثم «ثَبِّتِ العُبُورَ صُعُودًا» — بحقائقَ جديدة
+//   `skip`    «اِعْدُدْ قَفْزًا» — بالاثنين والخمسة والعشرة على الخطّ (الجلسة ك)
+//   `sub`     «اِطْرَحْ ضِمْنَ ٢٠» و«ثَبِّتِ العُبُورَ نُزُولًا» — عبوراً نازلاً
+//   `double`  «المُزْدَوَجَاتُ إِلَى ٢٠» · و`fluent` «طَلَاقَةٌ ضِمْنَ ٢٠» ختامَ المرحلة
+//             — **وأربعتُها تملكها `ops.js`** بحكم `curriculum.js` (نوعُ الشاشة واحدٌ
+//             ونوعُ التمرين واحد، والمحطةُ تقرأ جبهتَها هناك)
 //
 // ————— العهدُ الأكبر: **ما فوق العشرة يُبنى ولا يُعَدّ فرادى** —————
 //
@@ -43,13 +46,14 @@
 
 import * as progress from './progress.js';
 import { registerScreen } from './registry.js';
-import { stations } from './curriculum.js';
+import { stations, SKIP_STEPS } from './curriculum.js';
 import { rangeOf, kindOf } from './render.js';
 import { h, icon, pick, shuffle, seeded, shake, pop, arNum, BOND_ACCENT } from './ui.js';
 import {
-  BEAT, SAY, say, praiseThen, span, nearOptions, seeder, skillOf,
+  BEAT, NUMBER_NAME, SAY, say, praiseThen, span, nearOptions, seeder, skillOf,
   stationById, stationForSkill, figureBox, numeralCard, quantityCard, countAloud,
-  countCells, clearCount, clearCells, countMarks, usedOf, registerExercise, stationScreen,
+  countCells, clearCount, clearCells, clearLine, countMarks, slotLayer,
+  usedOf, registerExercise, stationScreen,
 } from './station.js';
 import { lineRound, lineView } from './compare.js';
 
@@ -58,7 +62,7 @@ const GUIDED = 2;          // «جرِّب معي» — جولتان بعونٍ 
 const SOLO = 5;            // «وحدك» (`METHOD.md §٤`: ٤–٦)
 
 /** أنواعُ الشاشات التي تملكها هذه الوحدة (يقابلها `STATIONS` في `test_measure.mjs`). */
-const TYPES = new Set(['teen', 'bridge']);
+const TYPES = new Set(['teen', 'bridge', 'skip']);
 
 /** حزمةُ العشرة — **من المصيِّر**: سَعةُ إطارها هي مقدارُها، ولا رقمَ يُكتب هنا. */
 const TEN = rangeOf('ten-frame').max;
@@ -72,12 +76,17 @@ const TEN = rangeOf('ten-frame').max;
 // المدير، مراجعة الجلسة ٦ البند ٦): «كَمْ بَقِيَ لِتَمْتَلِئَ الْعَشَرَةْ؟» سؤالُ الجسور
 // نفسُه (المرحلة ٥) وهو عينُ خطوة العبور الأولى، و«كَمْ صَارَتْ مَعًا؟» سؤالُ الجمع.
 
+// **ونصٌّ واحدٌ جديد في هذه الجلسة** (الجلسة ك): سؤالُ العدّ القفزيّ — وسائرُ ما تنطقه
+// المحطةُ الجديدة مصروفٌ أصلاً (أسماءُ الأعداد للقفزات، و«وَهَذَا مَوْضِعُهُ عَلَى
+// الْخَطّ» لكشفها، ودعوةُ «شاهِدْ» من جدول الحلقة) — زهدٌ صوتيّ بحكم المدير.
+
 const ASK = {
   build: 'اِبْنِ الْعَدَدْ',
   read: 'كَمْ هَذَا؟',
   ten: 'وَقَدِ اكْتَمَلَتِ الْعَشَرَةْ',
   rest: 'كَمْ بَقِيَ لِتَمْتَلِئَ الْعَشَرَةْ؟',
   total: 'كَمْ صَارَتْ مَعًا؟',
+  jump: 'إِلَى أَيْنَ تَقْفِزْ؟',
 };
 
 export const SPOKEN = Object.values(ASK);
@@ -97,6 +106,12 @@ export const CONSUMES = {
   bridge: {
     numbers: span(0, 20), numerals: span(0, 20), ops: ['add'], signs: ['+'],
     displays: ['ten-frame', 'two-frames', 'numeral'],
+  },
+  // **والقفزُ خطٌّ ورمزٌ ولا عمليةَ فيه**: العدُّ قفزاً عدٌّ لا جمع — لا علامةَ ولا
+  // عمليةَ في جبهته، ومداه مدى الخطّ نفسِه (`METHOD.md §٣` — الجلسة ك).
+  skip: {
+    numbers: span(0, 20), numerals: span(0, 20), ops: [], signs: [],
+    displays: ['numeral', 'line'],
   },
 };
 
@@ -140,6 +155,7 @@ function targetOf(station, rnd) {
  */
 function facesOf(station) {
   if (station.type === 'bridge') return ['bridge'];
+  if (station.type === 'skip') return ['skip'];
   return skillOf(station, 'line', 'place')
     ? ['build', 'read', 'place'] : ['build', 'read'];
 }
@@ -162,6 +178,30 @@ async function countUp(fig, alive = () => true) {
   await new Promise((r) => setTimeout(r, BEAT));
   if (!ones.length) return alive();
   return countMarks(ones, (i) => TEN + i + 1, alive);
+}
+
+/**
+ * **العدُّ قفزاً على الخطّ** (الجلسة ك): تُضاء مواقعُ القفزة وحدَها — كلٌّ باسم عددها —
+ * من الصفر حتى الموضع المقصود. فيُسمَع «اثنان، أربعة، ستّة» ويُرى مكانُ كلٍّ على الخطّ
+ * معاً، وهو معنى العدّ القفزيّ لا مجرّدُ حفظِ سلسلة.
+ *
+ * **والمواضعُ تُقرأ من الخطّ المرسوم** (`data-value`) لا من حسابٍ ثانٍ — فما يُضاء عند
+ * الخطأ عينُ ما يُحكَم به (نظيرُ `countAlongLine` في `compare.js`).
+ */
+async function countJumps(fig, step, upTo, alive = () => true) {
+  clearLine(fig);
+  for (const tick of fig.ticks) {
+    const value = Number(tick.dataset.value);
+    if (value > upTo) break;
+    if (value % step) continue;
+    if (!alive()) return false;
+    tick.classList.add('is-counted');
+    // **العلامةُ تُضاء ثم يُنتظَر اسمُها** — والصفرُ موضعُ الانطلاق فلا يُسمّى
+    if (value > 0) await say(NUMBER_NAME[value]);
+    if (!alive()) return false;
+    await new Promise((r) => setTimeout(r, BEAT));
+  }
+  return alive();
 }
 
 // ————— بناءُ الجولات (حتميٌّ ببذرة) —————
@@ -233,8 +273,16 @@ function bridgeRound(station, rnd, { aided = false } = {}) {
   const f = station.frontier;
   const skill = skillOf(station, 'add', 'bridge');
   const next = seeder(rnd);
-  // البدءُ قريبٌ من العشرة (فالعبورُ قصير)، والمُضافُ يجاوز ما ينقصها فيفضل عنها
-  const start = pick(span(Math.ceil(TEN / 2) + 1, TEN - 1), rnd);
+  /* **ومحطةُ التثبيت تعبر من أبعد** (٧·٦ «ثبِّتِ العبورَ صعوداً» — الجلسة ك): الأولى
+     تبدأ **قريباً من العشرة** فالعبورُ قصير (ينقصها واحدٌ إلى أربعة)، والثانية تبدأ
+     **من نصفها** فما ينقص العشرةَ أكثر (خمسةٌ وستّة) — فتُلقى الحقائقُ التي لم تُلقَ
+     لا الحقائقُ نفسُها باسمٍ آخر. **وموضعُها من ترتيب المنهج** لا من معرّفٍ يُكتب هنا:
+     أوّلُ محطةٍ من نوعها تُقدِّم، وما بعدها يُثبِّت. */
+  const family = stations().filter((s) => s.type === station.type);
+  const fix = family.findIndex((s) => s.id === station.id) > 0;
+  const start = fix
+    ? pick(span(Math.ceil(TEN / 2) - 1, Math.ceil(TEN / 2)), rnd)
+    : pick(span(Math.ceil(TEN / 2) + 1, TEN - 1), rnd);
   const need = TEN - start;
   const add = pick(span(need + 1, Math.min(TEN - 1, f.max - start)), rnd);
   const total = start + add;
@@ -268,11 +316,48 @@ function bridgeRound(station, rnd, { aided = false } = {}) {
   };
 }
 
+/**
+ * **جولةُ عدٍّ قفزيّ** (٧·٩ — تعديلُ «التكثيف المستهدف»): خطُّ الأعداد كلُّه مرسوم،
+ * ومواقعُ القفزات الأولى **مُضاءة**، والسؤالُ أين تقع التالية.
+ *
+ * **والقفزةُ من المنهج** (`SKIP_STEPS`) لا من هذه الشاشة — وهي قفزاتُ «النمط العدديّ»
+ * نفسُها بمصدرٍ واحد. **والجوابُ من المرسوم**: تقرأ الشاشةُ ما أُضيء على الخطّ فتعرف
+ * القفزةَ وموضعَ التالية، وقيمةُ الخانة من `data-value` على زرّها.
+ * **وخياراتُ الموضع مجاورة** كسائر أحواض الخيارات (`METHOD.md §٣`).
+ */
+function skipRound(station, rnd, { aided = false } = {}) {
+  const f = station.frontier;
+  const skill = skillOf(station, 'skip', 'count');
+  const next = seeder(rnd);
+  const step = pick(SKIP_STEPS, rnd);
+  // مواقعُ القفزة كلُّها من الصفر إلى الجبهة — والصفرُ أوّلُها (منه تبدأ القفزة)
+  const stops = span(0, Math.floor(f.max / step)).map((i) => i * step);
+  // كم موقعاً يُضاء قبل السؤال: اثنان على الأقلّ (فتُرى القفزةُ)، والسؤالُ ما بعدها
+  const shown = pick(span(2, stops.length - 1), rnd);
+  const target = stops[shown];
+  const spots = shuffle(
+    [target, ...nearOptions(target, span(f.min, f.max), OPTIONS - 1, rnd)], rnd);
+  const rail = { display: 'line', count: f.max, seed: next() };
+
+  return {
+    kind: 'count', concept: skill.concept, range: skill.range, mode: 'skip', aided,
+    ask: ASK.jump,
+    hint: 'اُنْظُرْ إِلَى القَفَزَاتِ المُضَاءَة، ثُمَّ الْمَسْ مَوْضِعَ التَّالِيَة',
+    step,
+    lit: stops.slice(0, shown),
+    rail,
+    spots,
+    figures: [rail],
+    sig: `${station.id}|${step}|${target}|${rail.seed}`,
+  };
+}
+
 /** جولةُ وجهٍ بعينه — والأوجهُ من `facesOf` (مقروءةً من مفاتيح المنهج). */
 function roundFor(station, rnd, face, aided) {
   if (face === 'read') return readRound(station, rnd, { aided });
   if (face === 'place') return lineRound(station, rnd, { aided });
   if (face === 'bridge') return bridgeRound(station, rnd, { aided });
+  if (face === 'skip') return skipRound(station, rnd, { aided });
   return buildRound(station, rnd, { aided });
 }
 
@@ -284,6 +369,24 @@ function roundFor(station, rnd, face, aided) {
 function modelOf(station, rnd) {
   const f = station.frontier;
   const next = seeder(rnd);
+
+  /* **ونمذجةُ القفز قفزةٌ تُرى وتُسمَع**: يُعَدّ على الخطّ **بالقفزة الأولى** (أصغرِ
+     قفزات المنهج) حتى منتصف الجبهة، ثم يُكشَف رمزُ الموضع الذي بلغه — فيلتقي المكانُ
+     والعددُ كما يلتقيان في «أين يقع؟». وتُبقيها القفزةُ الأصغرُ درساً لا استعراضاً. */
+  if (station.type === 'skip') {
+    const step = SKIP_STEPS[0];
+    const upTo = step * Math.max(2, Math.floor(f.max / (2 * step)));
+    return {
+      title: ASK.jump,
+      hint: 'نَقْفِزُ عَلَى الخَطِّ قَفْزَةً قَفْزَة — وَنُسَمِّي كُلَّ مَوْضِعٍ نَبْلُغُهُ',
+      figures: [{ display: 'line', count: f.max, seed: next() }],
+      count: (figs, alive) => countJumps(figs[0], step, upTo, alive),
+      reveal: {
+        say: SAY.revealSpot,
+        figures: [{ display: 'numeral', count: upTo, seed: next() }],
+      },
+    };
+  }
 
   if (station.type === 'bridge') {
     const round = bridgeRound(station, rnd, { aided: true });
@@ -343,6 +446,7 @@ const SCORE = {
   build: (r, ok) => progress.recordAttempt(r.concept, r.range, 'build', ok),
   place: (r, ok) => progress.recordAttempt(r.concept, r.range, 'place', ok),
   bridge: (r, ok) => progress.recordAttempt(r.concept, r.range, 'bridge', ok),
+  count: (r, ok) => progress.recordAttempt(r.concept, r.range, 'count', ok),
 };
 
 const score = (round, correct) => SCORE[round.kind]?.(round, correct);
@@ -590,7 +694,75 @@ function bridgeView(round, hooks) {
   return h('div', {}, head, hint, board, choices);
 }
 
-const VIEWS = { build: buildView, read: readView, bridge: bridgeView };
+// ————— شاشةُ «اِعْدُدْ قَفْزًا»: الخطُّ مرسومٌ وقفزاتُه مُضاءة —————
+
+function skipView(round, hooks) {
+  const rail = figureBox(round.rail, 'q-rail');
+  const board = h('div', { class: 'q-solve q-solve--skip' },
+    h('div', { class: 'q-linebox' }, rail.box));
+  board.dataset.mode = 'skip';
+  let locked = false;
+
+  /* **ما أُضيء يُقرأ من الخطّ نفسِه**: تُعلَّم مواقعُ القفزات المعروضة، ثم **تُقرأ من
+     الـDOM** فتُشتقّ منها القفزةُ وموضعُ التالية — فالجوابُ ما رُسِم لا ما نُوي. ولو
+     أضاء الرسمُ غيرَ ما طُلب لَتبدّل الجوابُ معه ولم تكذب الشاشةُ على الطفل. */
+  const wanted = new Set(round.lit);
+  for (const tick of rail.ticks) {
+    if (wanted.has(Number(tick.dataset.value))) tick.classList.add('is-open');
+  }
+  const shown = rail.ticks.filter((t) => t.classList.contains('is-open'))
+    .map((t) => Number(t.dataset.value));
+  const step = shown.length > 1 ? shown[1] - shown[0] : round.step;
+  const want = shown[shown.length - 1] + step;
+  board.dataset.answer = String(want);
+  board.dataset.step = String(step);
+
+  slotLayer(rail, round.spots, async (value, btn) => {
+    if (locked) return;
+    const correct = value === want;
+    hooks.attempt(round, correct);
+    if (correct) {
+      locked = true;
+      btn.classList.add('good');
+      pop(btn);
+      // **ويتمّ الإيقاعُ أمامه**: يُضاء الموضعُ الذي أصاب فتصير القفزاتُ متّصلة
+      const hit = rail.ticks.find((t) => Number(t.dataset.value) === value);
+      hit?.classList.add('is-open');
+      await praiseThen(hooks);
+      return;
+    }
+    btn.classList.add('bad');
+    shake(btn);
+    locked = true;
+    // **الخطأُ يُعَدّ أمامه بعدِّ درسِه**: يُقفَز على الخطّ من الصفر حتى الموضع الصحيح
+    await say(SAY.together);
+    if (!hooks.alive()) return;
+    await new Promise((r) => setTimeout(r, BEAT / 2));
+    if (!hooks.alive()) return;
+    if (!(await countJumps(rail, step, want, hooks.alive))) return;
+    clearLine(rail);            // (وأثرُ «ما قُفِز إليه» باقٍ: `is-open` لا يُمحى)
+    btn.classList.remove('bad');
+    locked = false;
+  });
+
+  /* **والعونُ المرئيّ في «جرِّب معي»**: يُقفَز على الخطّ مرّةً واحدة **بعد تمام
+     السؤال** — نمذجةٌ بعون، وهي غيرُ مقيسةٍ في ليتنر (نظيرُ «أين يقع؟»). */
+  (async () => {
+    await say(round.ask);
+    if (!round.aided || !hooks.alive()) return;
+    if (!(await countJumps(rail, step, shown[shown.length - 1], hooks.alive))) return;
+    if (hooks.alive()) clearLine(rail);
+  })();
+
+  return h('div', {},
+    h('h2', {}, round.ask),
+    h('p', { class: 'hint' }, round.hint),
+    board,
+    h('p', { class: 'hint' }, 'اِلْمَسِ المَوْضِعَ الَّذِي تَظُنُّه'),
+  );
+}
+
+const VIEWS = { build: buildView, read: readView, bridge: bridgeView, skip: skipView };
 const viewOf = (round, hooks) => (round.kind === 'place'
   ? lineView(round, hooks)                       // خطُّ ٠–٢٠: تمرينُ المرحلة ٤ بمداه
   : VIEWS[round.mode](round, hooks));
@@ -617,6 +789,7 @@ function screen(type) {
    كاتبِ نجمة» (`test_nodes.mjs`) يجرد السوابقَ المسجَّلة **من نصّ الشيفرة**. */
 registerScreen('teen', screen('teen'));
 registerScreen('bridge', screen('bridge'));
+registerScreen('skip', screen('skip'));
 
 /**
  * جولةٌ واحدة لمهارةٍ مستحقّة — مادّةُ المراجعة والبوابات.
@@ -634,3 +807,4 @@ registerExercise('build', {
 });
 registerExercise('place', { build: single((s, r) => lineRound(s, r)), view: viewOf });
 registerExercise('bridge', { build: single((s, r) => bridgeRound(s, r)), view: viewOf });
+registerExercise('count', { build: single((s, r) => skipRound(s, r)), view: viewOf });

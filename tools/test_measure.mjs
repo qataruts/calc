@@ -105,11 +105,17 @@ const STATIONS = {
   sub: { title: 'الطرح', file: 'ops.js', kinds: ['solve'] },
   diff: { title: 'الطرح فرقاً', file: 'ops.js', kinds: ['solve'] },
   zero: { title: 'الصفر في العمليات', file: 'ops.js', kinds: ['solve'] },
-  fluent: { title: 'طلاقة ضمن ١٠', file: 'ops.js', kinds: ['solve'] },
+  fluent: { title: 'طلاقة ضمن ١٠ وضمن ٢٠', file: 'ops.js', kinds: ['solve'] },
+  // **والمزدوجات محطتان في مرحلتين** (الجلسة ك): ضمن ١٠ (٦·٥) وإلى ٢٠ (٧·٩) — شاشةٌ
+  // واحدة تقرأ جبهتَها، ونوعُ تمرينها نوعُ العمليات نفسُه فمالكُها ملفُّها.
+  double: { title: 'المزدوجات', file: 'ops.js', kinds: ['solve'] },
 
   // ————— المرحلة ٧: ١١–٢٠ (الجلسة ٧) —————
   teen: { title: 'العشرة وما بعدها', file: 'teens.js', kinds: ['build', 'place'] },
   bridge: { title: 'اجمع بالعبور', file: 'teens.js', kinds: ['bridge'] },
+  // **والعدُّ القفزيّ عدٌّ لا جمع** (الجلسة ك): نوعُ تمرينه `count` — يُعَدّ على الخطّ
+  // قفزةً قفزة، ولا علامةَ عمليةٍ في جبهته.
+  skip: { title: 'اعدُدْ قفزاً', file: 'teens.js', kinds: ['count'] },
 
   // ————— المرحلة ٨: الأنماط والقياس (الجلسة ٧) —————
   pattern: { title: 'أكمِل النمط', file: 'patterns.js', kinds: ['extend'] },

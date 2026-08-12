@@ -24,7 +24,7 @@
 import { readdirSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import * as render from '../app/js/render.js';
-import { DISPLAYS, LEVEL_MAX, SCENES, stations } from '../app/js/curriculum.js';
+import { DISPLAYS, LEVEL_MAX, SCENES, SKIP_STEPS, stations } from '../app/js/curriculum.js';
 import { isEmoji, emojiSrc } from '../app/js/ui.js';
 
 const EMOJI_DIR = new URL('../app/emoji/', import.meta.url);
@@ -352,6 +352,45 @@ function patternErrors(name, figure, want) {
   return [...errors, ...placeErrors(name, figure.marks || [], figure.view)];
 }
 
+// ————— ٣ز) شريطُ الأرقام: **الرقمُ المرسوم هو المقصود مشرقياً** (الجلسة ك) —————
+//
+// مادّةُ الشريط قد تكون **أعداداً** (النمطُ العدديّ — قفزاتُ `SKIP_STEPS`)، فتُكتب في
+// خانتها رقماً. وشرطُ صدقه شرطُ بطاقة الرمز نفسُه: يُقابَل ما رسمه المصيِّر بجدول
+// الأرقام **المكتوب هنا مستقلاً** (`eastern`) لا بنسخةٍ عن `arNum` — فمقابلةُ نسخةٍ
+// بنسختها لا تُثبت شيئاً. **ولا رقمَ مغربيّ في خانة** (ق١).
+
+function numberStripErrors(name, figure, items) {
+  const errors = [];
+  for (const [i, item] of items.entries()) {
+    if (typeof item !== 'number') continue;
+    const drawn = (figure.items || [])[i];
+    if (drawn !== eastern(item)) {
+      errors.push(`${name}: الخانة ${i} طُلب فيها ${item} ورُسم «${drawn}» `
+        + '— **الرقمُ المرسوم ليس هو المقصود**');
+    }
+    if (/[0-9]/.test(String(drawn))) {
+      errors.push(`${name}: رقمٌ مغربيّ (123) في خانة شريط — والمشرقيةُ لغةُ التعليم (ق١)`);
+    }
+  }
+  return errors;
+}
+
+/** أشرطةُ الأرقام كما يبنيها المنهج: لكلِّ قفزةٍ كلُّ طولٍ يبلغه دون سقف المستوى. */
+function numberStrips() {
+  const { min, max } = render.rangeOf('pattern');
+  const out = [];
+  for (const step of SKIP_STEPS) {
+    const most = Math.min(max, Math.floor(LEVEL_MAX / step) + 1);
+    for (let length = min; length <= most; length++) {
+      out.push({
+        step,
+        items: Array.from({ length }, (_, i) => (i === length - 1 ? null : i * step)),
+      });
+    }
+  }
+  return out;
+}
+
 // ————— ٣هـ) مشهدُ القياس: يُقارَن على خطٍّ واحد (الجلستان ٧ و٨ب) —————
 //
 // وله وجهان، ولكلٍّ شرطُ صدقه:
@@ -517,6 +556,7 @@ function sweep() {
   let figures = 0;
   let splits = 0;
   let scenes = 0;
+  let strips = 0;
   const painted = render.displays();
 
   for (const display of painted) {
@@ -587,6 +627,27 @@ function sweep() {
       errors.push(...sceneErrors(`[مشهد ${order.join('')}]`, figure, order.length));
     }
   }
+  /* **وشريطُ الأرقام يُكنَس بقفزات المنهج نفسِها** (الجلسة ك): كلُّ قفزةٍ بكل طولٍ
+     يبلغه، فيُقابَل رقمُ كل خانةٍ بالمرسوم فيها — وخانةُ السؤال تبقى فارغةً تُعلن فراغها. */
+  for (const { step, items } of numberStrips()) {
+    const figure = render.plan('pattern', items.length, { seed: step * 7 + items.length, items });
+    strips++;
+    const name = `[شريطُ أرقامٍ بقفزة ${step} · ${items.length} خانة]`;
+    errors.push(...patternErrors(name, figure, items.length));
+    errors.push(...numberStripErrors(name, figure, items));
+  }
+  // **ومادّةُ الشريط رمزُ عالمٍ أو عددٌ في مدى بطاقة الرمز** — وما سواه يُرمى لا يُقرَّب
+  for (const [bad, why] of [
+    [[0, LEVEL_MAX + 10, null], 'عددٌ فوق مدى بطاقة الرمز في خانة'],
+    [[0, 1.5, null], 'كسرٌ في خانة'],
+    [[0, -2, null], 'عددٌ سالب في خانة'],
+    [[0, true, null], 'ما ليس عدداً ولا رمزاً في خانة'],
+  ]) {
+    if (!throws(() => render.plan('pattern', 3, { items: bad }))) {
+      errors.push(`[شريطُ الأرقام] قَبِل ما لا يجوز: ${why}`);
+    }
+  }
+
   // **ولا يُرسَم في مشهدٍ رمزٌ خارج جدول المنهج، ولا رمزان سواء، ولا رتبةٌ معه**
   const some = sceneMaterial()[0];
   for (const [bad, why] of [
@@ -629,7 +690,7 @@ function sweep() {
       errors.push(`[${display}] قَبِل شقّاً وهو لا يُعَدّ عناصرَ — لا يُقسَم ما ليس كمّاً`);
     }
   }
-  return { errors, figures, splits, scenes };
+  return { errors, figures, splits, scenes, strips };
 }
 
 const throws = (fn) => { try { fn(); return false; } catch { return true; } };
@@ -648,19 +709,21 @@ function check() {
   const dormant = (msg) => { asleep++; console.log('  ⏸', `${msg} — نائم، يستيقظ ذاتياً`); };
 
   const painted = render.displays();
-  const { errors, figures, splits, scenes } = sweep();
+  const { errors, figures, splits, scenes, strips } = sweep();
   const covered = painted.map((d) => render.rangeOf(d));
 
   const byKind = (kind) => painted.filter((d) => render.kindOf(d) === kind);
   door('١) المرسومُ هو المقصود — كمّاً يُعَدّ ورمزاً يُقرأ وخطّاً يمتدّ وشريطاً يتكرّر',
     errors,
     `${figures} شكلاً و${splits} شقّاً و${scenes} مشهدَ أشياءَ حقيقية `
+    + `و${strips} شريطَ أرقامٍ بقفزات المنهج `
     + `(${painted.length} نمطاً × مداه × ${SEEDS.length} بذور): `
     + `${byKind('quantity').length} نمطَ كمّيةٍ رسم عددَه بلا تراكبٍ ولا خروجٍ عن صندوقه `
     + `وانشقّ شقّين بترتيب رسمه، `
     + `و${byKind('numeral').length} بطاقةَ رمزٍ كتبت رقمَها المشرقيّ، `
     + `و${byKind('line').length} خطّاً علاماتُه مدىً وواحدةً متساويةَ التباعد من اليمين، `
-    + `و${byKind('pattern').length} شريطَ نمطٍ خاناتُه طولُه ومادّتُه ما أُعلن، `
+    + `و${byKind('pattern').length} شريطَ نمطٍ خاناتُه طولُه ومادّتُه ما أُعلن `
+    + '(رمزاً كان أو رقماً مشرقياً)، '
     + `و${byKind('scene').length} مشهدَ قياسٍ مقاديرُه تتبع رتبَها على خطٍّ واحد، `
     + '**وأشياءُ المشاهد الحقيقية سواءٌ في الحجم** فلا حكمَ فيه');
 
@@ -865,6 +928,30 @@ function selfTest() {
   'ومادّةٌ لا توافق الطولَ أو فيها رمزٌ خارج عناصر عالم الطفل تُرمى ولا تُقرَّب');
   ok(throws(() => render.plan('ten-frame', 5, { items: [null] })),
     'ولا مادّةَ خاناتٍ لِما ليس شريطَ نمط');
+
+  console.log('\n— ٣ز) شريطُ الأرقام: يُمسَك رقمٌ ليس هو المقصود (الجلسة ك) —');
+  const jump = SKIP_STEPS[SKIP_STEPS.length - 1];        // أكبرُ قفزة: ٠ · القفزة · سؤال
+  const numItems = [0, jump, null];
+  const numStrip = render.plan('pattern', numItems.length, { seed: 5, items: numItems });
+  ok(!patternErrors('ش', numStrip, numItems.length).length
+    && !numberStripErrors('ش', numStrip, numItems).length,
+  `شريطُ أرقامٍ بقفزة ${jump} نظيف — خاناتُه طولُه وأرقامُه مشرقيةٌ بمقاديرها`);
+  ok(found(numberStripErrors('ش', broke(numStrip, (f) => { f.items[1] = '٩٩'; }), numItems),
+    'ليس هو المقصود'),
+  '**ورقمٌ رُسم غيرَ ما طُلب في خانته يُمسَك** (٩٩ مكان القفزة)');
+  ok(found(numberStripErrors('ش', broke(numStrip, (f) => { f.items[1] = String(jump); }),
+    numItems), 'رقمٌ مغربيّ'),
+  'ورقمٌ مغربيّ (123) في خانةٍ يُمسَك (ق١)');
+  ok(found(patternErrors('ش', broke(numStrip, (f) => { f.marks[1].glyph = '٧'; }),
+    numItems.length), 'ورُسم فيها'),
+  'وخانةٌ أُعلنت رقماً ورُسم فيها غيرُه تُمسَك (شريطٌ يُرى غيرَ الذي بُني)');
+  ok(throws(() => render.plan('pattern', 3, { items: [0, LEVEL_MAX + 1, null] }))
+    && throws(() => render.plan('pattern', 3, { items: [0, 1.5, null] }))
+    && throws(() => render.plan('pattern', 3, { items: [0, -1, null] })),
+  `وعددٌ فوق مدى بطاقة الرمز (${LEVEL_MAX}) أو كسرٌ أو سالبٌ في خانةٍ يُرمى ولا يُقرَّب`);
+  ok(numberStrips().length >= SKIP_STEPS.length,
+    `وقفزاتُ المنهج كلُّها مكنوسةٌ بأطوالها (${numberStrips().length} شريطاً من `
+    + `${SKIP_STEPS.length} قفزات)`);
 
   console.log('\n— ٣هـ) مشهدُ القياس: يُمسَك ما كذب على العين —');
   const pair = render.plan('scene', 2, { seed: 4 });

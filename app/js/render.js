@@ -24,7 +24,9 @@
 // فلو كبر عنصرُ الأقلّ لصارت المقارنةُ بصرَ مساحةٍ لا حسَّ عدد — وهو عينُ الخطأ الذي
 // تبنيه الرحلة لتهدمه. ولذلك تُرسم الأشكالُ كلُّها بوحدةٍ واحدة (`--unit` في CSS).
 
-import { h, faceEl, seeded, shuffle, arNum, latinNum, icon, go, topbar, brandMark } from './ui.js';
+import {
+  h, faceEl, isEmoji, seeded, shuffle, arNum, latinNum, icon, go, topbar, brandMark,
+} from './ui.js';
 import { SCENES } from './curriculum.js';
 
 // ————— المقاييس (بوحدات الرسم — و`--unit` في `app.css` يحوّلها إلى بكسل) —————
@@ -250,8 +252,19 @@ const PATTERN_MAX = 9;
 const defaultItems = (count) => Array.from({ length: count },
   (_, i) => (i === count - 1 ? null : OBJECTS[i % 2].glyph));
 
+/**
+ * **مادّةُ الخانة: رمزٌ مصوَّرٌ أو عددٌ يُكتب رقماً** (النمطُ العدديّ — الجلسة ك).
+ *
+ * النمطُ في المرحلة ٨ إيقاعٌ يُرى، ومادّتُه أشياءُ عالم الطفل أوّلاً ثم **أعداد**
+ * (شريطُ قفزاتٍ يوافق العدّ القفزيّ). والعددُ يمرّ من هنا لا من الشاشة، فيُكتب رقمُه
+ * **بالمشرقية من `arNum` وحدَه** كبطاقة الرمز سواءً (ق١) — ولا يكتب هذا الملفُّ محرفَ
+ * رقمٍ واحداً بيده. وبعد التحويل تصير المادّةُ نصّاً واحداً في كلِّ حالٍ، فيقابله
+ * الحارسُ بجدول أرقامٍ **مكتوبٍ عنده مستقلاً** (`check_render.mjs`).
+ */
+const itemText = (item) => (typeof item === 'number' ? arNum(item) : item);
+
 function patternPlan(count, rnd, view, opts) {
-  const items = opts.items || defaultItems(count);
+  const items = (opts.items || defaultItems(count)).map(itemText);
   /* **وصندوقُ الشريط بمقاس شريطه** (لا بمقاس أطوله): شريطٌ من خمسٍ في صندوق تسعٍ
      يترك ثلثَيه فراغاً، فيُرسَم صغيراً في وسط بياض — والمراجعةُ البصرية أظهرته.
      فيُرَدّ الصندوقُ إلى ما رُسِم فيه، ويبقى `VIEWS.pattern` إعلانَ أقصاه. */
@@ -442,9 +455,17 @@ export function plan(display, count, opts = {}) {
       throw new RangeError(`مادّةُ «${display}» ${opts.items?.length} رمزاً والمقصود ${count}`);
     }
     if (painter.kind === 'pattern') {
-      const alien = opts.items.filter((g) => g !== null && !OBJECTS.some((o) => o.glyph === g));
+      // **ومادّةُ الشريط رمزُ عالمٍ أو عددٌ في مدى بطاقة الرمز** (الجلسة ك): مسطرةُ
+      // العدد هنا مسطرةُ البطاقة نفسُها (فما يُكتب في خانةٍ يُكتب في بطاقة)، وعددٌ
+      // خارجها أو كسرٌ **يُرمى ولا يُقرَّب** كسائر ما يُطلَب فوق المدى.
+      const room = { min: PAINTERS.numeral.min, max: PAINTERS.numeral.max };
+      const alien = opts.items.filter((g) => g !== null
+        && !OBJECTS.some((o) => o.glyph === g)
+        && !(Number.isInteger(g) && g >= room.min && g <= room.max));
       if (alien.length) {
-        throw new RangeError(`رمزٌ خارج عناصر عالم الطفل في الشريط: «${alien[0]}»`);
+        throw new RangeError(
+          `مادّةُ الشريط «${alien[0]}» ليست رمزَ عالمِ طفلٍ ولا عدداً في `
+          + `[${room.min}..${room.max}]`);
       }
     } else {
       // **ومادّةُ المشهد من جدول `SCENES` وحدَه** (الجلسة ٨ب): رمزٌ بلا رتبةٍ معلَنة
@@ -629,7 +650,14 @@ function paintPattern(figure) {
     if (glyph) box.dataset.item = glyph;
     el.append(box);
   }
-  for (const m of figure.marks) el.append(markEl(m.glyph, m, figure.view));
+  /* **ورقمُ الخانة نصٌّ لا صورة** (الجلسة ك): `faceEl` واحدةٌ للوجهين — صورةٌ للمصوَّر
+     ونصٌّ للرقم — ويُعلَن ذلك بصنفٍ على الوجه ليأخذ مقاسَ الرقم في خانته من اللوح،
+     فلا يُقاس رقمٌ بمسطرة صورة. */
+  for (const m of figure.marks) {
+    const mark = markEl(m.glyph, m, figure.view);
+    if (!isEmoji(m.glyph)) mark.classList.add('fig-mark--num', 'num');
+    el.append(mark);
+  }
   return el;
 }
 

@@ -63,6 +63,7 @@ def load_curriculum() -> dict:
     const m = await import({json.dumps(CURRICULUM.as_uri())});
     console.log(JSON.stringify({{
       ops: m.OPS, signs: m.SIGNS, displays: m.DISPLAYS, scenes: m.SCENES,
+      skipSteps: m.SKIP_STEPS,
       levelMax: m.LEVEL_MAX, subitizeMax: m.SUBITIZE_MAX, countMax: m.COUNT_MAX,
       stages: m.STAGES.map((s) => ({{ id: s.id, count: s.stations.length }})),
       gates: m.GATES,
@@ -271,6 +272,35 @@ def scene_usage_errors(label: str, used: dict, scenes: dict) -> list:
                 errors.append(f"{label}: «{glyph}» و«{ranks[rank]}» برتبةٍ واحدة ({rank}) "
                               "في سؤالٍ واحد — ولا يُسأل عن أثقل سواءين")
             ranks[rank] = glyph
+    return errors
+
+
+# ————— ١ج) قفزاتُ العدّ: كلُّ قفزةٍ تنتهي عند سقف المستوى (الجلسة ك) —————
+#
+# «اِعْدُدْ قَفْزاً» و«النمطُ العدديّ» يقرآن قفزاتهما من `SKIP_STEPS` في المنهج
+# (`METHOD.md §٣` المعدَّل: بالاثنين والخمسة والعشرة **حتى العشرين**). وشرطُ صدقها
+# حسابيّ: **كلُّ قفزةٍ تقسم سقفَ المستوى** فتقف عنده تماماً — فقفزةٌ لا تقسمه (كالثلاثة)
+# تُجاوزه بخانةٍ أو تنتهي دونه، وأيُّهما وقع خرج الطفلُ عن ق٣ أو عن الدرس. **ولا قفزةَ
+# دون الاثنين** (العدُّ فرادى ليس قفزاً) **ولا فوق نصفه** (قفزتان لا تُريان إيقاعاً).
+
+def skip_errors(steps: list, level_max: int) -> list:
+    errors = []
+    if not steps:
+        return ["[القفزات] لا قفزةَ عدٍّ واحدة في المنهج — ومحطتا القفز تقرآن منها"]
+    seen = set()
+    for step in steps:
+        at = f"[القفزات · {step}]"
+        if not isinstance(step, int) or isinstance(step, bool) or step < 2:
+            errors.append(f"{at}: ليست عدداً صحيحاً من اثنين فصاعداً — والعدُّ فرادى ليس قفزاً")
+            continue
+        if step in seen:
+            errors.append(f"{at}: قفزةٌ مكرَّرة في القائمة")
+        seen.add(step)
+        if step > level_max // 2:
+            errors.append(f"{at}: فوق نصف سقف المستوى ({level_max}) — قفزتان لا تُريان إيقاعاً")
+        if level_max % step:
+            errors.append(f"{at}: لا تقسم سقفَ المستوى ({level_max}) — فتجاوزه أو تقف دونه، "
+                          "والقفزةُ تنتهي عند السقف تماماً (ق٣)")
     return errors
 
 
@@ -536,6 +566,28 @@ def probe(modules: list, stations: list, scenes: dict) -> tuple:
     return errors, len(data["rounds"])
 
 
+# ————— جردُ مادّةِ الشريط: يُسأل `usedOf` نفسُها في node (الجلسة ك) —————
+#
+# **العلّة**: مادّةُ شريط النمط قد تكون أعداداً تُكتب رقماً في خاناته (النمطُ العدديّ)،
+# **وعددُ الشريط طولُه لا مادّتُه** — فجردُ الأعداد لا يمرّ عليها، وشريطٌ يقفز إلى
+# العشرين في محطةٍ جبهتُها العشرة يمرّ صامتاً. فتُسأل `usedOf` **بجولةٍ مصنوعةٍ بيد** لا
+# بجولةٍ يولّدها مولّد: أتجرد رقمَ الخانة رمزاً معروضاً؟ ثم يُقابَل الجردُ بجبهةٍ أضيق
+# فيُطالَب الحكمُ بأن يمسكه. (وهي وصلةٌ بين `station.js` وهذا الفاحص، فتُقاس عملاً.)
+
+def probe_strip() -> dict:
+    js = f"""
+    const m = await import({json.dumps((APP_JS / 'station.js').as_uri())});
+    console.log(JSON.stringify(m.usedOf({{
+      figures: [{{ display: 'pattern', count: 3, items: [0, 10, 20] }}],
+    }})));
+    """
+    run = subprocess.run(["node", "--input-type=module", "-e", js],
+                         capture_output=True, text=True)
+    if run.returncode != 0:
+        return {"error": run.stderr.strip()[:200]}
+    return json.loads(run.stdout)
+
+
 # ————— التشغيل —————
 
 def check(data: dict) -> int:
@@ -572,6 +624,10 @@ def check(data: dict) -> int:
          scene_table_errors(data["scenes"]),
          f"{sum(len(t) for t in data['scenes'].values())} مشهداً في "
          f"{len(data['scenes'])} وجهاً، كلُّ رمزٍ فيها برتبةٍ معلَنة مفردة")
+    door("١ج) قفزاتُ العدّ: كلُّ قفزةٍ تنتهي عند سقف المستوى",
+         skip_errors(data["skipSteps"], data["levelMax"]),
+         f"{len(data['skipSteps'])} قفزات ({'، '.join(str(s) for s in data['skipSteps'])}) "
+         f"كلٌّ منها يقسم {data['levelMax']} — ومصدرُها واحدٌ للخطّ والشريط")
     door("٢) تدرّجُ الجبهة: لا شيءَ يسبق موضعَه",
          order_errors(stations, vocab),
          "الصفرُ والرمزُ ورمزُ العملية والإطارات كلٌّ بعد موضعه")
@@ -756,6 +812,36 @@ def self_test(data: dict) -> int:
     ok(find(scene_usage_errors("ج", {"scenes": [
         {"face": "hologram", "items": []}]}, scenes), "لا مشاهدَ له في المنهج"),
        "ومشهدٌ لوجهٍ لا يعرفه المنهج يُمسَك")
+
+    print("\n— ١ج) قفزاتُ العدّ تُمسك ما لا ينتهي عند السقف —")
+    top = data["levelMax"]
+    ok(not skip_errors(data["skipSteps"], top),
+       f"قفزاتُ المنهج الحيّة نظيفة ({'، '.join(str(s) for s in data['skipSteps'])})")
+    ok(find(skip_errors([3], top), "لا تقسم سقفَ المستوى"),
+       f"وقفزةٌ لا تقسم السقفَ تُمسَك (٣ في {top} — تجاوزُه بخانةٍ خرقٌ لق٣)")
+    ok(find(skip_errors([1], top), "ليست عدداً صحيحاً من اثنين"),
+       "وقفزةُ الواحد تُمسَك (العدُّ فرادى ليس قفزاً)")
+    ok(find(skip_errors([20], top), "فوق نصف سقف المستوى"),
+       "وقفزةٌ فوق نصف السقف تُمسَك (قفزتان لا تُريان إيقاعاً)")
+    ok(find(skip_errors([2, 2], top), "مكرَّرة"), "وقفزةٌ مكرَّرة تُمسَك")
+    ok(find(skip_errors([], top), "لا قفزةَ عدٍّ واحدة"),
+       "وخلوُّ المنهج من القفزات يُمسَك (ومحطتا القفز تقرآن منها)")
+
+    print("\n— ٤ب) رقمُ خانة الشريط رمزٌ معروض (الجلسة ك) —")
+    strip = probe_strip()
+    if strip.get("error"):
+        ok(False, f"تعذّر جردُ الشريط العدديّ — {strip['error']}")
+    else:
+        numerals = strip.get("numerals") or []
+        ok(20 in numerals and 10 in numerals,
+           "**جولةٌ فيها شريطُ أرقامٍ تُجرَد أرقامُه رموزاً معروضة** "
+           f"(جُرِد: {'، '.join(str(n) for n in numerals)})")
+        ok(find(usage_errors("ج", strip, {
+            "min": 0, "max": 20, "numeral": 10, "ops": [], "signs": [],
+            "displays": ["pattern"],
+        }), "فوق أقصى رمز محطته"),
+           "**وشريطٌ يكتب العشرين في محطةٍ جبهتُها العشرة يُمسَك** — وعددُ الشريط طولُه "
+           "لا مادّتُه، فلا يمسكه جردُ الأعداد")
 
     print("\n— ٤+٥) حكمُ الاستهلاك يُمسك ما فوق الجبهة —")
     f = next(s["frontier"] for s in stations if s["frontier"]["ops"])

@@ -1037,6 +1037,17 @@ button {
   transform: scale(1.45);
 }
 
+/* **وما قُفِز إليه يبقى مُضاءً** («اِعْدُدْ قَفْزاً» — الجلسة ك): مواقعُ القفزات
+   المعروضة بلون المرحلة لا بلون الصواب — فتُقرأ **إيقاعاً يُرى** لا تصحيحاً وقع،
+   ويبقى أثرُ العدّ (`is-counted`) للأخضر وحدَه. */
+.fig-tick.is-open {
+  fill: color-mix(in srgb, var(--accent, var(--accent-bond)) 70%, var(--line));
+  stroke: var(--accent, var(--accent-bond));
+  transform-box: fill-box;
+  transform-origin: center;
+  transform: scale(1.3);
+}
+
 /* عنصرُ عالم الطفل: صندوقُه من `faceEl` وموضعُه نسبةٌ من الشكل، وصورتُه تملؤه */
 .fig-mark {
   position: absolute;
@@ -1048,6 +1059,18 @@ button {
 }
 
 .fig-mark .emoji { width: 100%; height: 100%; vertical-align: top; }
+
+/* **ووجهُ الخانة رقمٌ حيث كانت مادّتُها عدداً** (النمطُ العدديّ — الجلسة ك): مقاسُه
+   بوحدة الرسم كسائر ما في الشكل (فيتبع مقاسَ خانته على كل جهاز)، وبخطّ النسخ
+   (`--font-num`) كبطاقة الرمز — والرقمُ يبقى مقروءاً لا صورةً تُخفى. */
+.fig-mark--num {
+  display: grid;
+  place-items: center;
+  font-family: var(--font-num);
+  font-size: calc(34 * var(--unit, 1px));
+  line-height: 1;
+  color: color-mix(in srgb, var(--accent, var(--accent-pattern)) 82%, var(--ink));
+}
 
 /* لوحُ المصيِّر (`?dev=1`) — تُلتقط منه اللقطات المرجعية، ولا يراه طفل */
 .gallery { --unit: .62px; padding-bottom: 2rem; }
@@ -1552,6 +1575,21 @@ button {
   border-radius: 0 0 10px 10px;
 }
 
+/* ————— المزدوجات: **مرآةٌ تُرى** (الجلسة ك) —————
+
+   كمّيتان متطابقتان جنبَي خطّ المرآة — والتطابقُ من المصيِّر (نمطٌ واحدٌ وبذرةٌ واحدة)
+   لا من قلبٍ في اللوح: **إطارٌ يُملأ من اليمين لا يُقلَب** فيصير ملؤه يساراً، وثباتُ
+   جهته شرطُ أن يصير صورةً ذهنية (`METHOD.md §٣` — ٣·٥). فالمرآةُ خطٌّ بينهما لا انقلابٌ
+   في أحدهما، وكِبَرُ الشكلين هنا فوق كِبَرِ مجموعتَي الآلة (شكلان لا ثلاثة). */
+.q-solve--double .q-fact-part > .figure { --unit: .6px; }
+.q-solve--double .q-meet { gap: 1.1rem; align-items: stretch; }
+
+.q-mirror {
+  align-self: stretch;
+  min-height: 3.4rem;
+  border-inline-start: 4px dashed color-mix(in srgb, var(--accent) 45%, var(--mix));
+}
+
 /* زرُّ العون: بلا حدٍّ ولا احتساب (نظيرُ «أعِدِ العرض» في الخطف) */
 .q-peek { min-height: var(--tap); }
 .q-peek .ui-icon { width: 1.3em; height: 1.3em; }
@@ -1670,6 +1708,15 @@ button {
 }
 
 .fig-box img.emoji { width: 74%; height: 74%; }
+
+/* **ورقمُ الجواب يتمّ الخانةَ بما رُسِم على البطاقة** (النمطُ العدديّ — الجلسة ك):
+   مقاسُه مقاسُ سائر أرقام الشريط، فيُرى الشريطُ تامّاً بإيقاعٍ واحد. */
+.fig-strip-num {
+  font-family: var(--font-num);
+  font-size: calc(34 * var(--unit, 1px));
+  line-height: 1;
+  color: var(--ok-text);
+}
 
 /* **يُضاء الشريطُ دورةً دورة** فيُدرَك الإيقاعُ بالعين — لا عدَّ ولا كلام */
 .fig-box.is-counted { background: color-mix(in srgb, var(--ok) 22%, transparent); }

@@ -672,7 +672,21 @@
     const strip = d.querySelector('.q-solve--pattern');
     if (strip) {
       const want = strip.dataset.answer;
+      /* **والنمطُ العدديُّ جوابُه رقمٌ مرسوم** (الجلسة ك): بطاقاتُه بطاقاتُ رمز، فيُقابَل
+         ما أعلنه اللوحُ **بما رسمته البطاقة** — كلوح العملية سواءً بسواء. */
+      if (strip.dataset.mode === 'number') {
+        return cardsOf(d).find((c) => drawnOf(c) === Number(want));
+      }
       return cardsOf(d).find((c) => c.querySelector('img.emoji')?.dataset.emoji === want);
+    }
+    /* **والعدُّ القفزيُّ يُلمَس فيه موضعٌ على الخطّ** (الجلسة ك): اللوحُ يعلن الموضعَ
+       المطلوبَ مقروءاً من الخطّ المرسوم، فتُلمَس الخانةُ التي تحمل قيمتَه. ويُقدَّم على
+       لوح العملية العامّ لأنّ جوابَه خانةٌ لا بطاقة. */
+    const jump = d.querySelector('.q-solve--skip');
+    if (jump) {
+      const want = Number(jump.dataset.answer);
+      return [...d.querySelectorAll('.fig-slot')]
+        .find((s) => Number(s.dataset.value) === want);
     }
     /* **ومشهدُ القياس يُلمَس فيه الشيءُ نفسُه**: اللوحُ يعلن المطلوبَ مقروءاً من
        الرسم — **مقداراً** في الطول (`data-size`) **ورمزَ الشيء** في الثِّقَل والزمن
@@ -1314,6 +1328,61 @@
     `و«اِطْرَحْ ضِمْنَ ٢٠» تُجتاز لمساً، **وتطرح فوق العشرة فعلاً** `
     + `(أكبرُ كلٍّ رأته: ${Math.max(...seenWholes, 0)})`);
 
+  /* ————— ١١ز) التكثيفُ المستهدف: المزدوجات والعدُّ القفزيّ (الجلسة ك) —————
+
+     ثلاثةُ عهودٍ تُقاس على الشاشة الحيّة، ولا يراها فحصُ نصّ:
+       أ) **المزدوجُ كمّيتان متطابقتان مرآةً** — تطابقاً في **المرسوم** لا في النيّة،
+          وجوابُه مجموعُ ما رُسِم فيهما، وجملتُه رقمٌ واحدٌ مرّتين وبينهما «+».
+       ب) **العدُّ القفزيُّ قفزاتٌ مُضاءة على الخطّ** — تباعدُها واحد، والجوابُ ما بعد
+          آخرها بقفزةٍ مقروءاً من الخطّ نفسِه.
+       ج) **النمطُ العدديُّ شريطُ أرقامٍ مشرقية** بزيادةٍ ثابتة، وجوابُه من الشريط. */
+
+  // ————— أ) «المُزْدَوَجَات»: مرآةٌ تُرى، والجوابُ مجموعُ ما رُسِم —————
+  const dbl = await open('#/double/ten');
+  (await onward(dbl))?.click();
+  const dblBoard = await until(dbl, (d) => d.querySelector('.q-solve--double'), 16000);
+  const halves = dblBoard ? [...dblBoard.querySelectorAll('.q-fact-part .figure')] : [];
+  const drawnHalves = halves.map((f) => Number(f.dataset.drawn));
+  ok(halves.length === 2 && drawnHalves[0] === drawnHalves[1] && drawnHalves[0] >= 2
+    && halves[0].dataset.display === halves[1].dataset.display,
+  `محطةُ «المُزْدَوَجَات» تعرض **كمّيتين متطابقتين** (${drawnHalves.join(' و')} `
+    + `في «${halves[0]?.dataset.display}») — تطابقاً في المرسوم لا في النيّة`);
+  ok(!!dblBoard?.querySelector('.q-mirror'),
+    'وبينهما **خطُّ المرآة** — فيُرى التطابقُ ولا يُقال (والإطارُ لا يُقلَب فيتبدّل ملؤه)');
+  ok(Number(dblBoard?.dataset.answer) === drawnHalves[0] + drawnHalves[1],
+    `و**الجوابُ مجموعُ ما رُسِم فيهما** (${dblBoard?.dataset.answer} من `
+    + `${drawnHalves.join(' + ')}) لا العددُ الذي طُلب`);
+  const dblTerms = dblBoard
+    ? [...dblBoard.querySelectorAll('.q-sentence .q-term .figure')].map((f) => f.dataset.drawn)
+    : [];
+  const dblSign = shownIn(dblBoard?.querySelector('.q-sentence .q-sign')).trim();
+  ok(dblTerms.length === 2 && dblTerms[0] === dblTerms[1] && dblSign === '+',
+    `وجملتُها **رقمٌ واحدٌ مرّتين** بعلامة جبهتها (${dblTerms.join(` ${dblSign} `)})`);
+  const dblDone = await play(dbl, 90);
+  ok(!!dblDone, 'ومحطةُ المزدوجات تُجتاز كاملةً لمساً حتى الاحتفال');
+
+  // ————— ب) «اِعْدُدْ قَفْزًا»: قفزاتٌ مُضاءةٌ على الخطّ، والتالي منها —————
+  const jmp = await open('#/skip/twenty');
+  (await onward(jmp))?.click();
+  const jmpBoard = await until(jmp, (d) => d.querySelector('.q-solve--skip'), 20000);
+  const litTicks = jmpBoard
+    ? [...jmpBoard.querySelectorAll('[data-tick].is-open')].map((t) => Number(t.dataset.value))
+    : [];
+  const gaps = litTicks.slice(1).map((v, i) => v - litTicks[i]);
+  const jmpStep = Number(jmpBoard?.dataset.step);
+  ok(litTicks.length >= 2 && new Set(gaps).size === 1 && gaps[0] === jmpStep
+    && litTicks[0] === 0,
+  `ومحطةُ «اِعْدُدْ قَفْزًا» تُضيء مواقعَ القفزة من الصفر بتباعدٍ واحد `
+    + `(${litTicks.join(' · ')} — قفزةُ ${jmpStep})`);
+  ok(Number(jmpBoard?.dataset.answer) === litTicks[litTicks.length - 1] + jmpStep,
+    `و**الجوابُ ما بعد آخرها بقفزةٍ مقروءاً من الخطّ** (${jmpBoard?.dataset.answer})`);
+  const jmpSlots = [...jmp.querySelectorAll('.fig-slot')].map((s) => Number(s.dataset.value));
+  ok(jmpSlots.length >= 2 && jmpSlots.includes(Number(jmpBoard?.dataset.answer))
+    && jmpSlots.every((v) => Math.abs(v - Number(jmpBoard?.dataset.answer)) <= jmpSlots.length),
+  `وخياراتُها **مواضعُ متجاورة** على الخطّ لا الخطُّ كلُّه (${jmpSlots.join(' · ')})`);
+  const jmpDone = await play(jmp, 90);
+  ok(!!jmpDone, 'ومحطةُ العدّ القفزيّ تُجتاز كاملةً لمساً حتى الاحتفال');
+
   /* ————— ١١و) المرحلة ٨: الأنماطُ والقياسُ الوصفيّ ومحطةُ التعارف —————
 
      ثلاثةُ عهودٍ: **النمطُ إيقاعٌ يُرى وجوابُه من الشريط المرسوم**، و**القياسُ مقاديرُ
@@ -1346,6 +1415,36 @@
   ok(!!filled, 'وبالإصابة **تتمّ خانةُ السؤال بما رُسِم على البطاقة** فيُرى النمطُ تامّاً');
   const patDone = await play(pdoc, 90);
   ok(!!patDone, 'ومحطةُ النمط تُجتاز كاملةً لمساً حتى الاحتفال');
+
+  /* ————— أ٢) «النَّمَطُ العَدَدِيّ» (الجلسة ك): شريطُ أرقامٍ بزيادةٍ ثابتة —————
+
+     **ولا رقمَ لاتينيّ في خانةٍ** (ق١): الشريطُ يكتب المشرقيةَ كبطاقة الرمز، ويُقرأ
+     من الـDOM لا من نيّة المولّد. **وجوابُه ما بعد آخر خانةٍ بقفزتها** هي. */
+  const ndoc8 = await open('#/pattern/num');
+  (await onward(ndoc8))?.click();
+  const numBoard = await until(ndoc8, (d) => d.querySelector('.q-solve--pattern'), 20000);
+  const numCells = numBoard ? [...numBoard.querySelectorAll('[data-cell]')] : [];
+  const numShown = numCells.map((c) => c.dataset.item || null);
+  const eastern = (t) => /^[٠-٩]+$/.test(String(t));
+  const numValues = numShown.filter(Boolean).map((t) => Number(
+    String(t).replace(/[٠-٩]/g, (d) => String('٠١٢٣٤٥٦٧٨٩'.indexOf(d)))));
+  const numGaps = numValues.slice(1).map((v, i) => v - numValues[i]);
+  ok(numCells.length >= 3 && numShown.filter((x) => !x).length === 1
+    && numShown.filter(Boolean).every(eastern) && new Set(numGaps).size === 1,
+  `ومحطةُ «النَّمَطُ العَدَدِيّ» شريطُ أرقامٍ **مشرقيةٍ بزيادةٍ ثابتة** `
+    + `(${numShown.map((t) => t || '؟').join(' · ')} — قفزةُ ${numGaps[0]})`);
+  ok(Number(numBoard?.dataset.answer) === numValues[numValues.length - 1] + numGaps[0]
+    && Number(numBoard?.dataset.step) === numGaps[0],
+  `و**جوابُه من الشريط المرسوم**: ما بعد آخر خانةٍ بقفزتها (${numBoard?.dataset.answer})`);
+  const numRight = answerOf(ndoc8);
+  numRight?.click();
+  const numFull = await until(ndoc8,
+    (d) => d.querySelector('.q-solve--pattern [data-cell].is-full'), 12000);
+  ok(!!numFull && eastern(shownIn(numFull).trim()),
+    `وبالإصابة تتمّ الخانةُ **برقمٍ مشرقيّ رُسم على البطاقة** («${numFull
+      ? shownIn(numFull).trim() : '؟'}»)`);
+  const numDone = await play(ndoc8, 90);
+  ok(!!numDone, 'ومحطةُ النمط العدديّ تُجتاز كاملةً لمساً حتى الاحتفال');
 
   // ————— ب) «أَطْوَلُ وَأَقْصَر»: مقاديرُ على خطٍّ واحد —————
   const mdoc8 = await open('#/measure/size');

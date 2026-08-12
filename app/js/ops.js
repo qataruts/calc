@@ -1,18 +1,23 @@
-// **المرحلة ٦ — اِجْمَعْ وَاطْرَحْ ضِمْنَ ١٠** (`METHOD.md §٣`): ثماني محطاتٍ بخمس شاشات.
+// **المرحلة ٦ — اِجْمَعْ وَاطْرَحْ ضِمْنَ ١٠** (`METHOD.md §٣`): تسعُ محطاتٍ بستّ شاشات.
 //
 //   `add`     «آلَةُ الجَمْع» (**بلا رمز**) ثم «رَمْزُ + وَالجَمْعُ ضِمْنَ ٥» ثم «اِجْمَعْ ضِمْنَ ١٠»
+//   `double`  «المُزْدَوَجَات» — كميتان **متطابقتان** مرآةً (ضمن ١٠، وإلى ٢٠ في المرحلة ٧)
 //   `sub`     «رَمْزُ − وَالطَّرْحُ ضِمْنَ ٥» ثم «اِطْرَحْ ضِمْنَ ١٠»
 //   `diff`    «كَمِ الفَرْقُ بَيْنَهُمَا؟» — المقارنةُ معنىً ثانٍ للطرح
 //   `zero`    «الصِّفْرُ فِي العَمَلِيَّات» — ن+٠ وَن−٠ وَن−ن
-//   `fluent`  «طَلَاقَةٌ ضِمْنَ ١٠» — حقائقُ مختلطة
+//   `fluent`  «طَلَاقَةٌ ضِمْنَ ١٠» — حقائقُ مختلطة (و«ضِمْنَ ٢٠» ختامُ المرحلة ٧)
 //
-// **و`sub` تملك محطةً من المرحلة ٧** (٧·٦ «اِطْرَحْ ضِمْنَ ٢٠») بحكم `curriculum.js`:
-// نوعُ الشاشة واحدٌ ونوعُ التمرين واحد (`solve`)، والمحطةُ **تقرأ جبهتَها** فتولّد ضمن
-// العشرين في الإطارين. و**درسُها العبورُ نازلاً** (`METHOD.md §٣` — الجلسة ٧): ثلثا
-// جولاتها تُبقي دون العشرة فتُفتَح الحزمة، **والنزولُ يقف عند العشرة وقفةً مسموعة**
-// (`countDown`) — فتُرى العشرةُ محطّةً في الطريق، وهي نظيرةُ «اصنع عشرةً أولاً» صعوداً.
+// **وأربعٌ من محطاتها في المرحلة ٧** بحكم `curriculum.js` — لا بسطرٍ يُكتب هنا:
+// «اِطْرَحْ ضِمْنَ ٢٠» و«ثَبِّتِ العُبُورَ نُزُولًا» و«المُزْدَوَجَاتُ إِلَى ٢٠»
+// و«طَلَاقَةٌ ضِمْنَ ٢٠»: نوعُ الشاشة واحدٌ ونوعُ التمرين واحد (`solve`)، والمحطةُ
+// **تقرأ جبهتَها** فتولّد ضمن العشرين في الإطارين. و**درسُها العبورُ نازلاً**
+// (`METHOD.md §٣` — الجلسة ٧): ثلثا جولاتها تُبقي دون العشرة فتُفتَح الحزمة،
+// **والنزولُ يقف عند العشرة وقفةً مسموعة** (`countDown`) — فتُرى العشرةُ محطّةً في
+// الطريق، وهي نظيرةُ «اصنع عشرةً أولاً» صعوداً. **ومحطةُ التثبيت تعبر في كلِّ جولة**
+// (`isFix` — الجلسة ك): سابقتُها من نوعها بلغت جبهتَها، فهي تثبيتٌ لا إعادة.
+// **والعدُّ صاعداً كذلك يقف عند العشرة** (`countAcross`) حيث تجاوزتها الجبهة.
 //
-// وخمستُها في ملفٍّ واحد بقاعدة «**كلُّ نوع شاشةٍ يُنجَز في جلسةٍ واحدة**» (مراجعة
+// وستُّها في ملفٍّ واحد بقاعدة «**كلُّ نوع شاشةٍ يُنجَز في جلسةٍ واحدة**» (مراجعة
 // الجلسة ١): بابُ الشيفرة في `test_measure.mjs` يطالب النوعَ بأنواع تمارينه كلِّها متى
 // وُجد ملفُّه، وهي هنا نوعٌ واحد (`solve`) ودرسٌ واحد في المنهج (المرحلة ٦).
 //
@@ -52,7 +57,7 @@
 
 import * as progress from './progress.js';
 import { registerScreen } from './registry.js';
-import { SIGNS } from './curriculum.js';
+import { SIGNS, stations } from './curriculum.js';
 import { rangeOf, OBJECTS } from './render.js';
 import { h, icon, pick, shuffle, seeded, shake, pop, arNum, BOND_ACCENT } from './ui.js';
 import {
@@ -66,10 +71,10 @@ const GUIDED = 2;          // «جرِّب معي» — جولتان بعونٍ 
 const SOLO = 5;            // «وحدك» (`METHOD.md §٤`: ٤–٦)
 
 /** أنواعُ الشاشات التي تملكها هذه الوحدة (يقابلها `STATIONS` في `test_measure.mjs`). */
-const TYPES = new Set(['add', 'sub', 'diff', 'zero', 'fluent']);
+const TYPES = new Set(['add', 'sub', 'diff', 'zero', 'fluent', 'double']);
 
 /** أنواعٌ اسمُها وجهُها: محطتُها تدرّس وجهاً واحداً لا تخلطه بغيره. */
-const SINGLE = new Set(['add', 'sub', 'diff']);
+const SINGLE = new Set(['add', 'sub', 'diff', 'double']);
 
 /**
  * **أوجهُ الصفر الثلاثة** — بنصّ `METHOD.md §٣` (٦·٧): «ن+٠، ن−٠، ن−ن». وهي ثلاثُ
@@ -77,9 +82,9 @@ const SINGLE = new Set(['add', 'sub', 'diff']);
  */
 const ZERO_FACES = ['plus-zero', 'minus-zero', 'minus-self'];
 
-/** وجهُ الجولة ← وضعُها المرسوم: جمعٌ أو طرحٌ أو فرق. */
+/** وجهُ الجولة ← وضعُها المرسوم: جمعٌ أو طرحٌ أو فرقٌ أو مزدوج. */
 const MODE_OF = {
-  add: 'add', sub: 'sub', diff: 'diff',
+  add: 'add', sub: 'sub', diff: 'diff', double: 'double',
   'plus-zero': 'add', 'minus-zero': 'sub', 'minus-self': 'sub',
 };
 
@@ -116,6 +121,12 @@ export const CONSUMES = {
     numbers: span(0, 5), numerals: span(0, 5), ops: ['add'], signs: [],
     displays: ['objects', 'numeral'],
   },
+  // **والمزدوجُ إطارٌ ورمزٌ**: محطتاه (ضمن ١٠ وإلى ٢٠) تشتركان في إطار العشرة
+  // وبطاقة الرمز، وإطارُ الخمسة لأصغرهما وحدَه فيُجرَد جولةً جولة.
+  double: {
+    numbers: span(0, 10), numerals: span(0, 10), ops: ['add'], signs: ['+'],
+    displays: ['ten-frame', 'numeral'],
+  },
   sub: {
     numbers: span(0, 5), numerals: span(0, 5), ops: ['sub'], signs: ['−'],
     displays: ['numeral'],
@@ -128,9 +139,11 @@ export const CONSUMES = {
     numbers: span(0, 10), numerals: span(0, 10), ops: ['add', 'sub'], signs: ['+', '−'],
     displays: ['objects', 'ten-frame', 'numeral'],
   },
+  // **والطلاقةُ محطتان بجبهتين** (ضمن ١٠ وضمن ٢٠ — الجلسة ك): فالمُعلَنُ ما تشتركان
+  // فيه — إطارُ العشرة وبطاقةُ الرمز — وما زاد (الإطاران) يُجرَد جولةً جولة.
   fluent: {
     numbers: span(0, 10), numerals: span(0, 10), ops: ['add', 'sub'], signs: ['+', '−'],
-    displays: ['objects', 'ten-frame', 'numeral'],
+    displays: ['ten-frame', 'numeral'],
   },
 };
 
@@ -172,6 +185,49 @@ async function countDown(fig, gone, alive, cls) {
   return countMarks(back.slice(cross), (i) => name(cross + i), alive, cls);
 }
 
+/**
+ * **العدُّ صعوداً، والعشرةُ محطّةٌ في الطريق** (الجلسة ك — نظيرُ `countDown` نازلاً):
+ * يُعَدّ العنصرُ بعد العنصر، وحين تكتمل العشرةُ **تُسمّى تامّةً** ثم يمضي العدُّ فوقها.
+ *
+ * **ولا وقفةَ إن كانت العشرةُ آخرَ ما يُعَدّ**: العبورُ هو ما يُعلَّم، فحيث لا عبورَ لا
+ * وقفة — وبه لا يتبدّل شيءٌ في محطات المرحلة ٦ (جبهتُها العشرة، فالعشرةُ آخرُها).
+ * وهي عهدُ المرحلة ٧ في العدّ الصاعد: ما فوق العشرة يُبنى على حزمةٍ تُسمّى تامّة.
+ */
+async function countAcross(marks, name, alive, cls) {
+  const at = marks.findIndex((_, i) => name(i) === TEN);
+  if (at < 0 || at === marks.length - 1) return countMarks(marks, name, alive, cls);
+  if (!(await countMarks(marks.slice(0, at + 1), name, alive, cls))) return false;
+  await say(ASK.ten);
+  if (!alive()) return false;
+  await new Promise((r) => setTimeout(r, BEAT));
+  return countMarks(marks.slice(at + 1), (i) => name(at + 1 + i), alive, cls);
+}
+
+/**
+ * **محطةٌ تُثبِّت لا تُعيد** (الجلسة ك): محطتان من نوعٍ واحد بجبهةٍ واحدة — الأولى
+ * تُقدِّم والثانية **تثبّت بأصعب ما في الجبهة**. ويُقرأ ذلك **من ترتيب المنهج**
+ * (سابقتُها من نوعها بلغت ما تبلغه) لا من معرّفٍ يُكتب في شاشة، فمحطةُ تثبيتٍ ثالثة
+ * تأخذ حكمَها من تلقائها.
+ */
+function isFix(station) {
+  const family = stations().filter((s) => s.type === station.type);
+  const at = family.findIndex((s) => s.id === station.id);
+  return at > 0 && family[at - 1].frontier.max === station.frontier.max;
+}
+
+/**
+ * **نصفُ المزدوج: ما تدرّسه المحطةُ أوّلاً** — الشريحةُ بين ما بلغته سابقتُها من نوعها
+ * وما تبلغه هي، مقروءةً من ترتيب المنهج: «ضمن ١٠» أنصافُها ٢–٥ (٢+٢ … ٥+٥)، و«إلى
+ * ٢٠» أنصافُها ٦–١٠ (٦+٦ … ١٠+١٠). **ولا مزدوجَ دون الاثنين**: «واحدٌ وواحد» ليس
+ * حقيقةً تُحفظ.
+ */
+function halvesOf(station) {
+  const family = stations().filter((s) => s.type === station.type);
+  const at = family.findIndex((s) => s.id === station.id);
+  const before = at > 0 ? Math.floor(family[at - 1].frontier.max / 2) : 1;
+  return span(Math.max(2, before + 1), Math.floor(station.frontier.max / 2));
+}
+
 /** **رمزُ العملية من الجبهة حصراً** — وإلّا فلا علامةَ تُرسَم ولا تُعلَن. */
 const signFor = (frontier, op) => (frontier.signs.includes(SIGNS[op]) ? SIGNS[op] : null);
 
@@ -183,7 +239,10 @@ const signFor = (frontier, op) => (frontier.signs.includes(SIGNS[op]) ? SIGNS[op
 function facesOf(station) {
   if (station.type === 'zero') return ZERO_FACES;
   if (SINGLE.has(station.type)) return [station.type];
-  return station.frontier.ops;
+  /* **والطلاقةُ تخلط ما أعلنته مفاتيحُها**: عملياتُ جبهتها، **ومعها المزدوجاتُ إن
+     أعلنت مفتاحَها** (٧·١٠ «طلاقةٌ ضمن ٢٠» — حقائقُ العبور والمزدوجات مختلطة). فالوجهُ
+     من المنهج لا من اسم النوع، ومحطةُ ٦·٩ تبقى وجهين كما كانت لأنها لا تعلن مزدوجاً. */
+  return [...station.frontier.ops, ...(skillOf(station, 'double', 'solve') ? ['double'] : [])];
 }
 
 // ————— اختيارُ الأنماط من جبهة المحطة —————
@@ -304,6 +363,45 @@ function sumRound(station, rnd, { aided = false, zero = false } = {}) {
 }
 
 /**
+ * **جولةُ مزدوج** (٦·٥ و٧·٩ — تعديلُ «التكثيف المستهدف»): كمّيتان **متطابقتان** تُريان
+ * مرآةً، والسؤالُ كم صارتا معاً.
+ *
+ * **والتطابقُ في المرسوم لا في النيّة**: النصفُ واحدٌ والنمطُ واحد **والبذرةُ واحدة**،
+ * فيُرسَم الشكلان سواءً بسواء — فما يُرى مرآةٌ حقيقةً لا كمّيتان بعددٍ واحد. **والجوابُ
+ * مجموعُ ما رُسِم** في الشقّين يُقرأ من الـDOM، والخطأُ يُعَدّ **بعدّ درسِه**: يُسمّى
+ * النصفُ المعلومُ دفعةً ثم يُعَدّ الآخرُ فوقه (وهو عينُ العدّ التصاعدي من الأكبر في ٦·٤).
+ */
+function doubleRound(station, rnd, { aided = false } = {}) {
+  const f = station.frontier;
+  const skill = skillOf(station, 'double', 'solve');
+  const next = seeder(rnd);
+  const half = pick(halvesOf(station), rnd);
+  const shape = frameFor(f, [half], rnd);
+  const seed = next();
+  const pair = [
+    { display: shape, count: half, seed },
+    { display: shape, count: half, seed },
+  ];
+  const sign = signFor(f, 'add');
+  const terms = sign
+    ? [{ display: 'numeral', count: half, seed: next() },
+      { display: 'numeral', count: half, seed: next() }]
+    : [];
+  const options = optionsFor(f, half * 2, rnd, next);
+
+  return {
+    kind: 'solve', concept: skill.concept, range: skill.range,
+    mode: 'double', sign, aided,
+    ops: ['add'], signs: sign ? [sign] : [],
+    ask: ASK.add,
+    hint: 'كَمِّيَّتَانِ سَوَاءٌ تَمَامًا — وَهَذَا مَا يُسَهِّلُهَا',
+    pair, parts: [], terms, options,
+    figures: [...pair, ...terms, ...options],
+    sig: `${station.id}|${half}+${half}|${seed}`,
+  };
+}
+
+/**
  * **جولةُ طرح**: كمّيةٌ يُشطَب منها بعضُها — **الإزالةُ مرئية** (`METHOD.md §٣` ٦·٣).
  * وشقّاها **الباقي والمغادر**، فالمغادرُ آخرُ ما مُلئ في الإطار (يفرغ من حيث امتلأ).
  *
@@ -315,11 +413,15 @@ function takeRound(station, rnd, { aided = false, take = 'some' } = {}) {
   const next = seeder(rnd);
   const glyph = glyphOf(rnd);
 
-  const whole = reachOf(f, rnd, 2);
+  /* **ومحطةُ التثبيت تعبر في كلِّ جولةٍ** (٧·٧ «ثبِّتِ العبورَ نزولًا» — الجلسة ك):
+     ٧·٦ تعبر في ثلثَي جولاتها فتخلط العبورَ بما دونه، وهذه **كلُّها فوق العشرة**
+     فتُفتَح الحزمةُ في كل جولةٍ وتُسمَع وقفتُها — تثبيتٌ لا إعادة. */
+  const fix = take === 'some' && f.max > TEN && isFix(station);
+  const whole = fix ? pick(span(TEN + 2, f.max), rnd) : reachOf(f, rnd, 2);
   /* **ومحطةُ ما فوق العشرة تعبرها نازلةً** (٧·٦: «عبوراً نازلاً عبر العشرة»): يُختار
      المأخوذُ في ثلثَي جولاتها بحيث **يبقى دون العشرة** — فتُفتَح الحزمةُ فعلاً ويقع
      الدرس. ولولا ذلك لجاءت «١٧ − ٢» فمرّت المحطةُ كلُّها بلا عبورٍ واحد. */
-  const cross = take === 'some' && whole > TEN && rnd() < 2 / 3;
+  const cross = take === 'some' && whole > TEN && (fix || rnd() < 2 / 3);
   const gone = take === 'none' ? 0
     : take === 'all' ? whole
       : cross
@@ -391,6 +493,7 @@ function diffRound(station, rnd, { aided = false } = {}) {
 /** جولةُ وجهٍ بعينه — الوجهُ من `facesOf`، والوضعُ من `MODE_OF`. */
 function roundFor(station, rnd, face, aided) {
   const mode = MODE_OF[face];
+  if (mode === 'double') return doubleRound(station, rnd, { aided });
   if (mode === 'diff') return diffRound(station, rnd, { aided });
   if (mode === 'add') return sumRound(station, rnd, { aided, zero: face === 'plus-zero' });
   return takeRound(station, rnd, {
@@ -408,6 +511,30 @@ function modelOf(station, rnd) {
   const face = facesOf(station)[0];
   const round = roundFor(station, rnd, face, true);
   const next = seeder(rnd);
+
+  if (round.mode === 'double') {
+    const [one, two] = round.pair;
+    return {
+      title: round.ask,
+      hint: 'كَمِّيَّتَانِ سَوَاء — نُسَمِّي الأُولَى، ثُمَّ نَعُدُّ الثَّانِيَةَ فَوْقَهَا',
+      ops: round.ops,
+      figures: [one, two],
+      // **يُسمّى النصفُ دفعةً ثم يُعَدّ الآخرُ عليه** — وهو درسُ المزدوج نفسُه، وفوق
+      // العشرة تُسمَع وقفةُ الحزمة (`countAcross`) فلا تُعَدّ آحادُها فرادى بلا محطّة.
+      count: async (figs, alive) => {
+        for (const fig of figs) clearCount(fig);
+        for (const mark of figs[0].marks) mark.classList.add('is-counted');
+        await say(NUMBER_NAME[figs[0].drawn]);
+        if (!alive()) return false;
+        await new Promise((r) => setTimeout(r, BEAT));
+        return countAcross(figs[1].marks, (i) => figs[0].drawn + i + 1, alive, 'is-counted');
+      },
+      reveal: {
+        say: SAY.reveal,
+        figures: [{ display: 'numeral', count: one.count + two.count, seed: next() }],
+      },
+    };
+  }
 
   if (round.mode === 'diff') {
     const [big, small] = round.rows;
@@ -535,13 +662,38 @@ const FACT = {
         join();
         const from = merged.split ?? 0;
         if (from <= 0 || from >= merged.drawn) {
-          return countMarks(merged.marks, (i) => i + 1, alive);
+          return countAcross(merged.marks, (i) => i + 1, alive);
         }
         for (const mark of merged.marks.slice(0, from)) mark.classList.add('is-counted');
         await say(NUMBER_NAME[from]);
         if (!alive()) return false;
         await new Promise((r) => setTimeout(r, BEAT));
-        return countMarks(merged.marks.slice(from), (i) => from + i + 1, alive);
+        // **وفوق العشرة تُسمَع وقفتُها** (`countAcross` — الجلسة ك): جبهةُ ٧·١٠ عشرون،
+        // فالعدُّ التصاعديّ فيها يعبر الحزمةَ — ولا يُعَدّ ما فوقها بلا محطّةٍ عندها.
+        return countAcross(merged.marks.slice(from), (i) => from + i + 1, alive);
+      },
+    };
+  },
+
+  /**
+   * **المزدوج: مرآةٌ تُرى** — كمّيتان متطابقتان جنبَي خطّ المرآة، والجوابُ **مجموعُ
+   * ما رُسِم فيهما** مقروءاً من الـDOM. وعدُّ الخطأ عدُّ درسِه: النصفُ يُسمّى دفعةً
+   * (فهو المعلوم) ثم يُعَدّ الآخرُ فوقه.
+   */
+  double(round) {
+    const pair = round.pair.map((spec) => figureBox(spec, 'q-fact-part'));
+    const mirror = h('span', { class: 'q-mirror', 'aria-hidden': 'true' });
+    return {
+      box: h('div', { class: 'q-fact-body' },
+        h('div', { class: 'q-meet' }, pair[0].box, mirror, pair[1].box)),
+      figs: pair,
+      answer: () => pair.reduce((sum, fig) => sum + fig.drawn, 0),
+      walk: async (alive) => {
+        for (const mark of pair[0].marks) mark.classList.add('is-counted');
+        await say(NUMBER_NAME[pair[0].drawn]);
+        if (!alive()) return false;
+        await new Promise((r) => setTimeout(r, BEAT));
+        return countAcross(pair[1].marks, (i) => pair[0].drawn + i + 1, alive);
       },
     };
   },
@@ -687,6 +839,7 @@ registerScreen('sub', screen('sub'));
 registerScreen('diff', screen('diff'));
 registerScreen('zero', screen('zero'));
 registerScreen('fluent', screen('fluent'));
+registerScreen('double', screen('double'));
 
 /**
  * جولةٌ واحدة لمهارةٍ مستحقّة — مادّةُ المراجعة والبوابات.

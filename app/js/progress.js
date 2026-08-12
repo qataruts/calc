@@ -238,9 +238,25 @@ export function skillKey(concept, range, kind) {
   return `${concept}|${range ?? 'none'}|${kind}`;
 }
 
+/**
+ * **المدى عدداً إن كان عدداً، ونصّاً إن لم يكن** — قاعدةٌ واحدة لمصدرٍ واحد.
+ *
+ * مفاتيحُ `METHOD.md §٦` مدياتُها عدديةٌ في المراحل ١–٧ (`numeral|٧|match`) ووصفيةٌ في
+ * المرحلة ٨ (`pattern|abab|extend`)، وهي **تُكتب نصّاً في المفتاح** فتُقرأ نصّاً. وكان
+ * لهذه القاعدة موضعان: هذا الملفُّ يقرأ السجلَّ فيردّ المدى **نصّاً دائماً**،
+ * و`station.js` يقرأ المنهجَ فيردّه عدداً حيث كان عدداً — فمهارةٌ تُقرأ من السجلّ
+ * مدَاها «٧» ومحطتُها تدرّس ٧، **فلا يتطابقان**. وأثرُه صمتٌ لا حمرة: مراجعةُ رمزٍ
+ * ضعيفٍ كانت تُبنى على رمزٍ **مجاورٍ** بالقرعة (`reviewRound` في `numerals.js` تشترط
+ * `taught.includes(skill.range)` فلا تصدق أبداً)، فيراجع الطفلُ ما لم يضعف فيه —
+ * وأمسكه حارسُ البوابة يومَ تحرّك مجرى القرعة (الجلسة ك). **فصار للقاعدة مصدرٌ واحد
+ * هنا** ويقرأه `station.js`.
+ */
+export const spanOf = (text) =>
+  (Number.isFinite(Number(text)) && text !== '' ? Number(text) : text);
+
 export function parseSkillKey(key) {
   const [concept, range, kind] = String(key).split('|');
-  return { concept, range, kind };
+  return { concept, range: spanOf(range), kind };
 }
 
 export function getSkill(key) {
