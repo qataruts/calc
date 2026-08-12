@@ -58,6 +58,10 @@ const wanted = onDisk
   .filter((p) => !p.startsWith('audio/') || p === 'audio/manifest.json' || p === 'audio/versions.json')
   .filter((p) => !p.startsWith('emoji/') || p === 'emoji/index.json')
   .filter((p) => !p.startsWith('welcome/'))
+  // **و`CNAME` ليس ملفَّ تطبيق**: سطرٌ واحد يقرؤه GitHub Pages عند النشر ليعرف
+  // نطاقَنا (`calc.mishkat.qa`) — لا يطلبه متصفّحٌ ولا يخدم طفلاً، فخزنُه في القشرة
+  // خزنُ ورقةِ شحنٍ مع البضاعة. ويُحرَس حيث يعمل: على المنشور في `check_live.py`.
+  .filter((p) => p !== 'CNAME')
   .filter((p) => p !== 'sw.js');
 
 const forgotten = wanted.filter((p) => !shell.includes(p));

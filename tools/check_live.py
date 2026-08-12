@@ -55,7 +55,7 @@ def assets() -> list[str]:
     shot = sorted((WELCOME / "shots").glob("*.png"))
     font = sorted((WELCOME / "fonts").glob("*.woff2"))
     out = ["", "welcome/welcome.css", "css/app.css", "manifest.webmanifest", "sw.js",
-           "js/install.js"]
+           "js/install.js", "CNAME"]
     if shot:
         out.append(f"welcome/shots/{shot[0].name}")
     if font:
@@ -131,14 +131,14 @@ def self_test() -> int:
     else:
         print(f"  ✓ وأصولُها موجودةٌ في الشجرة ({len(needed)} مسارات)")
 
-    # **وملفُّ النطاق مُعَدٌّ ومطابقٌ لِما تفحصه هذه الأداة** (الجلسة ٩): يبقى في
-    # `docs/` حتى يضبط المالكُ Cloudflare — فلو نُشر قبل أن يُشير النطاقُ إلى الموقع
-    # لَحوَّل GitHub عنوانَ النشر إليه فصار الموقعُ لا يُفتَح من عنوانٍ ألبتّة.
-    # ويومَ يجهز النطاق: `git mv docs/CNAME app/CNAME` ودفعةٌ واحدة.
-    cname = ROOT / "docs" / "CNAME"
+    # **وملفُّ النطاق منشورٌ ومطابقٌ لِما تفحصه هذه الأداة** (الجلسة ٩): كان في
+    # `docs/` حتى يضبط المالكُ Cloudflare (فملفُّ النطاق يحوّل عنوانَ النشر فورَ
+    # وصوله)، فلمّا ضُبط الربطُ نُقل إلى `app/` — فصار النطاقُ مكتوباً في المنشور
+    # لا في لوحة إعداداتٍ وحدَها، ويُقرأ من هنا كما يقرؤه GitHub.
+    cname = ROOT / "app" / "CNAME"
     host = BASE.split("//")[1].strip("/")
     if cname.exists() and cname.read_text(encoding="utf-8").strip() == host:
-        print(f"  ✓ وملفُّ النطاق مُعَدٌّ في docs/CNAME بنطاقنا ({host}) — يُنقَل إلى app/ يومَ يجهز الربط")
+        print(f"  ✓ وملفُّ النطاق منشورٌ في app/CNAME بنطاقنا ({host})")
     else:
         print(f"  ✗ ملفُّ النطاق مفقودٌ أو يخالف {host}")
         fails += 1
