@@ -30,7 +30,7 @@
      نتيجة» لا يجوز أن يكون آخرَ ما نعرف. */
   const watchdog = setTimeout(() => {
     report([...out, { ok: false, msg: 'تعلّقت صفحةُ الفحص قبل تمامها (انتظارٌ لم ينتهِ)' }]);
-  }, 380000);
+  }, 580000);
 
   /* ————— «لا نطقَ آليّ»: يُقاس في مسار الطفل نفسِه (الجلسة ص) —————
 
@@ -255,6 +255,10 @@
     quantity: (f) => f.querySelectorAll('[data-mark]').length,
     numeral: (f) => arDigits(f.querySelector('[data-numeral]')?.textContent ?? ''),
     line: (f) => f.querySelectorAll('[data-tick]').length - 1,
+    // **ولكلِّ صنفٍ جديدٍ مسطرتُه** (الجلسة ٧): الشريطُ تُعَدّ خاناتُه — وخانةُ السؤال
+    // منها — والمشهدُ تُعَدّ أشياؤه، وكلاهما يُقرأ هنا **مستقلاً** عن المصيِّر.
+    pattern: (f) => f.querySelectorAll('[data-cell]').length,
+    scene: (f) => f.querySelectorAll('[data-item]').length,
   };
   const miscount = figures.filter((f) => {
     const want = Number(f.dataset.count);
@@ -557,6 +561,22 @@
     /* **لوحُ العملية** (المرحلة ٦): جوابُه عددٌ **محسوبٌ من المرسوم** يعلنه اللوحُ
        نفسُه (`data-answer` — مجموعُ ما رُسِم، أو ما لم يُشطَب منه، أو فرقُ الصفّين)،
        فتُختار البطاقةُ التي **رسمت** ذلك العدد. */
+    /* **ولوحُ النمط جوابُه رمزُ عالم الطفل لا عدد** (الجلسة ٧): تُعلن الشاشةُ ما
+       قرأته من الشريط المرسوم (`data-answer`)، فتُلمَس البطاقةُ التي **رسمت** ذلك
+       الرمز — لا التي طُلب منها رسمُه. */
+    const strip = d.querySelector('.q-solve--pattern');
+    if (strip) {
+      const want = strip.dataset.answer;
+      return cardsOf(d).find((c) => c.querySelector('img.emoji')?.dataset.emoji === want);
+    }
+    /* **ومشهدُ القياس يُلمَس فيه الشيءُ نفسُه**: اللوحُ يعلن **مقدارَ** المطلوب مقروءاً
+       من الرسم، فيُلمَس الزرُّ الذي يسكن ذلك المقدار. */
+    const scene = d.querySelector('.q-solve--measure');
+    if (scene) {
+      const want = scene.dataset.answer;
+      return [...d.querySelectorAll('.q-pickspot')]
+        .find((s) => s.dataset.size === want && !s.disabled);
+    }
     const solve = d.querySelector('.q-solve');
     if (solve) {
       const want = Number(solve.dataset.answer);
@@ -568,9 +588,12 @@
       const left = Number(bond.dataset.slots);
       const free = cardsOf(d).filter((c) => !c.disabled);
       const worth = (c) => Number(c.querySelector('.figure')?.dataset.drawn);
-      return left <= 1
-        ? free.find((c) => worth(c) === need)
-        : (free.find((c) => worth(c) < need) || free.find((c) => worth(c) === need));
+      if (left <= 1) return free.find((c) => worth(c) === need) || free[0];
+      /* **خانتان: يُختار جزءٌ يبقى له مكمِّلٌ في الحوض** — وإلّا وضع السائقُ جزءاً
+         لا يُتمّه شيء، فانسدّت عليه الجولة. (وهو ما يفعله الطفلُ المصيب: ينظر إلى
+         ما بقي قبل أن يضع.) وفي المرحلة ٧ هذا هو **بناءُ الحزمة والآحاد** بعينه. */
+      const fit = free.find((a) => free.some((b) => b !== a && worth(a) + worth(b) === need));
+      return fit || free.find((c) => worth(c) < need) || free[0];
     }
     const slots = [...d.querySelectorAll('.fig-slot')];
     if (slots.length) return slots.find((s) => Number(s.dataset.value) === subject);
@@ -1064,6 +1087,21 @@
 
   // ————— هـ) «كَمِ الفَرْقُ بَيْنَهُمَا؟» (٦·٦): صفّان متحاذيان —————
   const fdoc6 = await open('#/diff/ten');
+  /* **ونمذجتُها تُرَصّ كما تُرَصّ «وحدك»** (قيدُ إصلاح مراجعة الجلسة ٦): التلميحُ يقول
+     «الصَّفَّ الأَعْلَى» — فإن عُرِضت الكمّيتان جنباً إلى جنب فلا صفَّ أعلى في الصورة،
+     والكلامُ لا يطابق العين. **والفحصُ يقيس الرصَّ لا يقرأ النصّ**: أعلى الأوّل فوق
+     أسفل الثاني، ويسارُهما واحد. */
+  const bare = (t) => String(t).replace(/[ً-ْٰ]/g, '');
+  await until(fdoc6, (d) => (d.querySelectorAll('.q-stage .figure').length === 2 ? true : null), 14000);
+  const modelPair = [...fdoc6.querySelectorAll('.q-stage .figure')];
+  const modelStacked = modelPair.length === 2
+    && Math.abs(rectOf(modelPair[0]).left - rectOf(modelPair[1]).left) < 2
+    && rectOf(modelPair[0]).bottom <= rectOf(modelPair[1]).top + 1;
+  const modelHint = bare(shownIn(fdoc6.querySelector('.station-body .hint')));
+  ok(modelStacked && modelHint.includes('الصف الأعلى'),
+    `ونمذجةُ الفرق **صفٌّ تحت صفّ** كما في «وحدك» (${modelPair.length} صفّاً`
+    + `${modelPair.length === 2 ? `، فرقُ اليسار ${Math.round(Math.abs(rectOf(modelPair[0]).left
+      - rectOf(modelPair[1]).left))}px` : ''}) — والكلامُ يطابق العين`);
   (await onward(fdoc6))?.click();
   await until(fdoc6, (d) => d.querySelector('.q-fact-body.q-rows .figure'), 14000);
   const diffRows = [...fdoc6.querySelectorAll('.q-fact-body.q-rows .figure')];
@@ -1075,6 +1113,204 @@
     === Number(diffRows[0].dataset.drawn) - Number(diffRows[1].dataset.drawn),
   `و«كَمِ الفَرْقُ» صفّان متحاذيان (${diffRows.map((f) => f.dataset.drawn).join(' و')})، `
     + `**والفرقُ من المرسوم** (${diffBoard ? diffBoard.dataset.answer : '؟'})`);
+
+  /* ————— ١١هـ) المرحلة ٧: العشرةُ وما بعدها ١١–٢٠ (الجلسة ٧) —————
+
+     أربعةُ عهودٍ لا يُثبتها إلا متصفّح:
+       • **ما فوق العشرة يُبنى ولا يُعَدّ فرادى** (`METHOD.md §٢.٢` المعتمد): النمذجةُ
+         **تُعلّم الحزمةَ كلَّها في لحظةٍ واحدة** ثم تَعُدّ الآحادَ فوقها — فلا مشيَ على
+         أربعةَ عشرَ عنصراً واحداً واحداً.
+       • **والبناءُ حزمةٌ وآحاد**: خانتان تُملآن، وإحدى البطاقات إطارٌ ممتلئ.
+       • **والعبورُ صعوداً خطوتان**: كم يُكمِل العشرة، ثم كم صارت كلُّها.
+       • **والعبورُ نازلاً يفرغ من حيث امتلأ**: أوّلُ ما يغادر آخرُ ما مُلئ. */
+
+  // ————— أ) «١١–١٥ عَشَرَةٌ وَآحَاد»: الحزمةُ تُسمّى ثم تُعَدّ الآحادُ فوقها —————
+  const teenDoc = await open('#/teen/fifteen');
+  const teenModel = await until(teenDoc, (d) => d.querySelector('.q-stage .figure[data-split]'), 14000);
+  ok(teenModel && Number(teenModel.dataset.drawn) > 10
+    && teenModel.querySelectorAll('[data-part="a"]').length === 10,
+  `محطةُ «١١–١٥» تُنمذِج **عشرةً وآحاداً**: ${teenModel
+    ? teenModel.querySelectorAll('[data-part="a"]').length : '؟'} في الحزمة `
+    + `و${teenModel ? teenModel.querySelectorAll('[data-part="b"]').length : '؟'} فوقها `
+    + `من ${teenModel ? teenModel.dataset.drawn : '؟'} مرسومة`);
+
+  /* **والحزمةُ تُعلَّم دفعةً واحدة**: يُنتظَر أوّلُ تعليمٍ في النمذجة، فيجب أن يكون
+     **عشرةَ عناصرَ معاً** لا عنصراً واحداً — وهو الفرقُ بين «تُبنى» و«تُعَدّ فرادى». */
+  const litAtOnce = await until(teenDoc,
+    (d) => d.querySelectorAll('.q-stage [data-mark].is-counted').length || null, 16000);
+  ok(litAtOnce >= 10,
+    `و**الحزمةُ تُعلَّم دفعةً واحدة** (${litAtOnce || 0} عنصراً في أوّل تعليم) — `
+    + 'فما فوق العشرة يُبنى ولا يُعَدّ فرادى');
+
+  (await onward(teenDoc))?.click();
+  const teenBoard = await until(teenDoc, (d) => d.querySelector('.q-bond, .q-solve--teen'), 14000);
+  if (teenBoard && teenBoard.classList.contains('q-bond')) {
+    const bundle = cardsOf(teenDoc).find((c) => Number(c.querySelector('.figure')?.dataset.drawn) === 10);
+    ok(Number(teenBoard.dataset.slots) === 2 && !!bundle,
+      `ولوحُ البناء **خانتان** وفي بطاقاته حزمةُ عشرةٍ ممتلئة `
+      + `(المطلوب ${teenBoard.dataset.need})`);
+  } else {
+    ok(!!teenBoard, 'ولوحُها يُرسَم (بناءً أو قراءةً بحسب دور الوجه)');
+  }
+  const teenDone = await play(teenDoc, 90);
+  ok(!!teenDone && teenDoc.querySelectorAll('.big-stars .on').length > 0,
+    `ومحطةُ «١١–١٥» تُجتاز كاملةً لمساً حتى الاحتفال `
+    + `(${teenDoc.querySelectorAll('.big-stars .on').length} نجمة)`);
+
+  // ————— ب) «اِصْنَعْ عَشَرَةً أَوَّلًا» (٧·٥): سؤالان في جولةٍ واحدة —————
+  const bridge = await open('#/bridge/twenty');
+  (await onward(bridge))?.click();
+  const brBoard = await until(bridge, (d) => d.querySelector('.q-solve--bridge'), 16000);
+  const brFrames = brBoard ? [...brBoard.querySelectorAll('.q-fact-body .figure')] : [];
+  const brGap = brFrames[0]
+    ? brFrames[0].querySelectorAll('[data-cell]').length - Number(brFrames[0].dataset.drawn) : -1;
+  const brSplit = brFrames[1] ? Number(brFrames[1].dataset.split) : -1;
+  ok(brBoard && Number(brBoard.dataset.answer) === brGap && brGap === brSplit,
+    `و«اِصْنَعْ عَشَرَةً أَوَّلًا» تسأل أوّلاً **ما يُكمِل العشرة** — `
+    + `${brGap} خانةً فارغة، وهي شقُّ المُضاف نفسُه (${brSplit}) مقروءين من الرسم`);
+
+  answerOf(bridge)?.click();
+  const brTotal = await until(bridge,
+    (d) => d.querySelector('.q-fact-body .figure[data-display="two-frames"]'), 16000);
+  ok(brTotal && Number(bridge.querySelector('.q-solve--bridge').dataset.answer)
+    === Number(brTotal.dataset.drawn)
+    && brTotal.querySelectorAll('[data-part="a"]').length === 10,
+  `ثم **تصير الحصيلةُ حزمةً وآحاداً في الإطارين** (${brTotal ? brTotal.dataset.drawn : '؟'}) `
+    + '— والسؤالُ الثاني جوابُه ما رُسِم فيهما');
+  const brDone = await play(bridge, 110);   // جولتُها سؤالان، فخطواتُها ضِعف
+  ok(!!brDone, 'ومحطةُ العبور تُجتاز كاملةً لمساً حتى الاحتفال');
+
+  // ————— ج) «اِطْرَحْ ضِمْنَ ٢٠» (٧·٦): يفرغ من حيث امتلأ، وينزل عبر العشرة —————
+  const down = await open('#/sub/twenty');
+  (await onward(down))?.click();
+  await until(down, (d) => d.querySelector('.q-solve--sub .q-fact-fig .figure'), 16000);
+  const downFig = down.querySelector('.q-solve--sub .q-fact-fig .figure');
+  const goneMarks = downFig ? [...downFig.querySelectorAll('[data-part="b"]')] : [];
+  const downRight = answerOf(down);
+  cardsOf(down).find((c) => c !== downRight)?.click();
+  const firstLit = await until(down,
+    (d) => d.querySelector('.q-solve--sub [data-mark].is-counted'), 16000);
+  ok(goneMarks.length > 0 && firstLit === goneMarks[goneMarks.length - 1],
+    'و**الطرحُ يفرغ من حيث امتلأ**: أوّلُ ما يغادر آخرُ ما مُلئ '
+    + `(${goneMarks.length} مغادراً، والمُضاء أوّلاً هو ${firstLit === goneMarks[goneMarks.length - 1]
+      ? 'الأخير' : 'ليس الأخير'})`);
+
+  /* **ومهلةُ السَّوق هنا أوسع**: العدُّ النازل من فوق العشرين يمشي على عشرين عنصراً
+     ومعه وقفةُ العشرة — ثوانٍ بحسابها لا تعلّقاً، والسائقُ محبوسٌ فيها. */
+  const seenWholes = [];
+  for (let i = 0; i < 130 && !down.querySelector('.celebrate'); i++) {
+    const fig = down.querySelector('.q-solve--sub .q-fact-fig .figure');
+    if (fig) seenWholes.push(Number(fig.dataset.drawn));
+    (answerOf(down) || down.querySelector('.station-body .next'))?.click();
+    await new Promise((r) => setTimeout(r, 480));
+  }
+  ok(!!down.querySelector('.celebrate') && Math.max(...seenWholes, 0) > 10,
+    `و«اِطْرَحْ ضِمْنَ ٢٠» تُجتاز لمساً، **وتطرح فوق العشرة فعلاً** `
+    + `(أكبرُ كلٍّ رأته: ${Math.max(...seenWholes, 0)})`);
+
+  /* ————— ١١و) المرحلة ٨: الأنماطُ والقياسُ الوصفيّ ومحطةُ التعارف —————
+
+     ثلاثةُ عهودٍ: **النمطُ إيقاعٌ يُرى وجوابُه من الشريط المرسوم**، و**القياسُ مقاديرُ
+     تقف على خطٍّ واحد فيُقارَن الطولُ لا الموضع**، و**محطةُ التعارف عرضٌ بلا قياس**
+     وهي **وحدَها** التي فيها رقمٌ مغربيّ في التطبيق كلِّه (ق١). */
+
+  // ————— أ) «أَكْمِلِ النَّمَط»: الجوابُ ما يبعد دورةً كاملة —————
+  const pdoc = await open('#/pattern/abab');
+  (await onward(pdoc))?.click();
+  const stripFig = await until(pdoc, (d) => d.querySelector('.q-solve--pattern .figure'), 16000);
+  const cells = stripFig ? [...stripFig.querySelectorAll('[data-cell]')] : [];
+  const items = cells.map((c) => c.dataset.item || null);
+  const blankAt = items.indexOf(null);
+  const period = 2;                          // (أ ب أ ب) — دورتُها اثنتان
+  ok(cells.length === Number(stripFig?.dataset.drawn) && items.filter((x) => !x).length === 1
+    && blankAt === cells.length - 1
+    && stripFig.parentElement.parentElement.dataset.answer === items[blankAt - period],
+  `شريطُ (أ ب أ ب) ${cells.length} خانةً وآخرُها سؤال، **وجوابُه ما يبعد دورةً كاملة** `
+    + 'مقروءاً من الشريط المرسوم لا من نيّة المولّد');
+
+  const patRight = answerOf(pdoc);
+  const patCards = cardsOf(pdoc).map((c) => c.querySelector('img.emoji')?.dataset.emoji || '؟');
+  ok(!!patRight,
+    `وفي البطاقات ما رسم ذلك الرمز (يُقرأ من صورتها) — المطلوب «${pdoc
+      .querySelector('.q-solve--pattern')?.dataset.answer}»، وفي ${patCards.length} بطاقة: `
+    + patCards.join(' '));
+  patRight?.click();
+  const filled = await until(pdoc,
+    (d) => d.querySelector('.q-solve--pattern [data-cell].is-full'), 12000);
+  ok(!!filled, 'وبالإصابة **تتمّ خانةُ السؤال بما رُسِم على البطاقة** فيُرى النمطُ تامّاً');
+  const patDone = await play(pdoc, 90);
+  ok(!!patDone, 'ومحطةُ النمط تُجتاز كاملةً لمساً حتى الاحتفال');
+
+  // ————— ب) «أَطْوَلُ وَأَقْصَر»: مقاديرُ على خطٍّ واحد —————
+  const mdoc8 = await open('#/measure/size');
+  (await onward(mdoc8))?.click();
+  const sceneFig = await until(mdoc8, (d) => d.querySelector('.q-solve--measure .figure'), 16000);
+  const things = sceneFig ? [...sceneFig.querySelectorAll('[data-item]')] : [];
+  const boxes = things.map(rectOf);
+  const grounded = boxes.length > 1
+    && boxes.every((b) => Math.abs(b.bottom - boxes[0].bottom) < 2);
+  const sizes = things.map((t) => Number(t.dataset.size));
+  ok(things.length >= 2 && new Set(sizes).size === sizes.length && grounded,
+    `ومشهدُ القياس ${things.length} أشياءَ بمقاديرَ مختلفة (${sizes.join(' و')}) `
+    + '**تقف على خطٍّ واحد** — فالفرقُ طولٌ يُرى لا موضعٌ يخدع');
+  const wantSize = mdoc8.querySelector('.q-solve--measure').dataset.answer;
+  const askText = bare(askOf(mdoc8));
+  const extreme = askText.includes('أقصر') || askText.includes('أخف')
+    ? Math.min(...sizes) : Math.max(...sizes);
+  ok(Number(wantSize) === extreme,
+    `و**المطلوبُ من المقدار المرسوم**: «${askOf(mdoc8)}» ⇒ ${wantSize} `
+    + `(والمنتظَر ${extreme})`);
+  const meaDone = await play(mdoc8, 90);
+  ok(!!meaDone, 'ومحطةُ «أطولُ وأقصر» تُجتاز كاملةً لمساً حتى الاحتفال');
+
+  /* ————— ١١ز) 🚪 بوابة ٣ «ختامُ التأسيس»: من أضعف الرحلة كلِّها —————
+     **وتُساق من داخل مستند القياس نفسِه** كأختيها: وضعُ المعاينة لا يكتب على القرص،
+     فسجلُّ ليتنر لا يعبر من مستندٍ إلى مستند — ويُساق من الذي لعب محطةً كاملة. */
+  mdoc8.defaultView.location.hash = '#/gate/final';
+  await new Promise((r) => setTimeout(r, 1300));
+  const finalDots = mdoc8.querySelectorAll('.dots .dot').length;
+  ok(!!mdoc8.querySelector('.gate-head') && finalDots > 0 && finalDots <= 10,
+    `بوابةُ «خِتَامُ التَّأْسِيس» تُرسَم بجلسةٍ من سجلّ ما لعبه الطفل (${finalDots} تمريناً)`);
+  for (let i = 0; i < 60 && !mdoc8.querySelector('.celebrate'); i++) {
+    (answerOf(mdoc8) || mdoc8.querySelector('.station-body .next'))?.click();
+    await new Promise((r) => setTimeout(r, 460));
+  }
+  const finalVerdict = mdoc8.querySelector('.celebrate');
+  ok(!!finalVerdict && !/رسوب|فشل|خطأ/.test(shownIn(finalVerdict)),
+    `وتُجتاز إلى حكمها بلا لفظ رسوب (${finalVerdict
+      && !finalVerdict.classList.contains('celebrate--again') ? 'فُتِحَت' : 'لَيْسَ بَعْدُ'})`);
+
+  // ————— ج) «تَعَارُفٌ: أَرْقَامٌ أُخْرَى» (٨·٥): عرضٌ بلا قياس، ورقمٌ مغربيّ فيها وحدَها —————
+  const idoc = await open('#/intro/latin');
+  const rows = [...idoc.querySelectorAll('.intro-row')];
+  const west = rows.map((r) => shownIn(r.querySelector('.intro-west')).trim());
+  ok(rows.length >= 10 && west.every((t) => /^[0-9]+$/.test(t)),
+    `محطةُ التعارف تعرض ${rows.length} صفّاً: مشرقيُّنا ورسمُه الآخر (${west.join('')})`);
+  const introLatin = [...new Set((shownIn(idoc.querySelector('main.screen-card')).match(/\d/g) || []))];
+  ok(introLatin.length > 0,
+    `و**هي وحدَها** التي فيها رقمٌ مغربيّ في التطبيق كلِّه (${introLatin.length} رقماً) — `
+    + 'استثناءٌ مكتوبٌ في المنهج (ق١)، وسائرُ الشاشات صفرُ رقمٍ لاتينيّ');
+  idoc.querySelector('.station-body .next')?.click();
+  await new Promise((r) => setTimeout(r, 700));
+  ok(idoc.querySelectorAll('.big-stars .on').length === 3,
+    'وتُختَم **بنجومٍ كاملة بلا محاولةٍ واحدة** — إتمامُها مشاهدةٌ لا إتقان');
+
+  /* ————— ١١ح) الخريطةُ تعرض الرحلةَ كلَّها — والعددُ يُقابَل بالمنهج لا يُكتب بيد —————
+     `test_journey.mjs` يطبع عددَ العقد من ثلاثة مصادر في node، وهذا يقابله **بما
+     رُسِم على الخريطة فعلاً**: تُفرَد أقسامُها كلُّها وتُعَدّ عقدُها. */
+  const mapDoc = await open('#/');
+  const wanted = await (async () => {
+    const m = await import('/js/curriculum.js');
+    return m.sections().reduce((n, s) => n + (s.nodes || []).length, 0);
+  })();
+  for (const head of [...mapDoc.querySelectorAll('.station-head--fold')]) {
+    if (head.getAttribute('aria-expanded') !== 'true') head.click();
+  }
+  await new Promise((r) => setTimeout(r, 900));
+  const drawnNodes = mapDoc.querySelectorAll('.node').length;
+  ok(drawnNodes === wanted,
+    `والخريطةُ ترسم الرحلةَ كلَّها: **${drawnNodes} عقدة** في `
+    + `${mapDoc.querySelectorAll('.station').length} قسماً — وهو ما يحسبه المنهج (${wanted})`);
 
   /* ————— ١٢) **تعاقبُ الصوت**: صوتٌ واحدٌ في الجوّ، والانتقالُ بعد تمامه —————
 

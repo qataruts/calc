@@ -122,8 +122,16 @@ def has_digit(text: str) -> bool:
     return bool(_DIGIT_RE.search(str(text)))
 
 
-def has_counted_noun(text: str) -> bool:
-    """**ق٢**: لا معدودٌ مقرونٌ بعدد — «ثَلَاثُ تُفَّاحَاتْ» ممنوعةٌ نصّاً."""
+def has_counted_noun(text: str, category: str = "") -> bool:
+    """**ق٢**: لا معدودٌ مقرونٌ بعدد — «ثَلَاثُ تُفَّاحَاتْ» ممنوعةٌ نصّاً.
+
+    **واسمُ العدد المركَّب ليس معدوداً** (الجلسة ٧): «ثَلَاثَةَ عَشَرْ» عددٌ واحد لفظُه
+    كلمتان — وهو عينُ العدّ المجرد الذي يفرضه ق٢ لا نقضٌ له. فيُستثنى **بفئته لا
+    بشكله** (`number_name` — وهي مشتقّةٌ من موضع النصّ في الشجرة لا مكتوبةٌ بيد)،
+    والنصُّ نفسُه في فئةٍ أخرى يُمسَك كما كان.
+    """
+    if category == "number_name":
+        return False
     return bool(_COUNTED_RE.search(str(text)))
 
 
@@ -146,11 +154,11 @@ def quoted_symbols(text: str) -> list:
     return found
 
 
-def gate_reason(text: str) -> str:
+def gate_reason(text: str, category: str = "") -> str:
     """علّةُ ردّ النصّ قبل أيّ طلب — أو `""` إن كان سليماً."""
     if has_digit(text):
         return "رقمٌ في نصّ منطوق (ق١): العددُ يُسمّى ولا يُقرأ رسمُه"
-    if has_counted_noun(text):
+    if has_counted_noun(text, category):
         return "معدودٌ مقرونٌ بعدد (ق٢): الكميةُ تُرى وتُعَدّ ولا تُركَّب نحوياً"
     syms = quoted_symbols(text)
     if syms:
@@ -859,7 +867,7 @@ def drain_queue(pool: KeyPool, dry_run: bool = False, limit: int = 0) -> int:
         label = f"[{n}/{len(plan)}] {text} ({CATEGORY_AR.get(cat, cat)}، أولوية {entry.get('priority', 100)})"
 
         # **الحارسُ عند البوّابة**: قيدا المنهج قبل أيّ طلب — طلبٌ لا يُنفَق، وأذنٌ لا تُتعَب.
-        why = gate_reason(text)
+        why = gate_reason(text, cat)
         if why:
             held += 1
             print(f"  ⛔ {label}: {why} — يُحجَز ولا يُطلَب", file=sys.stderr)
@@ -943,8 +951,12 @@ def self_test() -> int:
     ok(quoted_symbols("الْهَمْزَةُ «ء» تُكتَبُ") == ["ء"], "والرمزُ المقتبس يُجرَد")
     ok(gate_reason("ثَلَاثُ تُفَّاحَاتْ").startswith("معدود")
        and gate_reason("خَمْسَةْ") == "", "وعلّةُ الردّ تُسمّى، والسليمُ يمرّ بلا علّة")
+    ok(not has_counted_noun("ثَلَاثَةَ عَشَرْ", "number_name")
+       and has_counted_noun("ثَلَاثَةَ عَشَرْ", "instruction"),
+       "واسمُ العدد المركَّب يمرّ **بفئته**، والنصُّ نفسُه تعليمةً يُمسَك")
     # **والحارسُ يُقاس على القائمة الحيّة**: مدخلٌ واحدٌ يخالف ⇒ فحصٌ أحمر هنا.
-    live = [e["text"] for e in load_queue() if gate_reason(e["text"])]
+    live = [e["text"] for e in load_queue()
+            if gate_reason(e["text"], e.get("category", ""))]
     ok(not live, f"وكلُّ ما في القائمة اليومَ يمرّ البوّابة ({len(load_queue())} مدخلاً)"
        + (f" — مخالف: {'، '.join(live[:4])}" if live else ""))
 

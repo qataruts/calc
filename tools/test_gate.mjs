@@ -197,8 +197,12 @@ if (!builders.length) {
       const got = [...concepts].map((concept) => {
         const skill = curriculum.stations().flatMap((s) => s.skills || [])
           .find((k) => k.startsWith(`${concept}|`) && k.endsWith(`|${kind}`)).split('|');
-        const [item] = review.sessionItems(
-          [{ concept: skill[0], range: Number(skill[1]), kind }], 1, seeded(7));
+        /* **والمدى كما كتبه المنهج** (الجلسة ٧): مدياتُ المرحلة ٨ **وصفيةٌ لا عددية**
+           (`measure|length|pick`)، فتحويلُها عدداً يعطي `NaN` فيسقط التطابقُ التامّ في
+           `stationForSkill` وتُبنى مهارةُ غيرِها — وهو عينُ ما يحرسه هذا الباب، فلا
+           يجوز أن يقع فيه هو. */
+        const range = Number.isFinite(Number(skill[1])) ? Number(skill[1]) : skill[1];
+        const [item] = review.sessionItems([{ concept: skill[0], range, kind }], 1, seeded(7));
         return [concept, item];
       });
       ok(got.every(([concept, item]) => item && item.concept === concept),

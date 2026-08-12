@@ -233,6 +233,81 @@ function linePlan(count) {
   };
 }
 
+// ————— شريطُ النمط: **وحدةٌ تتكرّر، وخانةٌ تنتظر** (المرحلة ٨ — `METHOD.md §٣`) —————
+//
+// **و`count` هنا طولُ الشريط لا كمّيةٌ تُعَدّ**: خاناتٌ متساوية **تُملأ من اليمين**
+// كالإطار سواءً بسواء (جهةُ القراءة نفسُها)، وآخرُها في الترتيب — أقصى اليسار —
+// **خانةُ السؤال**. وما في كل خانةٍ يعلنه المُنادي (`items`) ولا يخترعه الرسّام:
+// النمطُ مادّةُ درسٍ لا زينة، فمن بناه قاله. **والرسّامُ يُعلن ما رسم** (`data-item`
+// على كل خانة) فتقرأ الشاشةُ منه جوابَها — كما تُقرأ الكمّيةُ من `[data-mark]`:
+// «ما يأتي بعده» هو ما في الخانة التي تبعد عنه دورةً كاملة، **مقروءاً من الرسم**.
+
+/** أطولُ شريطٍ يُرسَم: دورتان من (أ أ ب ب) وخانةُ سؤال — وهو أوسعُ ما يحتاجه المنهج. */
+const PATTERN_MAX = 9;
+
+/** الشريطُ الافتراضيّ حين لا يُملي المُنادي مادّتَه: (أ ب أ ب…) وآخرُه سؤال. */
+const defaultItems = (count) => Array.from({ length: count },
+  (_, i) => (i === count - 1 ? null : OBJECTS[i % 2].glyph));
+
+function patternPlan(count, rnd, view, opts) {
+  const items = opts.items || defaultItems(count);
+  /* **وصندوقُ الشريط بمقاس شريطه** (لا بمقاس أطوله): شريطٌ من خمسٍ في صندوق تسعٍ
+     يترك ثلثَيه فراغاً، فيُرسَم صغيراً في وسط بياض — والمراجعةُ البصرية أظهرته.
+     فيُرَدّ الصندوقُ إلى ما رُسِم فيه، ويبقى `VIEWS.pattern` إعلانَ أقصاه. */
+  const box = { w: 2 * PAD + count * CELL, h: view.h };
+  const { cells } = frameGeom(count, 1, PAD, PAD);
+  return {
+    view: box,
+    cells,
+    items,
+    // العناصرُ المرسومة وحدَها (وخانةُ السؤال بلا عنصر) — ولكلٍّ رمزُه
+    marks: cells.map((c, i) => (items[i] ? { ...c, r: R, glyph: items[i] } : null))
+      .filter(Boolean),
+  };
+}
+
+// ————— مشهدُ القياس الوصفيّ: **أشياءُ الشيء الواحد بأحجامٍ مختلفة** (٨·٣ و٨·٤) —————
+//
+// «أطولُ وأقصر · أثقلُ وأخفّ · قبلُ وبعد» قياسٌ **وصفيّ** لا عدديّ (`METHOD.md §٣`):
+// لا كمّيةَ تُعَدّ هنا وإنما مقدارٌ يُقارَن بالعين. فالمشهدُ صفٌّ من خاناتٍ **من
+// اليمين**، في كلٍّ منها الشيءُ نفسُه بمقدارٍ مختلف، **وكلُّها تقف على خطٍّ واحد**
+// (فالفرقُ ارتفاعٌ يُرى، لا موضعٌ يخدع)، **ولكلٍّ رتبتُه** (`ranks` — ١ أصغرُها).
+//
+// **والمقدارُ المرسوم يُعلَن** (`data-size`) فتقرأ الشاشةُ منه أيُّها الأطول — فلا
+// تدّعي شاشةٌ طولاً لم يُرسَم، وهو عقدُ «الجوابُ من المرسوم» على ما ليس كمّاً.
+
+/** أكثرُ ما يقف في مشهدٍ واحد: ثلاثةٌ لترتيب «قبلُ وبعد»، والرابعةُ سَعةُ احتياط. */
+const SCENE_MAX = 4;
+/** نصفُ قطر أكبر شيءٍ في المشهد — أكبرُ من عنصر الكمّية لأنه يُقارَن بالعين لا يُعَدّ. */
+const SCENE_R = 3 * R;
+/** خانةُ الشيء في المشهد: تسع أكبرَه وفاصلَه، فلا يتلامس شيئان مهما اختلفت الرتب. */
+const SCENE_SLOT = 2 * SCENE_R + GAP;
+
+/** رتبُ المشهد الافتراضية: الأيمنُ أكبرُها ثم تصغر يساراً (ثابتةٌ لا تتبع البذرة). */
+const defaultRanks = (count) => Array.from({ length: count }, (_, i) => count - i);
+
+function scenePlan(count, rnd, view, opts) {
+  const ranks = opts.ranks || defaultRanks(count);
+  // **وصندوقُ المشهد بمقاس أشيائه** (كالشريط): مشهدُ شيئين في صندوق أربعةٍ يزيح
+  // الشيئين إلى طرفه فيُقرآن غيرَ متوسّطين — وهو ما أظهرته المراجعةُ البصرية.
+  const box = { w: 2 * PAD + count * SCENE_SLOT, h: view.h };
+  const base = box.h - PAD;                       // خطُّ الأرض: الكلُّ يقف عليه
+  return {
+    view: box,
+    ranks,
+    // المقدارُ من الرتبة: أصغرُها نصفُ أكبرها تقريباً — فارقٌ يُرى بلا أن يختفي الصغير
+    marks: ranks.map((rank, i) => {
+      const r = SCENE_R * (0.5 + (0.5 * rank) / count);
+      return {
+        rank,
+        r,
+        x: box.w - PAD - i * SCENE_SLOT - SCENE_SLOT / 2,
+        y: base - r,
+      };
+    }),
+  };
+}
+
 // ————— سِجلُّ الأنماط —————
 //
 // **المعجمُ يملكه المنهج** (`DISPLAYS` في `curriculum.js`)، وهذا الملفُّ يُنفِّذ منه ما
@@ -250,12 +325,15 @@ const VIEWS = {
   // بطاقةُ الرمز بصندوق بطاقة النرد نفسِه — الرمزُ تسميةٌ لكمٍّ لا بديلٌ أكبرُ منه
   numeral: { w: 2 * (PAD + 4) + 3 * CELL, h: 2 * (PAD + 4) + 3 * CELL },
   line: { w: 660, h: 140 },
+  pattern: { w: 2 * PAD + PATTERN_MAX * CELL, h: 2 * PAD + CELL },
+  scene: { w: 2 * PAD + SCENE_MAX * SCENE_SLOT, h: 2 * PAD + 2 * SCENE_R },
 };
 
 /**
  * **ولكلِّ رسّامٍ صنفُه** (`kind`، الجلسة ٤): `quantity` كمّيةٌ تُعَدّ عناصرُها ·
- * `numeral` رمزٌ يُقرأ نصُّه · `line` خطٌّ تُعَدّ علاماتُه. وبه يعرف **قارئُ المرسوم**
- * (`read`) كيف يُرجِع ما رُسِم فعلاً، ويعرف الحارسُ بأيّ مسطرةٍ يقيس — فلا يُطالَب
+ * `numeral` رمزٌ يُقرأ نصُّه · `line` خطٌّ تُعَدّ علاماتُه · **`pattern` شريطٌ تُعَدّ
+ * خاناتُه** · **`scene` مشهدٌ تُعَدّ أشياؤه** (الجلسة ٧). وبه يعرف **قارئُ المرسوم**
+ * (`READERS`) كيف يُرجِع ما رُسِم فعلاً، ويعرف الحارسُ بأيّ مسطرةٍ يقيس — فلا يُطالَب
  * الرمزُ بأن يرسم سبعةَ أشياء ولا الكمّيةُ بأن تكتب رقماً.
  */
 const PAINTERS = {
@@ -269,6 +347,10 @@ const PAINTERS = {
   // **الخطُّ من عددٍ واحدٍ فصاعداً**: خطٌّ بلا مسافةٍ ليس خطّاً — والمدى هنا مدى
   // الخطّ لا كميةٌ تُعَدّ، فالصفرُ طرفُه الأيمن دائماً لا قيمةٌ يُطلَب رسمُها.
   line: { kind: 'line', min: 1, max: 20, plan: linePlan, paint: paintLine },
+  // **الشريطُ من ثلاثِ خاناتٍ فصاعداً**: خانتان لا تُرِيان تكراراً، فليستا نمطاً.
+  pattern: { kind: 'pattern', min: 3, max: PATTERN_MAX, plan: patternPlan, paint: paintPattern },
+  // **والمشهدُ من شيئين فصاعداً**: القياسُ الوصفيّ مقارنةٌ، والواحدُ لا يُقارَن.
+  scene: { kind: 'scene', min: 2, max: SCENE_MAX, plan: scenePlan, paint: paintScene },
 };
 
 /**
@@ -280,6 +362,10 @@ const READERS = {
   quantity: (el) => el.querySelectorAll('[data-mark]').length,
   numeral: (el) => readNumeral(el.querySelector('[data-numeral]')?.dataset.numeral),
   line: (el) => el.querySelectorAll('[data-tick]').length - 1,
+  // الشريطُ تُعَدّ **خاناتُه** لا عناصرُه: خانةُ السؤال منه، وهي موضعُ الدرس
+  pattern: (el) => el.querySelectorAll('[data-cell]').length,
+  // والمشهدُ تُعَدّ **أشياؤه**: مقاديرُ تُقارَن لا كمّيةٌ تُعَدّ
+  scene: (el) => el.querySelectorAll('[data-item]').length,
 };
 
 /** أنماطُ العرض التي يرسمها المصيِّر اليوم، بترتيب الرحلة. */
@@ -332,6 +418,31 @@ export function plan(display, count, opts = {}) {
   if (opts.glyph && !OBJECTS.some((o) => o.glyph === opts.glyph)) {
     throw new RangeError('رمزٌ خارج عناصر عالم الطفل — «صدق الصورة» عقدٌ لا ذوق');
   }
+  // **ومادّةُ الشريط تُقابَل بطوله وبصدق الصورة**: خانةٌ زائدة أو ناقصة أو رمزٌ من
+  // خارج عناصر عالم الطفل **يُرمى ولا يُقرَّب** — كما تُرمى كمّيةٌ خارج المدى.
+  if (opts.items !== undefined) {
+    if (painter.kind !== 'pattern') {
+      throw new RangeError(`«${display}» ليس شريطَ نمطٍ — ولا مادّةَ خاناتٍ لِما لا خانةَ له`);
+    }
+    if (!Array.isArray(opts.items) || opts.items.length !== count) {
+      throw new RangeError(`مادّةُ الشريط ${opts.items?.length} خانةً وطولُه ${count}`);
+    }
+    const alien = opts.items.filter((g) => g !== null && !OBJECTS.some((o) => o.glyph === g));
+    if (alien.length) {
+      throw new RangeError(`رمزٌ خارج عناصر عالم الطفل في الشريط: «${alien[0]}»`);
+    }
+  }
+  // **ورتبُ المشهد مقاديرُ مختلفة**: رتبتان متساويتان تُريان شيئين سواءً، ولا يُسأل
+  // «أيُّهما أطول» عن سواءين — فالتكرارُ خطأُ برمجةٍ يصرخ.
+  if (opts.ranks !== undefined) {
+    if (painter.kind !== 'scene') {
+      throw new RangeError(`«${display}» ليس مشهدَ قياسٍ — ولا رتبةَ لِما لا يُقارَن مقداره`);
+    }
+    const want = Array.from({ length: count }, (_, i) => i + 1).join('،');
+    if (!Array.isArray(opts.ranks) || [...opts.ranks].sort((a, b) => a - b).join('،') !== want) {
+      throw new RangeError(`رتبُ المشهد ليست ١..${count} كلَّها مرّةً واحدة`);
+    }
+  }
   const split = opts.split ?? null;
   if (split !== null) {
     if (painter.kind !== 'quantity') {
@@ -344,15 +455,17 @@ export function plan(display, count, opts = {}) {
 
   const view = VIEWS[display];
   const rnd = seeded((opts.seed ?? 0) >>> 0);
-  const glyph = display === 'objects'
+  // **ومشهدُ القياس شيءٌ واحد بمقادير**: المقارنةُ على المقدار لا على الصنف، فلو
+  // اختلف الشيئان لَقارن الطفلُ سيارةً بفراشة — والمقصودُ أكبرُ وأصغر لا أيُّهما أثقل حقاً.
+  const glyph = display === 'objects' || display === 'scene'
     ? (opts.glyph || OBJECTS[Math.floor(rnd() * OBJECTS.length)].glyph)
     : null;
 
   const figure = {
     display, count, view, r: R, glyph, kind: painter.kind, split,
     seed: (opts.seed ?? 0) >>> 0,
-    cells: [], frames: [], ticks: [], slots: [], labels: [], text: null,
-    ...painter.plan(count, rnd, view),
+    cells: [], frames: [], ticks: [], slots: [], labels: [], items: [], ranks: [], text: null,
+    ...painter.plan(count, rnd, view, opts),
   };
   if (split !== null) figure.marks = splitMarks(figure.marks, split);
   return figure;
@@ -420,12 +533,8 @@ export function spanStyle(box, view) {
 function paintObjects(figure) {
   const el = h('div', {});
   for (const m of figure.marks) {
-    const mark = faceEl(figure.glyph, 'fig-mark');
-    mark.dataset.mark = '';
+    const mark = markEl(figure.glyph, m, figure.view);
     if (m.part) mark.dataset.part = m.part;
-    for (const [key, value] of Object.entries(spotStyle(m, figure.view))) {
-      mark.style.setProperty(key, value);
-    }
     el.append(mark);
   }
   return el;
@@ -456,6 +565,57 @@ function paintLine(figure) {
   const text = labels.map((l) => `<text class="fig-label num" x="${l.x.toFixed(2)}"`
     + ` y="${l.y + 34}" text-anchor="middle">${l.text}</text>`).join('');
   return svgFigure(figure, rail + dots + text);
+}
+
+/** صندوقُ خانةٍ من مركزها — خانةُ الشريط مربّعٌ بمقاس `CELL` حول العنصر. */
+const cellBox = (c) => ({ x: c.x - CELL / 2, y: c.y - CELL / 2, w: CELL, h: CELL });
+
+/** عنصرٌ من عناصر عالم الطفل في موضعه من الشكل — مُصيِّرُ الرموز الواحد (`faceEl`). */
+function markEl(glyph, mark, view, extra = {}) {
+  const el = faceEl(glyph, 'fig-mark');
+  el.dataset.mark = '';
+  for (const [key, value] of Object.entries({ ...spotStyle(mark, view), ...extra })) {
+    el.style.setProperty(key, value);
+  }
+  return el;
+}
+
+/**
+ * **شريطُ النمط**: خاناتٌ متساوية من اليمين، في كلٍّ ما أعلنه المُنادي — **وخانةُ
+ * السؤال فارغةٌ تُعلن فراغها** (`data-cell` بلا `data-item`). فتقرأ الشاشةُ الشريطَ
+ * من الـDOM ولا تُصدَّق على دعواها: «ما يأتي بعده» ما في خانةٍ تبعد دورةً كاملة.
+ */
+function paintPattern(figure) {
+  const el = h('div', {});
+  for (const [i, cell] of figure.cells.entries()) {
+    const glyph = figure.items[i];
+    const box = h('div', {
+      class: `fig-box${glyph ? '' : ' fig-box--ask'}`,
+      css: spanStyle(cellBox(cell), figure.view),
+    }, glyph ? null : h('span', { class: 'fig-ask' }, '؟'));
+    box.dataset.cell = '';
+    if (glyph) box.dataset.item = glyph;
+    el.append(box);
+  }
+  for (const m of figure.marks) el.append(markEl(m.glyph, m, figure.view));
+  return el;
+}
+
+/**
+ * **مشهدُ القياس**: الشيءُ نفسُه بمقادير، كلُّه واقفٌ على خطٍّ واحد — **والمقدارُ
+ * المرسوم مُعلَنٌ** (`data-size` قطراً بوحدات الرسم، و`data-rank` رتبتُه) فتقرأ
+ * الشاشةُ منه الأطولَ والأقصر، ولا تدّعي طولاً لم يُرسَم.
+ */
+function paintScene(figure) {
+  const el = h('div', {});
+  for (const m of figure.marks) {
+    const mark = markEl(figure.glyph, m, figure.view);
+    mark.dataset.item = figure.glyph;
+    mark.dataset.size = String(Math.round(2 * m.r));
+    mark.dataset.rank = String(m.rank);
+    el.append(mark);
+  }
+  return el;
 }
 
 /**
@@ -499,6 +659,8 @@ const TITLES = {
   'two-frames': 'إِطَارَا العَشَرَة — عَشَرَةٌ وَآحَاد',
   numeral: 'بِطَاقَةُ الرَّمْز — مَشْرِقِيَّةٌ حَصْراً',
   line: 'خَطُّ الأَعْدَاد — الصِّفْرُ مِنَ اليَمِين',
+  pattern: 'شَرِيطُ النَّمَط — خَانَاتٌ مِنَ اليَمِين وَآخِرُهَا سُؤَال',
+  scene: 'مَشْهَدُ القِيَاس — الشَّيْءُ نَفْسُهُ بِمَقَادِير',
 };
 
 function sheet(display) {

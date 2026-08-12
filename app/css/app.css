@@ -1223,6 +1223,16 @@ button {
 
 .q-rows .figure { --unit: .82px; }
 
+/* **ونمذجةُ الفرق تُرَصّ كما تُرَصّ «وحدك»** (قيدُ إصلاح مراجعة الجلسة ٦): خطوةُ
+   «شاهِدْ» تقول «الصَّفُّ الأَعْلَى» فيجب أن يكون في الصورة صفٌّ أعلى — صفٌّ تحت صفّ
+   بمحاذاةٍ واحدة، لا كمّيتان جنباً إلى جنب. */
+.q-stage.q-rows {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: .5rem;
+}
+
 /* بطاقةُ الرمز في موضع الاختيار: صندوقٌ يبلغ هدفَ اللمس ورقمُه بيّن */
 .qcard--numeral .figure { --unit: .42px; }
 .q-choices .qcard--numeral { padding: .35rem; }
@@ -1522,6 +1532,111 @@ button {
   box-shadow: 0 0 0 3px var(--accent-numeral), 0 0 0 7px var(--ok);
 }
 
+/* ————— شاشاتُ المرحلتين ٧–٨: الحزمةُ والعبورُ والنمطُ والقياس (الجلسة ٧) ————— */
+
+/* **حُزْمةٌ وآحاد**: لوحُ البناء هو لوحُ الجسر نفسُه (`q-bond`) — الرمزُ فوق وخانتاه
+   تحته — فالبناءُ في المرحلة ٧ جسرٌ ثانٍ: عشرةٌ وآحاد. */
+.q-solve--teen .q-fact-fig > .figure { --unit: .78px; }
+.q-solve--bridge .q-fact-fig > .figure { --unit: .72px; }
+.q-solve--bridge .q-fact-part > .figure { --unit: .72px; }
+.q-solve--bridge .q-meet { gap: 1.4rem; align-items: flex-start; }
+
+/* شريطُ النمط ومشهدُ القياس: بطلا شاشتيهما، ويُفردان على عرض البطاقة */
+.q-solve--pattern,
+.q-solve--measure { display: flex; justify-content: center; margin: .5rem 0 1rem; }
+
+/* **وشريطُ النمط أكبرُ من بطاقةِ كمّية**: خاناتُه تُقرأ إيقاعاً بنظرةٍ واحدة، فيُفرَد
+   على عرض البطاقة (و`max-width` يردّه على الشاشات الضيقة بلا فائض). */
+.q-figure > .figure--pattern { --unit: 1.45px; }
+.q-reveal .figure--pattern { --unit: 1.05px; }
+.q-strip > .figure { --unit: 1.45px; }
+.q-scene > .figure { --unit: .78px; }
+
+/* خانةُ الشريط: مربّعٌ هادئٌ يحدّ العنصر، **وخانةُ السؤال بحدٍّ متقطّع** — فيُرى
+   موضعُ الجواب مكاناً ينتظر لا فراغاً يُتخيَّل (نظيرُ خانة الإطار الفارغة). */
+.fig-box {
+  position: absolute;
+  left: var(--x);
+  top: var(--y);
+  width: var(--w);
+  height: var(--h);
+  display: grid;
+  place-items: center;
+  border-radius: 16px;
+  background: color-mix(in srgb, var(--accent, var(--accent-pattern)) 7%, transparent);
+  transition: background .18s ease, box-shadow .18s ease;
+}
+
+.fig-box--ask {
+  background: none;
+  box-shadow: inset 0 0 0 3px var(--accent, var(--accent-pattern));
+}
+
+.fig-ask {
+  font-family: var(--font-num);
+  font-size: calc(46 * var(--unit, 1px));
+  color: var(--accent, var(--accent-pattern));
+}
+
+.fig-box img.emoji { width: 74%; height: 74%; }
+
+/* **يُضاء الشريطُ دورةً دورة** فيُدرَك الإيقاعُ بالعين — لا عدَّ ولا كلام */
+.fig-box.is-counted { background: color-mix(in srgb, var(--ok) 22%, transparent); }
+.fig-box.is-open { box-shadow: inset 0 0 0 3px var(--accent, var(--accent-pattern)); }
+.fig-box.is-full { box-shadow: inset 0 0 0 3px var(--ok); background: none; }
+
+/* أهدافُ اللمس في مشهد القياس: زرٌّ فوق كل شيءٍ بمقاسه من المصيِّر (نظيرُ `fig-tap`) */
+.q-pickspot {
+  position: absolute;
+  left: var(--x);
+  top: var(--y);
+  width: var(--d);
+  aspect-ratio: 1;
+  padding: 0;
+  border: 3px solid transparent;
+  border-radius: 50%;
+  background: none;
+  transition: border-color .18s ease, transform .15s ease;
+}
+
+.q-pickspot:active { transform: scale(.94); }
+.q-pickspot.good { border-color: var(--ok); }
+.q-pickspot.bad { border-color: var(--err); }
+
+/* وأثرُ «يُرى الدرس» على أشياء المشهد: حلقةٌ وحجم، كأثر العدّ على عناصر الكمّية */
+.fig-mark[data-item].is-counted {
+  box-shadow: 0 0 0 4px var(--ok);
+  border-radius: 50%;
+  transform: scale(1.06);
+}
+
+/* محطةُ التعارف (٨·٥): صفٌّ لكل رقمٍ — مشرقيُّنا ورسمُه الآخر، **بلا قياس** */
+.intro-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(9rem, 1fr));
+  gap: .6rem;
+  margin: 1rem 0;
+}
+
+.intro-row {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: .5rem;
+  min-height: var(--tap);
+  padding: .4rem .6rem;
+  border-radius: 18px;
+  background: var(--card);
+  border: 3px solid color-mix(in srgb, var(--accent) 22%, var(--mix));
+  box-shadow: var(--shadow);
+}
+
+.intro-row.is-lit { border-color: var(--ok); }
+.intro-row:active { transform: scale(.97); }
+.intro-east .figure { --unit: .3px; }
+.intro-vs { color: var(--ink-soft); font-size: 1.2rem; }
+.intro-west { font-size: 2rem; color: var(--accent); }
+
 /* ————— الشاشات الضيقة ————— */
 
 @media (max-width: 26rem) {
@@ -1544,4 +1659,11 @@ button {
   .q-fact-fig > .figure { --unit: .62px; }
   .q-fact-part > .figure { --unit: .38px; }
   .q-sign { font-size: 1.9rem; }
+  .q-strip > .figure { --unit: .52px; }
+  .q-scene > .figure { --unit: .46px; }
+  .q-solve--teen .q-fact-fig > .figure { --unit: .5px; }
+  .q-solve--bridge .q-fact-fig > .figure { --unit: .44px; }
+  .q-solve--bridge .q-fact-part > .figure { --unit: .44px; }
+  .intro-east .figure { --unit: .22px; }
+  .intro-west { font-size: 1.5rem; }
 }

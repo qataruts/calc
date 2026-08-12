@@ -30,6 +30,9 @@ import './numerals.js';
 import './compare.js';
 import './bonds.js';
 import './ops.js';
+import './teens.js';
+import './patterns.js';
+import './intro.js';
 import {
   h, icon, faceEl, toast, go, arNum, starsRow, topbar, brandMark, landmark, DEV,
   PAUSE_ACCENT,

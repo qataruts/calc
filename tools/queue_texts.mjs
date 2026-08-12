@@ -63,6 +63,8 @@ const SAY_CATEGORY = {
   revealSpot: 'modeling',
   revealSplit: 'modeling',   // «وَتَنْشَقُّ إِلَى هَذَيْنِ الْجُزْأَيْنْ» — شقُّ الكمّية يُشاهَد
   revealRest: 'modeling',    // «وَهَذَا مَا بَقِيَ لَهَا» — وكذلك ما بقي للإطار
+  revealNext: 'modeling',    // «وَهَذَا مَا يَأْتِي بَعْدَهْ» — تمامُ النمط يُشاهَد
+  revealOrder: 'modeling',   // «وَهَذَا تَرْتِيبُهَا…» — ترتيبُ المقادير يُشاهَد
   bravo: 'celebration',
   great: 'celebration',
 };

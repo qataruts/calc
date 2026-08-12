@@ -190,7 +190,13 @@ function compareView(round, hooks) {
 
 // ————— ٤·٢ «أَيْنَ يَقَع؟» — خطُّ الأعداد —————
 
-function lineRound(station, rnd, { aided = false } = {}) {
+/**
+ * **ومولّدُ الخطّ ومُصيِّرُه مُصدَّران** (الجلسة ٧): المحطة ٧·٤ تعلن `line|20|place`
+ * فتسأل السؤالَ نفسَه بمداه الممتدّ — و**التمرينُ واحدٌ فلا يُنسَخ**: نسختان تفترقان
+ * يوماً في «يُعَدّ على الخطّ ولا يُلقَّن»، والمقيسُ (`line|…|place`) واحدٌ في ليتنر
+ * وفي لوحة وليّ الأمر. والمولّدُ **يقرأ جبهةَ محطته** فيمتدّ الخطُّ بامتدادها.
+ */
+export function lineRound(station, rnd, { aided = false } = {}) {
   const f = station.frontier;
   const skill = skillOf(station, 'line', 'place');
   const pool = span(f.min, f.max);
@@ -208,7 +214,7 @@ function lineRound(station, rnd, { aided = false } = {}) {
   };
 }
 
-function lineView(round, hooks) {
+export function lineView(round, hooks) {
   const card = figureBox(round.card, 'q-model');
   const rail = figureBox(round.rail, 'q-rail');
   let locked = false;

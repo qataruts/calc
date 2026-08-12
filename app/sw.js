@@ -37,9 +37,12 @@
 // قفلُ الزوم في ميتا مخزونةٍ قديمة لا يُقفل شيئاً، وجهازُ المالك يبقى يُكبَّر بعد
 // أن أُصلح. **رفعةٌ واحدة للحزمة كلِّها** (بندُ م٢·٤) لا رفعةٌ لكل ملفّ.
 //
+// **وإلى `v10` في الجلسة ٧**: دخلت `js/teens.js` و`js/patterns.js` و`js/intro.js`
+// (المرحلتان ٧–٨ ومحطةُ التعارف) وتحرّكت `render.js` و`station.js` و`ops.js` و`app.css`.
+//
 // **وإلى `v9` في الجلسة ٦**: دخلت `js/ops.js` (المرحلة ٦) وتحرّكت `station.js`
 // و`curriculum.js` و`gate.js` و`app.css` — والقشرةُ المخزونةُ لا تعرف الملفَّ الجديد.
-const VERSION = 'v9';
+const VERSION = 'v10';
 const SHELL_CACHE = `ihsib-shell-${VERSION}`;
 const AUDIO_CACHE = 'ihsib-audio';        // ثابتٌ عمداً — لا يحمل VERSION
 const KEEP = [SHELL_CACHE, AUDIO_CACHE];
@@ -60,16 +63,19 @@ const SHELL = [
   'js/counting.js',
   'js/curriculum.js',
   'js/gate.js',
+  'js/intro.js',
   'js/main.js',
   'js/numerals.js',
   'js/ops.js',
   'js/parent.js',
+  'js/patterns.js',
   'js/progress.js',
   'js/quantity.js',
   'js/registry.js',
   'js/render.js',
   'js/review.js',
   'js/station.js',
+  'js/teens.js',
   'js/ui.js',
   // فهرسُ رموز عالم الطفل — **ومنه** تُخزَّن ملفاتُها (`precacheEmoji`)، فلا يُكتب
   // ملفُّ رمزٍ في هذه القائمة بيد: رمزٌ جديد يدخل المخزون بجرد `fetch_twemoji.py`.

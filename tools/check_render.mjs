@@ -41,14 +41,21 @@ const label = (display, count, seed) => `[${display} · ${count} · بذرة ${s
 // **دالّةٌ خالصة على خطةٍ** — لا تعرف مَن ولّدها، فتُجرَّب سالباً بخططٍ مصنوعةٍ مكسورة.
 
 function figureErrors(name, figure, want) {
-  const errors = [];
   const marks = figure.marks || [];
+  const errors = marks.length === want ? []
+    : [`${name}: رسم ${marks.length} عنصراً والمقصود ${want} `
+      + '— **العددُ المرسوم ليس هو المقصود**'];
+  return [...errors, ...placeErrors(name, marks, figure.view)];
+}
 
-  if (marks.length !== want) {
-    errors.push(`${name}: رسم ${marks.length} عنصراً والمقصود ${want} `
-      + '— **العددُ المرسوم ليس هو المقصود**');
-  }
-
+/**
+ * **الموضعُ وحدَه**: داخلَ الصندوق، وبلا تراكبٍ ولا تلاصقٍ دون الفاصل الأدنى.
+ * مفصولٌ عن عدّ العناصر لأنّ الأنماط التي ليست كمّاً (الشريطُ والمشهد) تُقاس بعددٍ
+ * آخر — **وقواعدُ الموضع واحدةٌ لها كلِّها**: ما خرج عن صندوقه يُقتصّ، وما تلاصق
+ * لا يُميَّز عمّا جاوره.
+ */
+function placeErrors(name, marks, view) {
+  const errors = [];
   for (const [i, m] of marks.entries()) {
     if (![m.x, m.y, m.r].every(Number.isFinite)) {
       errors.push(`${name}: العنصر ${i} بموضعٍ ليس عدداً`);
@@ -56,7 +63,7 @@ function figureErrors(name, figure, want) {
     }
     if (m.r <= 0) errors.push(`${name}: العنصر ${i} بلا حجم`);
     if (m.x - m.r < -EPS || m.y - m.r < -EPS
-      || m.x + m.r > figure.view.w + EPS || m.y + m.r > figure.view.h + EPS) {
+      || m.x + m.r > view.w + EPS || m.y + m.r > view.h + EPS) {
       errors.push(`${name}: العنصر ${i} يخرج عن صندوق الشكل `
         + `(${m.x.toFixed(1)}، ${m.y.toFixed(1)}) — فيُقتصّ فلا يُعَدّ`);
     }
@@ -292,6 +299,95 @@ function lineErrors(name, figure, want) {
   return errors;
 }
 
+// ————— ٣د) شريطُ النمط: خاناتُه طولُه، ومادّتُه ما أُعلن (الجلسة ٧) —————
+//
+// خمسُ حقائقَ تُقاس أعداداً: **الخاناتُ طولُ الشريط** (فلا تسقط منها واحدة) ·
+// **متساويةُ التباعد** · **تُملأ من اليمين** كالإطار (جهةُ القراءة نفسُها) ·
+// **وما في كل خانةٍ هو ما أُعلن** (عنصرٌ أو فراغٌ للسؤال) · **ولكلِّ عنصرٍ خانتُه**
+// — فعنصرٌ في غير خانته يُري الطفلَ نمطاً غيرَ الذي بُني له.
+
+function patternErrors(name, figure, want) {
+  const errors = [];
+  const cells = figure.cells || [];
+  const items = figure.items || [];
+  if (cells.length !== want) {
+    errors.push(`${name}: رسم ${cells.length} خانةً والشريطُ ${want} `
+      + '— **الخاناتُ ليست هي المقصود**');
+    return errors;
+  }
+  if (items.length !== want) {
+    errors.push(`${name}: مادّةُ الشريط ${items.length} والخاناتُ ${want}`);
+    return errors;
+  }
+  const steps = cells.slice(1).map((c, i) => cells[i].x - c.x);
+  if (steps.some((s) => s <= 0)) {
+    errors.push(`${name}: الشريطُ لا يمضي إلى اليسار — والخاناتُ تُملأ من اليمين `
+      + '(جهةُ ملء الإطار نفسُها، `METHOD.md §٣`)');
+  } else if (Math.max(...steps) - Math.min(...steps) > 1e-6) {
+    errors.push(`${name}: تباعدُ الخانات غيرُ متساوٍ — والنمطُ إيقاعٌ يُرى`);
+  }
+  if (cells.some((c) => Math.abs(c.y - cells[0].y) > EPS)) {
+    errors.push(`${name}: خاناتُ الشريط ليست على صفٍّ واحد`);
+  }
+  const filled = items.filter(Boolean).length;
+  if ((figure.marks || []).length !== filled) {
+    errors.push(`${name}: رسم ${(figure.marks || []).length} عنصراً ومادّتُه ${filled} `
+      + '— **المرسومُ ليس هو المُعلَن**');
+    return errors;
+  }
+  if (!filled) errors.push(`${name}: شريطٌ بلا عنصرٍ واحد — لا نمطَ في فراغ`);
+  let at = 0;
+  for (const [i, glyph] of items.entries()) {
+    if (!glyph) continue;
+    const m = figure.marks[at++];
+    if (m.glyph !== glyph) {
+      errors.push(`${name}: الخانة ${i} أُعلنت «${glyph}» ورُسم فيها «${m.glyph}»`);
+      break;
+    }
+    if (Math.abs(m.x - cells[i].x) > EPS || Math.abs(m.y - cells[i].y) > EPS) {
+      errors.push(`${name}: عنصرُ الخانة ${i} ليس في موضعها — نمطٌ يُرى غيرَ الذي بُني`);
+      break;
+    }
+  }
+  return [...errors, ...placeErrors(name, figure.marks || [], figure.view)];
+}
+
+// ————— ٣هـ) مشهدُ القياس: مقاديرُ تُقارَن على خطٍّ واحد (الجلسة ٧) —————
+//
+// «أطولُ وأقصر» قياسٌ بالعين، وشرطُه أربعةٌ: **الأشياءُ عددُ المشهد** · **رتبُها
+// ١..العدد كلُّها مرّةً واحدة** (فلا سواءان يُسأل عن أطولهما) · **والمقدارُ يتبع
+// الرتبة** (الأكبرُ رتبةً أكبرُ مقداراً — وإلّا كذب المشهدُ على عينه) · **وكلُّها
+// تقف على خطٍّ واحد** فيكون الفرقُ ارتفاعاً يُرى لا موضعاً يخدع.
+
+function sceneErrors(name, figure, want) {
+  const errors = [];
+  const marks = figure.marks || [];
+  if (marks.length !== want) {
+    errors.push(`${name}: في المشهد ${marks.length} شيئاً والمقصود ${want}`);
+    return errors;
+  }
+  const ranks = marks.map((m) => m.rank);
+  const wanted = Array.from({ length: want }, (_, i) => i + 1).join('،');
+  if ([...ranks].sort((a, b) => a - b).join('،') !== wanted) {
+    errors.push(`${name}: الرتبُ (${ranks.join('، ')}) وليست ١..${want} كلَّها مرّةً واحدة `
+      + '— ولا يُسأل «أيُّهما أطول» عن سواءين');
+    return errors;
+  }
+  const bySize = [...marks].sort((a, b) => a.r - b.r);
+  if (bySize.some((m, i) => m.rank !== i + 1)) {
+    errors.push(`${name}: المقدارُ لا يتبع الرتبة — **المرسومُ ليس هو المقيس**`);
+  }
+  const base = marks[0].y + marks[0].r;
+  if (marks.some((m) => Math.abs(m.y + m.r - base) > EPS)) {
+    errors.push(`${name}: الأشياءُ لا تقف على خطٍّ واحد — فالفرقُ موضعٌ يخدع لا طولٌ يُرى`);
+  }
+  const steps = marks.slice(1).map((m, i) => marks[i].x - m.x);
+  if (steps.some((s) => s <= 0)) {
+    errors.push(`${name}: المشهدُ لا يمضي إلى اليسار — وجهةُ العرض جهةُ القراءة`);
+  }
+  return [...errors, ...placeErrors(name, marks, figure.view)];
+}
+
 // ————— ٤) صدق الصورة: عناصرُ عالم الطفل —————
 
 function objectErrors() {
@@ -387,6 +483,8 @@ function sweep() {
         if (kind === 'quantity') errors.push(...figureErrors(name, figure, n));
         if (kind === 'numeral') errors.push(...numeralErrors(name, figure, n));
         if (kind === 'line') errors.push(...lineErrors(name, figure, n));
+        if (kind === 'pattern') errors.push(...patternErrors(name, figure, n));
+        if (kind === 'scene') errors.push(...sceneErrors(name, figure, n));
         if (figure.frames.length) errors.push(...frameErrors(name, figure, n));
         if (display === 'dice') errors.push(...diceErrors(name, figure, n));
         if (display === 'objects' && !render.OBJECTS.some((o) => o.glyph === figure.glyph)) {
@@ -478,13 +576,15 @@ function check() {
   const covered = painted.map((d) => render.rangeOf(d));
 
   const byKind = (kind) => painted.filter((d) => render.kindOf(d) === kind);
-  door('١) المرسومُ هو المقصود — كمّاً يُعَدّ ورمزاً يُقرأ وخطّاً يمتدّ',
+  door('١) المرسومُ هو المقصود — كمّاً يُعَدّ ورمزاً يُقرأ وخطّاً يمتدّ وشريطاً يتكرّر',
     errors,
     `${figures} شكلاً و${splits} شقّاً (${painted.length} نمطاً × مداه × ${SEEDS.length} بذور): `
     + `${byKind('quantity').length} نمطَ كمّيةٍ رسم عددَه بلا تراكبٍ ولا خروجٍ عن صندوقه `
     + `وانشقّ شقّين بترتيب رسمه، `
     + `و${byKind('numeral').length} بطاقةَ رمزٍ كتبت رقمَها المشرقيّ، `
-    + `و${byKind('line').length} خطّاً علاماتُه مدىً وواحدةً متساويةَ التباعد من اليمين`);
+    + `و${byKind('line').length} خطّاً علاماتُه مدىً وواحدةً متساويةَ التباعد من اليمين، `
+    + `و${byKind('pattern').length} شريطَ نمطٍ خاناتُه طولُه ومادّتُه ما أُعلن، `
+    + `و${byKind('scene').length} مشهدَ قياسٍ مقاديرُه تتبع رتبَها على خطٍّ واحد`);
 
   door('٢) صدق الصورة: عناصرُ عالم الطفل من Twemoji المحلية',
     objectErrors(),
@@ -655,6 +755,57 @@ function selfTest() {
     f.labels = f.ticks.map((t) => ({ ...t, text: String(t.value) }));
   }), 10), 'أرقامُ المرساة'),
   'ورقمٌ فوق كلِّ علامةٍ يُمسَك — «أين يقع؟» حسُّ موضعٍ لا قراءةُ لافتة');
+
+  console.log('\n— ٣د) شريطُ النمط: يُمسَك ما خالف مادّتَه أو إيقاعَه —');
+  const strip = render.plan('pattern', 5, { seed: 1 });
+  const trio = render.plan('pattern', 7, {
+    items: [render.OBJECTS[0].glyph, render.OBJECTS[1].glyph, render.OBJECTS[2].glyph,
+      render.OBJECTS[0].glyph, render.OBJECTS[1].glyph, render.OBJECTS[2].glyph, null],
+  });
+  ok(!patternErrors('ش', strip, 5).length && !patternErrors('ش', trio, 7).length,
+    'شريطا (أ ب أ ب ؟) و(أ ب ج أ ب ج ؟) نظيفان — خاناتُهما طولُهما ومادّتُهما ما أُعلن');
+  ok(found(patternErrors('ش', broke(strip, (f) => { f.cells.pop(); }), 5),
+    'ليست هي المقصود'),
+  'وخانةٌ ساقطةٌ من الشريط تُمسَك');
+  ok(found(patternErrors('ش', broke(strip, (f) => { f.marks[1].glyph = f.items[0]; }), 5),
+    'ورُسم فيها'),
+  '**وعنصرٌ رُسم غيرَ ما أُعلن في خانته يُمسَك** (نمطٌ يُرى غيرَ الذي بُني)');
+  ok(found(patternErrors('ش', broke(strip, (f) => { f.marks[1].x = f.marks[0].x; }), 5),
+    'ليس في موضعها'),
+  'وعنصرٌ زاح عن خانته يُمسَك');
+  ok(found(patternErrors('ش', broke(strip, (f) => {
+    for (const c of f.cells) c.x = f.view.w - c.x;
+  }), 5), 'إلى اليسار'),
+  'وشريطٌ انقلب فصارت أولى خاناته يساراً يُمسَك (جهةُ ملء الإطار نفسُها)');
+  ok(found(patternErrors('ش', broke(strip, (f) => { f.cells[2].x -= 9; }), 5), 'غيرُ متساوٍ'),
+    'وخانةٌ انزاحت فاختلّ الإيقاع تُمسَك (النمطُ إيقاعٌ يُرى)');
+  ok(throws(() => render.plan('pattern', 5, { items: [null, null, null, null] }))
+    && throws(() => render.plan('pattern', 5, { items: [null, null, null, null, 'x'] })),
+  'ومادّةٌ لا توافق الطولَ أو فيها رمزٌ خارج عناصر عالم الطفل تُرمى ولا تُقرَّب');
+  ok(throws(() => render.plan('ten-frame', 5, { items: [null] })),
+    'ولا مادّةَ خاناتٍ لِما ليس شريطَ نمط');
+
+  console.log('\n— ٣هـ) مشهدُ القياس: يُمسَك ما كذب على العين —');
+  const pair = render.plan('scene', 2, { seed: 4 });
+  const three = render.plan('scene', 3, { seed: 5, ranks: [2, 3, 1] });
+  ok(!sceneErrors('ش', pair, 2).length && !sceneErrors('ش', three, 3).length,
+    'مشهدا شيئين وثلاثةٍ نظيفان — المقدارُ يتبع الرتبة والكلُّ على خطٍّ واحد');
+  ok(found(sceneErrors('ش', broke(pair, (f) => { f.marks[0].r = f.marks[1].r / 2; }), 2),
+    'ليس هو المقيس'),
+  '**ومقدارٌ لا يتبع رتبتَه يُمسَك** (الأصغرُ رسماً يُسمّى الأكبر)');
+  ok(found(sceneErrors('ش', broke(pair, (f) => { f.marks[1].rank = f.marks[0].rank; }), 2),
+    'سواءين'),
+  'ورتبتان متساويتان تُمسَكان (لا يُسأل «أيُّهما أطول» عن سواءين)');
+  ok(found(sceneErrors('ش', broke(pair, (f) => { f.marks[1].y -= 20; }), 2), 'خطٍّ واحد'),
+    'وشيءٌ رُفع عن خطّ الأرض يُمسَك (الفرقُ موضعٌ يخدع لا طولٌ يُرى)');
+  ok(found(sceneErrors('ش', broke(pair, (f) => {
+    const [a, b] = f.marks; f.marks = [b, a];
+  }), 2), 'إلى اليسار'),
+  'ومشهدٌ انقلب فمضى إلى اليمين يُمسَك');
+  ok(throws(() => render.plan('scene', 3, { ranks: [1, 1, 2] }))
+    && throws(() => render.plan('scene', 3, { ranks: [1, 2] }))
+    && throws(() => render.plan('objects', 3, { ranks: [1, 2, 3] })),
+  'ورتبٌ مكرَّرةٌ أو ناقصةٌ أو على نمطٍ لا يُقارَن مقدارُه تُرمى');
 
   console.log('\n— ٤) صدق الصورة والمعجم: يُمسَك ما لا صورةَ له —');
   ok(found(vocabErrors(['dice', 'hologram'], DISPLAYS), 'ولا يعرفه المنهج'),

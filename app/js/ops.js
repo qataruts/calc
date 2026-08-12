@@ -6,6 +6,12 @@
 //   `zero`    «الصِّفْرُ فِي العَمَلِيَّات» — ن+٠ وَن−٠ وَن−ن
 //   `fluent`  «طَلَاقَةٌ ضِمْنَ ١٠» — حقائقُ مختلطة
 //
+// **و`sub` تملك محطةً من المرحلة ٧** (٧·٦ «اِطْرَحْ ضِمْنَ ٢٠») بحكم `curriculum.js`:
+// نوعُ الشاشة واحدٌ ونوعُ التمرين واحد (`solve`)، والمحطةُ **تقرأ جبهتَها** فتولّد ضمن
+// العشرين في الإطارين. و**درسُها العبورُ نازلاً** (`METHOD.md §٣` — الجلسة ٧): ثلثا
+// جولاتها تُبقي دون العشرة فتُفتَح الحزمة، **والنزولُ يقف عند العشرة وقفةً مسموعة**
+// (`countDown`) — فتُرى العشرةُ محطّةً في الطريق، وهي نظيرةُ «اصنع عشرةً أولاً» صعوداً.
+//
 // وخمستُها في ملفٍّ واحد بقاعدة «**كلُّ نوع شاشةٍ يُنجَز في جلسةٍ واحدة**» (مراجعة
 // الجلسة ١): بابُ الشيفرة في `test_measure.mjs` يطالب النوعَ بأنواع تمارينه كلِّها متى
 // وُجد ملفُّه، وهي هنا نوعٌ واحد (`solve`) ودرسٌ واحد في المنهج (المرحلة ٦).
@@ -90,6 +96,9 @@ const ASK = {
   add: 'كَمْ صَارَتْ مَعًا؟',
   sub: 'كَمْ بَقِيَ؟',
   diff: 'كَمِ الْفَرْقُ بَيْنَهُمَا؟',
+  // **علامةُ العبور نازلاً** (٧·٦ — الجلسة ٧): النزولُ من فوق العشرة يقف عندها
+  // **وقفةً مسموعة** ثم يمضي، فتُرى العشرةُ محطّةً في الطريق لا رقماً يمرّ.
+  ten: 'وَقَدِ اكْتَمَلَتِ الْعَشَرَةْ',
 };
 
 export const SPOKEN = Object.values(ASK);
@@ -134,6 +143,34 @@ export const CONSUMES = {
  */
 const isMachine = (station) => station.frontier.ops.length > 0
   && station.frontier.signs.length === 0;
+
+/** حزمةُ العشرة — **من المصيِّر لا من رقمٍ يُكتب هنا**: سَعةُ إطارها هي مقدارُها. */
+const TEN = rangeOf('ten-frame').max;
+
+/**
+ * **العدُّ نازلاً — ومَن يغادر آخرُ من مُلئ** (`METHOD.md §٣` — ٦·٥): يُسمّى الكلُّ ثم
+ * يُشطَب مغادرٌ في لحظة اسمه. و**ترتيبُ المغادرة عكسُ ترتيب الملء**: الإطارُ يفرغ من
+ * حيث امتلأ، فيُقابِل الاسمُ العنصرَ الذي غادر فعلاً لا عنصراً في وسط الصفّ.
+ *
+ * **وفوق العشرة يقف النزولُ عندها** (٧·٦ «عبوراً نازلاً عبر العشرة»): يُعَدّ من فوقها
+ * حتى تكتمل الحزمةُ، **فتُسمَّى تامّةً**، ثم يُفتَح ما فيها ويمضي العدُّ دونها — فيرى
+ * الطفلُ العشرةَ محطّةً في الطريق، وهو عينُ ما بناه صعوداً في ٧·٥.
+ */
+async function countDown(fig, gone, alive, cls) {
+  const drawn = fig.drawn;
+  const back = [...gone].reverse();               // آخرُ ما مُلئ أوّلُ ما يغادر
+  const name = (i) => drawn - i - 1;              // ما بقي بعد مغادرة هذا
+  await say(NUMBER_NAME[drawn]);
+  if (!alive()) return false;
+  await new Promise((r) => setTimeout(r, BEAT));
+  const cross = Math.max(0, drawn - TEN);         // كم مغادراً حتى تكتمل الحزمة
+  if (!cross || cross >= back.length) return countMarks(back, name, alive, cls);
+  if (!(await countMarks(back.slice(0, cross), name, alive, cls))) return false;
+  await say(ASK.ten);
+  if (!alive()) return false;
+  await new Promise((r) => setTimeout(r, BEAT));
+  return countMarks(back.slice(cross), (i) => name(cross + i), alive, cls);
+}
 
 /** **رمزُ العملية من الجبهة حصراً** — وإلّا فلا علامةَ تُرسَم ولا تُعلَن. */
 const signFor = (frontier, op) => (frontier.signs.includes(SIGNS[op]) ? SIGNS[op] : null);
@@ -279,9 +316,15 @@ function takeRound(station, rnd, { aided = false, take = 'some' } = {}) {
   const glyph = glyphOf(rnd);
 
   const whole = reachOf(f, rnd, 2);
+  /* **ومحطةُ ما فوق العشرة تعبرها نازلةً** (٧·٦: «عبوراً نازلاً عبر العشرة»): يُختار
+     المأخوذُ في ثلثَي جولاتها بحيث **يبقى دون العشرة** — فتُفتَح الحزمةُ فعلاً ويقع
+     الدرس. ولولا ذلك لجاءت «١٧ − ٢» فمرّت المحطةُ كلُّها بلا عبورٍ واحد. */
+  const cross = take === 'some' && whole > TEN && rnd() < 2 / 3;
   const gone = take === 'none' ? 0
     : take === 'all' ? whole
-      : 1 + Math.floor(rnd() * (whole - 1));
+      : cross
+        ? whole - TEN + 1 + Math.floor(rnd() * (TEN - 1))
+        : 1 + Math.floor(rnd() * (whole - 1));
   const rest = whole - gone;
 
   const shape = frameFor(f, [whole], rnd);
@@ -372,6 +415,9 @@ function modelOf(station, rnd) {
       title: ASK.diff,
       hint: 'نَعُدُّ مَا يَفْضُلُ فِي الصَّفِّ الأَعْلَى',
       ops: round.ops,
+      // **صفٌّ تحت صفّ كما في «وحدك»** (قيدُ إصلاح مراجعة الجلسة ٦): التلميحُ يسمّي
+      // «الصَّفَّ الأَعْلَى»، فيجب أن يكون في الصورة صفٌّ أعلى — والتحاذي هو الدرس.
+      rows: true,
       figures: [big, small],
       count: (figs, alive) => {
         for (const fig of figs) clearCount(fig);      // «أَعِدْ» تبدأ من نظيف
@@ -393,16 +439,14 @@ function modelOf(station, rnd) {
       ops: round.ops,
       figures: [round.fact],
       // **يُسمّى الكلُّ ثم يُعَدّ نزولاً**: «خمسة… أربعة، ثلاثة» — والمغادرُ يُشطَب وقتَ
-      // اسمِه لا قبله، فيقع العددُ على فعلِه (`METHOD.md §٣` — ٦·٥).
+      // اسمِه لا قبله، فيقع العددُ على فعلِه (`METHOD.md §٣` — ٦·٥). وفوق العشرة
+      // **يقف النزولُ عندها** (٧·٦) — و`countDown` واحدةٌ للنمذجة وللخطأ معاً.
       count: async (figs, alive) => {
         const [fig] = figs;
         for (const mark of fig.marks) mark.classList.remove('is-counted', 'is-gone');
         const gone = fig.marks.filter((m) => m.dataset.part === 'b');
         if (!gone.length) return countAloud(figs, alive);
-        await say(NUMBER_NAME[fig.drawn]);
-        if (!alive()) return false;
-        await new Promise((r) => setTimeout(r, BEAT));
-        return countMarks(gone, (i) => fig.drawn - i - 1, alive, 'is-gone');
+        return countDown(fig, gone, alive, 'is-gone');
       },
       reveal: {
         say: SAY.reveal,
@@ -511,13 +555,11 @@ const FACT = {
       box: h('div', { class: 'q-fact-body' }, fig.box),
       figs: [fig],
       answer: () => fig.split,
-      walk: async (alive) => {
-        if (!gone.length) return countMarks(fig.marks, (i) => i + 1, alive);
-        await say(NUMBER_NAME[fig.drawn]);
-        if (!alive()) return false;
-        await new Promise((r) => setTimeout(r, BEAT));
-        return countMarks(gone, (i) => fig.drawn - i - 1, alive);
-      },
+      // **وعدُّ الخطأ عدُّ درسِ المحطة نفسِه**: نزولاً مع كل مغادر، وعبر العشرة حيث
+      // تجاوزتها الجبهة — فلا يختلف ما يراه عند الخطأ عمّا نُمذِج له.
+      walk: (alive) => (gone.length
+        ? countDown(fig, gone, alive, 'is-counted')
+        : countMarks(fig.marks, (i) => i + 1, alive)),
     };
   },
 
