@@ -132,6 +132,13 @@ def shell_sample() -> list:
     )]
 
 
+# **و`.json` يُنتظَر منه العكس** (وهو عينُ قاعدة التخزين أعلاه): فيه بصماتُ الصوت
+# التي بها يطلب التطبيقُ كلَّ ملفّ، فتخزينُه شهراً يحبس الجديدَ عن الأجهزة شهراً.
+# فالحكمُ عليه مقلوب: `DYNAMIC` صوابٌ مقصود، و`HIT` **إخفاقٌ يجب أن يُرى** —
+# والحارسُ الذي يعدّ الصوابَ إخفاقاً يُعلَّم تجاهلُه، ثم يمرّ تحته الخطأُ الحقيقيّ.
+FRESH = (".json",)
+
+
 def measure(urls: list, label: str) -> tuple[int, int, int]:
     print(f"\n{label} ({len(urls)}):")
     good = bad = other = 0
@@ -140,15 +147,21 @@ def measure(urls: list, label: str) -> tuple[int, int, int]:
         r = head(url)                               # والثانية هي الحكم
         status = (r["headers"].get("cf-cache-status") or "—").upper()
         age = r["headers"].get("age", "0")
-        if status in GOOD:
+        name = url.split("/")[-1].split("?")[0]
+        keep_fresh = name.endswith(FRESH)
+        wanted = (status in BAD) if keep_fresh else (status in GOOD)
+        if wanted:
             good += 1
-        elif status in BAD:
+            if keep_fresh:
+                print(f"   ✓ {status:<10} {name[:44]} (طازجٌ عمداً — فيه البصمات)")
+        elif status in GOOD or status in BAD:
             bad += 1
-            print(f"   ✗ {status:<10} {url.split('/')[-1][:44]}")
+            print(f"   ✗ {status:<10} {name[:44]}"
+                  + (" — **مخزونٌ وفيه البصمات**: الجديدُ لا يصل الأجهزة" if keep_fresh else ""))
         else:
             other += 1
-            print(f"   ? {status:<10} {url.split('/')[-1][:44]} (عمر {age})")
-    print(f"   مخزونٌ في الحافّة: {good} · غيرُ مخزون: {bad} · غيرُ معروف: {other}")
+            print(f"   ? {status:<10} {name[:44]} (عمر {age})")
+    print(f"   على المطلوب: {good} · مخالف: {bad} · غيرُ معروف: {other}")
     return good, bad, other
 
 
@@ -156,6 +169,7 @@ def self_test() -> int:
     checks = [
         (VERSIONS.exists(), "بيانُ بصمات الصوت موجود"),
         ("HIT" in GOOD and "DYNAMIC" in BAD, "وتصنيفُ حالات الحافّة معلَن"),
+        (FRESH == (".json",), "و`.json` يُنتظَر منه الطزاجةُ لا التخزين (فيه بصماتُ الصوت)"),
         (len(shell_sample()) >= 5, f"وعيّنةُ القشرة {len(shell_sample())} ملفات"),
     ]
     bad = [m for ok, m in checks if not ok]
@@ -183,13 +197,13 @@ def main() -> int:
         return 1
 
     ag, ab, ao = measure(audio_sample(args.sample), "الصوت — وهو الثقلُ كلُّه")
-    sg, sb, so = measure(shell_sample(), "القشرةُ والرموزُ والخطوط")
+    sg, sb, so = measure(shell_sample(), "القشرةُ والرموزُ والخطوط (وبياناتُ البصمات طازجةً عمداً)")
 
     print("\n" + "—" * 46)
     if ab == 0 and sb == 0:
-        print("✅ الوسيطُ يخدم ملفاتنا من حافّته — حصةُ GitHub محميّة.")
+        print("✅ الوسيطُ يخدم ملفاتنا من حافّته، وبياناتُ البصمات طازجة — حصةُ GitHub محميّة.")
         return 0
-    print(f"⚠️ ملفاتٌ لا يخزّنها الوسيط: صوت {ab} · قشرة {sb}")
+    print(f"⚠️ ملفاتٌ على غير المطلوب: صوت {ab} · قشرة {sb}")
     print("   العلاجُ قاعدةُ تخزينٍ في Cloudflare (Caching ← Cache Rules) تشمل"
           " `/audio/*` و`/emoji/*` و`/fonts/*`.")
     return 1
