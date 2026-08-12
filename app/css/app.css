@@ -52,10 +52,16 @@
 }
 
 /* خطّ العلامة «اِحْسِبْ» حصراً — لا يُكتب به نصٌّ ولا مادّةُ تعليم.
-   مقطع العربية وحدَه: العلامةُ حروفٌ عربية، ولا لاتينيّ فيها. */
+   مقطع العربية وحدَه: العلامةُ حروفٌ عربية، ولا لاتينيّ فيها.
+
+   **Kufam — بحكم المالك على لوحة المرشَّحات** (١٢ أغسطس ٢٠٢٦، الجلسة هـ:
+   `tools/identity_fonts.html` و`docs/REVIEW_IDENTITY.md §٢`). كوفيٌّ هندسيّ عربيُّ
+   الأصل بترخيص OFL، أرقامُه المشرقية العشرة مرسومةٌ فيه غيرُ ملتبسة، ورسمُه أبعدُ ما
+   عُرِض عن دوران Marhey — **وMarhey لعلامة اقرأ وحدَها** (ميثاق `FAMILY.md §٩.٤`)،
+   فأُسقط ملفُّه من الشجرة ومن قشرة `sw`، ويحرس غيابَه `tools/test_identity.mjs`. */
 @font-face {
-  font-family: 'Marhey';
-  src: url('../fonts/Marhey-arabic.woff2') format('woff2');
+  font-family: 'Kufam';
+  src: url('../fonts/Kufam-arabic.woff2') format('woff2');
   font-weight: 400 700;
   font-display: swap;
   unicode-range: U+0600-06FF, U+0750-077F, U+0870-088E, U+0890-0891, U+0897-08E1,
@@ -119,7 +125,7 @@
 
   --font-ui: 'Baloo Bhaijaan 2', 'Noto Naskh Arabic', 'Geeza Pro', system-ui, sans-serif;
   --font-num: 'Noto Naskh Arabic', 'Geeza Pro', 'Traditional Arabic', serif;
-  --font-brand: 'Marhey', 'Baloo Bhaijaan 2', 'Geeza Pro', sans-serif;
+  --font-brand: 'Kufam', 'Baloo Bhaijaan 2', 'Geeza Pro', sans-serif;
 
   --accent: var(--accent-quantity);
 }

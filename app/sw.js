@@ -42,7 +42,12 @@
 //
 // **وإلى `v9` في الجلسة ٦**: دخلت `js/ops.js` (المرحلة ٦) وتحرّكت `station.js`
 // و`curriculum.js` و`gate.js` و`app.css` — والقشرةُ المخزونةُ لا تعرف الملفَّ الجديد.
-const VERSION = 'v10';
+//
+// **وإلى `v11` في الجلسة هـ** (حزمة الهوية): **بُدِّل خطُّ العلامة** — دخل
+// `fonts/Kufam-arabic.woff2` وخرج `fonts/Marhey-arabic.woff2` وتحرّك `app.css`.
+// والرفعةُ هنا **شرطُ صحّةٍ لا تنظيم**: قشرةٌ مخزونةٌ تحمل ملفَّ الخطّ القديم تُبقي
+// جهازَ المالك يعرض علامةً أُسقطت — ويسقط الجديدُ إلى احتياطيّ لأن ملفَّه ليس فيها.
+const VERSION = 'v11';
 const SHELL_CACHE = `ihsib-shell-${VERSION}`;
 const AUDIO_CACHE = 'ihsib-audio';        // ثابتٌ عمداً — لا يحمل VERSION
 const KEEP = [SHELL_CACHE, AUDIO_CACHE];
@@ -56,7 +61,7 @@ const SHELL = [
   'fonts/NotoNaskhArabic-latin.woff2',
   'fonts/BalooBhaijaan2-arabic.woff2',
   'fonts/BalooBhaijaan2-latin.woff2',
-  'fonts/Marhey-arabic.woff2',
+  'fonts/Kufam-arabic.woff2',
   'js/audio.js',
   'js/bonds.js',
   'js/compare.js',

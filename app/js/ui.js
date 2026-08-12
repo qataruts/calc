@@ -119,7 +119,7 @@ export function mascot(className = 'mascot') {
 // كلُّ من يعرضه يستورده من هنا.
 export const BRAND = 'اِحْسِبْ';
 
-/** علامةُ التطبيق: الكلمةُ مشكولةً بخطّ العلامة (Marhey)، ومرشدُها إلى جانبها. */
+/** علامةُ التطبيق: الكلمةُ مشكولةً بخطّ العلامة (Kufam — الجلسة هـ)، ومرشدُها إلى جانبها. */
 export function brandMark(tag = 'span') {
   return h(tag, { class: 'brand' },
     h('span', { class: 'brand-word' }, BRAND),

@@ -10,10 +10,15 @@
 
      ————— بذرةُ المنصة (منسوخةٌ من «اِقْرَأْ») —————
      البنيةُ والقياسُ منه حرفاً بحرف، والمبدَّلُ الكلمةُ («اِحْسِبْ») وتدرّجُ اللون
-     (فيروزيُّ «اِحْسِبْ» لا برتقاليُّ «اِقْرَأْ» — هويةٌ مستقلة، `SESSIONS.md` §٠.٣). */
+     (فيروزيُّ «اِحْسِبْ» لا برتقاليُّ «اِقْرَأْ» — هويةٌ مستقلة، `SESSIONS.md` §٠.٣).
+
+     **وخطُّ العلامة يُبدَّل بالرابط للمراجعة وحدها** (`?font=X&src=…`، الجلسة هـ):
+     لوحةُ مرشَّحات الخط (`tools/identity_fonts.html`) تُري المالكَ أيقونةَ كلِّ مرشَّح
+     **من أصل الأيقونة نفسِه** لا من نسخةٍ ثانية تفترق عنه يوماً. والافتراضُ بلا رابطٍ
+     هو خطُّ العلامة المنشور في `app/fonts/` — فما يولّده `make_icons.py` لا يتغيّر. */
   @font-face {
-    font-family: 'Marhey';
-    src: url('../app/fonts/Marhey-arabic.woff2') format('woff2');
+    font-family: 'Kufam';
+    src: url('../app/fonts/Kufam-arabic.woff2') format('woff2');
     font-weight: 400 700;
     font-display: block;          /* لا نلتقط بخطٍّ احتياطيّ ثم نُسمّيه علامتنا */
   }
@@ -24,7 +29,7 @@
     place-items: center;
     background: linear-gradient(160deg, #3AA6A0 0%, #2E8C86 45%, #1F6E77 100%);
     color: #fff;
-    font-family: 'Marhey', 'Geeza Pro', 'Al Bayan', sans-serif;
+    font-family: 'Kufam', 'Geeza Pro', 'Al Bayan', sans-serif;
     font-weight: 700;
     line-height: 1;
     overflow: hidden;
@@ -41,43 +46,69 @@
   const pad = +(q.get('pad') || 0);          // نسبة الهامش الآمن (maskable = .2)
   const round = q.get('round') !== '0';      // الأيقونة المقنَّعة تملأ المربّع كاملاً
 
+  // خطُّ العلامة — الافتراضُ خطُّ التطبيق أعلاه، ولوحةُ المرشَّحات وحدَها تُبدّله.
+  // (المصدرُ مسارٌ محليّ لا غير: لا اقتباسَ ولا قوسَ يدخل `url()`.)
+  let FAMILY = 'Kufam';
+  const alt = q.get('font'), altSrc = q.get('src');
+  if (alt && altSrc && /^[\w .-]+$/.test(alt) && /^[\w./-]+\.woff2$/.test(altSrc)) {
+    const face = new FontFace(alt, `url(${altSrc})`, { weight: '400 700' });
+    document.fonts.add(face);
+    face.load();
+    FAMILY = alt;
+  }
+
   document.body.style.width = `${size}px`;
   document.body.style.height = `${size}px`;
   if (q.get('bg')) document.body.style.background = q.get('bg');
 
   const box = document.createElement('div');
   box.className = 'icon';
+  box.style.fontFamily = `'${FAMILY}', 'Geeza Pro', 'Al Bayan', sans-serif`;
   box.style.width = `${size}px`;
   box.style.height = `${size}px`;
   box.style.borderRadius = round ? `${size * 0.22}px` : '0';
   // مشكولةٌ في كل مقاس (سياسةُ العلامة في `FAMILY.md §٦`): العلامةُ واحدةٌ لا تتبدّل
   // بالمقاس، والتشكيلُ في الأيقونة الصغرى زخرفةٌ لا تُقرأ — والأيقونةُ ليست مادّةَ قراءة.
   // والنسبةُ ٠٫٣٤ لا ٠٫٣٧ (كما في اقرأ): «اِحْسِبْ» ستةُ حروفٍ بسنٍّ نازلة، فتحتاج هواءً أوسع.
-  box.style.fontSize = `${size * (1 - 2 * pad) * 0.34}px`;
+  const INNER = size * (1 - 2 * pad);          // العلبةُ داخل الهامش الآمن
+  const RATIO = 0.34;                          // سقفُ المقاس — لا مقاسُه المفروض
+  const SAFE = 0.94;                           // ما يُسمح لحبر الكلمة أن يشغله من العلبة
+  box.style.fontSize = `${INNER * RATIO}px`;
   const word = Object.assign(document.createElement('span'), { textContent: 'اِحْسِبْ' });
   box.append(word);
   document.body.append(box);
 
   // القياس نظيرُ رفعة الحبر في اقرأ حرفاً بحرف: نصفُ فرقِ صندوق الخطّ ناقصاً نصفَ
   // فرقِ صندوق الحبر — موجبُه يعني أن الحبر يجلس تحت المركز، فالرفعة سالبُه.
+  // **والعرضُ مقيسٌ كذلك لا مقدَّر**: النسبةُ أعلاه سقفٌ، فإن كان حبرُ الكلمة بهذا
+  // الخطّ أعرضَ من العلبة (أو أطولَ) ضاق المقاسُ حتى تسعه — فلا تُقَصُّ علامةٌ في
+  // أيقونة، ولا يُربَط رسمُ الأيقونة برقمٍ ضُبط لخطٍّ بعينه ثم بُدِّل الخطّ.
   const PROBE = 200;
-  function applyLift() {
+  function applyMetrics() {
     try {
       const ctx = document.createElement('canvas').getContext('2d');
-      ctx.font = `700 ${PROBE}px "Marhey", sans-serif`;
+      ctx.font = `700 ${PROBE}px "${FAMILY}", sans-serif`;
       ctx.textBaseline = 'alphabetic';
       const m = ctx.measureText(word.textContent);
+
+      // نسبةُ المقاس التي يسعها الحبرُ عرضاً وطولاً: حبرُ الكلمة عند PROBE يكبر
+      // بالتناسب، فالنسبةُ المسموحة = (ما يُسمح به من العلبة) ÷ (حبرُها لكلّ بكسل).
+      const inkW = m.actualBoundingBoxLeft + m.actualBoundingBoxRight;
+      const inkH = m.actualBoundingBoxAscent + m.actualBoundingBoxDescent;
+      const fit = Math.min(RATIO, SAFE * PROBE / inkW, SAFE * PROBE / inkH);
+      if (Number.isFinite(fit) && fit > 0) box.style.fontSize = `${INNER * fit}px`;
+
       const base = (m.fontBoundingBoxAscent - m.fontBoundingBoxDescent) / 2;
       const ink = (m.actualBoundingBoxDescent - m.actualBoundingBoxAscent) / 2;
       if (Number.isFinite(base + ink)) {
         word.style.setProperty('--ink-lift', `${(-(base + ink) / PROBE).toFixed(4)}em`);
       }
-    } catch { /* بلا canvas: توسيطٌ هندسيّ كما كان */ }
+    } catch { /* بلا canvas: توسيطٌ هندسيّ ومقاسُ السقف كما كان */ }
   }
-  applyLift();
+  applyMetrics();
   // `font-display: block` يؤخّر الرسم لا التحميل: القياسُ قبل وصول الخطّ قياسُ الاحتياطيّ.
   // فيُعاد بعد وصوله — و`--virtual-time-budget` في make_icons.py يضمن أن اللقطة بعده.
-  document.fonts?.ready.then(applyLift);
+  document.fonts?.ready.then(applyMetrics);
 </script>
 </body>
 </html>

@@ -1,0 +1,123 @@
+<!doctype html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="utf-8">
+<title>مُتحَن الصفّ — أيقونات العائلة على شاشة آيباد</title>
+<!--
+  **مُتحَن الصفّ** (ميثاق الهوية `FAMILY.md §٩.٢`): «الأيقونةُ تُعرَف من لمحةٍ بين
+  أخواتها — فالتطبيقات ستتجاور على شاشة آيبادٍ واحدة، وأيقونتان بلونٍ واحد عيبُ
+  استعمالٍ لا ذوقٍ فحسب. ومحكُّها: صفُّ أيقونات العائلة معاً، وطفلُ سادسةٍ يسمّي كلَّ
+  واحدةٍ بلا تردّد.»
+
+  فهذه اللوحة **لا تُصيَّر أيقونةً من جديد**: تعرض الملفّات المولَّدة نفسَها
+  (`app/icons/icon-192.png`) بمقاسَي شاشة الآيباد كما يعرضها الجهاز — أيقونتُنا
+  بجوار أيقونة اقرأ **تُقرأ من مستودعه ولا تُمَسّ**، ومكانُ اكتب محجوزٌ فارغاً حتى
+  توجد أيقونتُه (فتُعاد اللوحةُ يومَها بلا تعديل).
+
+  **عُدّةٌ لا تُنشَر** — موضعُها `tools/` فلا تدخل شجرةَ النشر ولا قشرةَ `sw`.
+
+  ————— التشغيل (من **جذر الورشة**: المجلدُ الحاوي لـ`calc` و`read`) —————
+      python3 -m http.server 8899
+      open http://127.0.0.1:8899/calc/tools/identity_row.html
+  (خادمُ بايثون لا يخرج بـ`..` عن جذره — وهو صوابُه أمنياً — فيُشغَّل من فوق
+   المستودعَين ليبلغ أيقونةَ اقرأ. وإن شُغِّل من جذر `calc` وحدَه ظهر مكانُ اقرأ
+   معلَّماً «ليست بجوارنا» ولم تكذب اللوحة.)
+  واللقطة في `shots/identity-row.png` — تُعرَض على المالك (`docs/REVIEW_IDENTITY.md`).
+
+  والتزامُ أيقونة اقرأ يُتحقَّق منه بأمرٍ واحد (قاعدةُ النقل: يُقابَل المبصوم):
+      git -C ../read log --oneline -1 -- app/icons/icon-192.png
+-->
+<style>
+  :root { color-scheme: dark; }
+  body {
+    margin: 0; padding: 2.5rem 2rem 2rem;
+    font-family: 'Baloo Bhaijaan 2', 'Geeza Pro', system-ui, sans-serif;
+    /* خلفيةُ شاشةٍ محايدة (لا صورةَ خارجية): الحكمُ على الأيقونات لا على الجدارية */
+    background: linear-gradient(165deg, #4A5A6B 0%, #33404E 55%, #232C36 100%);
+    color: #fff;
+  }
+  h1 { font-size: 1.15rem; margin: 0 0 .3rem; font-weight: 600; }
+  p.note { margin: 0 0 2rem; font-size: .85rem; line-height: 1.9; color: #C7D0DA; max-width: 54rem; }
+  p.note b { color: #fff; }
+
+  h2 { font-size: .78rem; font-weight: 400; color: #AEBAC6; margin: 2.2rem 0 .9rem; }
+
+  .row { display: flex; gap: 1.7rem; align-items: flex-start; }     /* تباعدُ أيقونات الآيباد */
+  .app { width: 152px; text-align: center; }
+  .app.sm { width: 76px; }
+  .app img, .app .gap {
+    width: 152px; height: 152px; border-radius: 34px; display: block;   /* ٢٢٪ كما يقصّها النظام */
+    box-shadow: 0 6px 18px rgba(0, 0, 0, .35);
+  }
+  .app.sm img, .app.sm .gap { width: 76px; height: 76px; border-radius: 17px; }
+  .app .gap {
+    border: 2px dashed rgba(255, 255, 255, .3); box-shadow: none;
+    display: grid; place-items: center; font-size: .7rem; color: #AEBAC6; line-height: 1.5;
+  }
+  .app figcaption { margin-top: .55rem; font-size: .82rem; letter-spacing: .2px; }
+  .app.sm figcaption { font-size: .68rem; }
+  .miss { font-size: .68rem; color: #F0B7AE; margin-top: .35rem; }
+</style>
+</head>
+<body>
+  <h1>صفُّ أيقونات العائلة — على شاشة آيباد</h1>
+  <p class="note">
+    المحكّ: <b>طفلُ سادسةٍ يسمّي كلَّ واحدةٍ بلا تردّد</b>. ولونا الأيقونتين مفترقان
+    سلفاً (فيروزيُّ «اِحْسِبْ» · تدرّجُ «اِقْرَأْ» البرتقاليّ)، <b>فالمُتحَن على الرسم لا
+    اللون وحده</b>: أتُقرَأ الكلمتان مفترقتَين من لمحة؟ وأيّهما يُسمّى أوّلاً؟
+    والصفُّ الثاني بمقاس الأيقونة الصغرى — <b>حيث يسقط التشكيلُ زخرفةً لا تُقرأ</b>،
+    فيبقى الفارقُ في الشكل العام وحده.
+  </p>
+
+  <h2>مقاسُ شاشة الآيباد (١٥٢ بكسل)</h2>
+  <div class="row" id="big"></div>
+
+  <h2>الأيقونةُ الصغرى (٧٦ بكسل)</h2>
+  <div class="row" id="small"></div>
+
+<script>
+// أيقوناتُ العائلة: الملفُّ المولَّد نفسُه لكلٍّ — ولا تُصيَّر هنا من جديد.
+const FAMILY = [
+  { name: 'اِحْسِبْ', src: '../app/icons/icon-192.png' },
+  { name: 'اِقْرَأْ', src: '../../read/app/icons/icon-192.png' },
+  { name: 'اُكْتُبْ', src: null, gap: 'أيقونةُ اكتب\nلم تُخلق بعد' },
+];
+
+for (const [id, small] of [['big', false], ['small', true]]) {
+  const row = document.getElementById(id);
+  for (const app of FAMILY) {
+    const fig = document.createElement('figure');
+    fig.className = 'app' + (small ? ' sm' : '');
+    fig.style.margin = '0';
+    if (app.src) {
+      const img = document.createElement('img');
+      img.src = app.src;
+      img.alt = `أيقونة ${app.name}`;
+      // **لا لوحةَ تكذب**: أيقونةٌ لا تُقرأ من موضعها تُعلن غيابَها ولا تُترك فراغاً
+      img.onerror = () => {
+        const gap = document.createElement('div');
+        gap.className = 'gap';
+        gap.textContent = 'ليست بجوارنا';
+        img.replaceWith(gap);
+        const why = document.createElement('div');
+        why.className = 'miss';
+        why.textContent = 'شُغِّل الخادمُ من جذر الورشة؟';
+        fig.append(why);
+      };
+      fig.append(img);
+    } else {
+      const gap = document.createElement('div');
+      gap.className = 'gap';
+      gap.style.whiteSpace = 'pre-line';
+      gap.textContent = app.gap;
+      fig.append(gap);
+    }
+    const cap = document.createElement('figcaption');
+    cap.textContent = app.name;
+    fig.append(cap);
+    row.append(fig);
+  }
+}
+</script>
+</body>
+</html>

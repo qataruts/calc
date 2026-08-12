@@ -1,0 +1,255 @@
+<!doctype html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="utf-8">
+<title>لوحة خطّ العلامة — «اِحْسِبْ»</title>
+<!--
+  لوحةُ اختيار خطّ العلامة: مرشَّحاتٌ **مُصيَّرةٌ للنظر لا موصوفةٌ بالكلام** (الجلسة هـ —
+  ميثاق الهوية `FAMILY.md §٩`: «لكل تطبيقٍ رسمُ علامته وخطُّها قرارَ مراجعةٍ يُقَرّ»،
+  وحكمُ المالك ١٢ أغسطس ٢٠٢٦: الميثاقُ يسود وMarhey لاقرأ وحدَها فلا تُورَّث بالنسخ).
+  وهي على سنّة لوحة خطّ العناوين في اقرأ (`read@c7ae9cf:tools/welcome_fonts.html`).
+
+  **عُدّةٌ لا تُنشَر**: موضعُها `tools/` لا `app/`، فلا تدخل شجرةَ النشر ولا تُخزَّن في
+  قشرة `sw` ولا يحملها جهازُ طفل. وملفّاتُ المرشَّحين في `tools/fonts/` كذلك.
+
+  **ولا تُعرَض الخطوطُ في سطر عيّنة**، بل في **الموضعين اللذين تُرى فيهما العلامةُ فعلاً**:
+  ترويسةُ التطبيق (مُصيَّرةً من `brandMark()` في `app/js/ui.js` نفسِها) وأيقونتُه
+  (مُصيَّرةً من `tools/icon.html` نفسِه بمقاسَي شاشة الآيباد) — فالحكمُ على ما سيُرى.
+  وتحت كلٍّ **شريطُ أرقام التعليم بخطّ المادّة** (Noto Naskh) يُثبت أن الأرقام التي
+  يتعلّمها الطفل لا تتبدّل بتبدّل العلامة: خطُّ العلامة للعلامة وحدَها.
+
+  ————— شرطانِ حاسمان يميّزان حالَنا (`REVIEW_IDENTITY.md §٢`) —————
+  ١) **العلامةُ مشكولة**: «اِحْسِبْ» بكسرةِ وصلٍ وسكونَين وكسرة — يُنظَر صدقُ رسمها
+     بحركاتها الأربع (درسُ اقرأ: Reem Kufi ضاق بالمسافات).
+  ٢) **الأرقامُ جوهرُ تطبيقنا**: تُصيَّر المشرقيةُ ٠–٩ بكلّ مرشَّح، وما التبست أرقامُه
+     يسقط قبل العرض (درسُ اقرأ: El Messiri التبس فيه ٨/٥ — وذلك عندنا قاتلٌ لا عيب).
+
+  ————— المُسقَطون قبل العرض (جُرِّبوا مُصيَّرين، والسببُ معلَن) —————
+  المسبارُ صيَّر ثمانيةً بالكلمة مشكولةً وبالأرقام ٠–٩، فسقط خمسة:
+  · **Rakkas** — العلامةُ نفسُها تُرسَم خطأً: «ح» و«س» تلتحمان فتُقرأ «اِصِبْ»،
+    وسكونُ الحاء يضيع في الالتحام (سقوطٌ بالشرط ١).
+  · **Changa** — أرقامُه مربّعةٌ تفارق أشكالَ المشرق: ٢ و٣ عمودان وثلاثةُ أعمدة،
+    والصفرُ حلقةٌ لاتينيةُ الهيئة (سقوطٌ بالشرط ٢)، ونصُّه الأول غيرُ معلَنٍ عربياً
+    في بيانات المصدر (`primaryScript` فارغ).
+  · **Alexandria** — أرقامُه سليمةٌ وحركاتُه صادقة، لكنه **رفيقُ Montserrat اللاتينيّ**
+    بنصّ مصدره («the Arabic companion of Montserrat») — والشرطُ عربيُّ الأصل.
+  · **Tajawal** و**Almarai** — سليما الأرقام والحركات، وسقوطُهما لضعف التمايز لا
+    لالتباس: خطّا متنٍ محايدان تخرج بهما العلامةُ سطرَ واجهةٍ لا علامةً تُعرَف من
+    لمحة — وواجهتُنا Baloo المدوّرُ أصلاً، فلا يزيد سانسٌ محايدٌ ثالثٌ تمايزاً.
+
+  ويُعاد جلبُ أيٍّ منهم للمقابلة بسطرٍ واحد (المقطعُ العربيُّ وحدَه يكفي للحكم):
+      curl -sS "https://fonts.googleapis.com/css2?family=Rakkas" -H "User-Agent: Mozilla/5.0 Chrome/120"
+      # ثم يُنسخ رابطُ مقطع arabic من الجواب إلى tools/fonts/ ويُضاف سطرُ @font-face أدناه
+
+  ————— الحكم: **Kufam** (المالك، ١٢ أغسطس ٢٠٢٦) —————
+
+  حُسم الاختيار على هذه اللوحة: **Kufam** — كوفيٌّ هندسيّ، أرقامُه العشرة مرسومةٌ فيه
+  غيرُ ملتبسة، وحركاتُه الأربع صادقة، ورسمُه أبعدُ ما عُرِض عن دوران Marhey فتُعرَف
+  أيقونتُنا من لمحةٍ بجوار اقرأ. فنُقل إلى `app/fonts/` — **ويُقرأ في هذه اللوحة من
+  موضعه المنشور** لا من نسخةٍ ثانية تفترق عنه — وبُدِّل `--font-brand` في `app.css`
+  وخطُّ `icon.html`، وأُعيدت الأيقوناتُ الأربع، وأُسقط ملفُّ Marhey من الشجرة ومن قشرة
+  `sw` (رفعةً إلى `v11`)، ويحرس غيابَه `tools/test_identity.mjs`.
+
+  **وحُذف الخاسران من الشجرة** كما حُذفت خطوطُ لوحة اقرأ بعد حكمها: لا وزنَ ميتاً
+  يُصان. وحتى يُعادا **يُصيَّر عمودُهما بالخطّ الاحتياطيّ، وهو ظاهرٌ للعين لا يخفى**،
+  ويُعادان بسطرين إلى `tools/fonts/`:
+
+      mkdir -p tools/fonts
+      curl -o tools/fonts/Lemonada-arabic.woff2 https://fonts.gstatic.com/s/lemonada/v31/0QINMXFD9oygTWy_R-FFlwV-bgfR7QJGeusUktdsBQEKSBoUrFoQbbs7uvJLVIQJFg.woff2
+      curl -o tools/fonts/Lalezar-arabic.woff2  https://fonts.gstatic.com/s/lalezar/v16/zrfl0HLVx-HwTP82YaL4IwD3VCnWiQ.woff2
+
+  ————— التشغيل واللقطة (من جذر المستودع) —————
+      python3 -m http.server 8899
+      open http://127.0.0.1:8899/tools/identity_fonts.html
+  واللقطةُ في `shots/identity-fonts.png` (عُرِضت على المالك — `docs/REVIEW_IDENTITY.md`).
+-->
+<link rel="stylesheet" href="../app/css/app.css">
+<style>
+  /* **المُقَرُّ من موضعه المنشور** (`app/fonts/`) لا من نسخةٍ ثانية تفترق عنه يوماً.
+     والخاسران ملفّاهما محذوفان بعد الحكم ويُعادان بأمرَي `curl` في الترويسة — وحتى
+     يُعادا يُصيَّر عمودُهما بالخطّ الاحتياطيّ. و`block` كي لا يُحكَم على احتياطيّ خفيةً.
+     ومدى الوزن في كل إعلانٍ هو مدى ملفّه — ومنه يُحسب «غليظٌ حقيقيٌّ أم مصطنع». */
+  @font-face { font-family: 'Kufam';    src: url('../app/fonts/Kufam-arabic.woff2') format('woff2');
+    font-weight: 400 700; font-display: block; }
+  @font-face { font-family: 'Lemonada'; src: url('fonts/Lemonada-arabic.woff2') format('woff2');
+    font-weight: 400 700; font-display: block; }
+  @font-face { font-family: 'Lalezar';  src: url('fonts/Lalezar-arabic.woff2') format('woff2');
+    font-weight: 400;     font-display: block; }
+
+  body { background: var(--paper); color: var(--ink); padding: 1.25rem 1.5rem; }
+  .board { max-width: 1560px; margin: 0 auto; }
+  .board > h1 { font-size: 1.45rem; margin: 0 0 .35rem; font-family: var(--font-ui); }
+  .board > p { color: var(--ink-soft); max-width: 68rem; margin: 0 0 1.1rem; font-size: .92rem; line-height: 1.85; }
+
+  .cols { display: grid; grid-template-columns: repeat(4, 1fr); gap: 1rem; align-items: start; }
+  .col {
+    background: var(--card); border: 1px solid var(--line); border-radius: var(--radius);
+    padding: 1rem 1.1rem 1.2rem; font-family: var(--font-ui);
+  }
+  .col.is-now { opacity: .78; }                 /* الحاصلُ اليوم — مردودٌ بالميثاق */
+
+  .tag { display: block; font-size: .78rem; color: var(--ink-soft); line-height: 1.7;
+    border-bottom: 1px solid var(--line); padding-bottom: .6rem; margin-bottom: .8rem; }
+  .tag b { color: var(--ink); font-size: .9rem; }
+  .tag .why { display: block; color: var(--ink-soft); }
+
+  h4 { font-size: .74rem; color: var(--ink-soft); font-weight: 400; margin: 1rem 0 .3rem;
+    letter-spacing: .3px; }
+
+  /* ١) الترويسةُ كما تُرى — على الورق نفسِه */
+  .slice { background: var(--paper); border-radius: var(--radius-btn); padding: .1rem .6rem .3rem; }
+  .slice .topbar { position: static; padding: .5rem .1rem; }
+  .slice .topbar h1 { font-size: 1.5rem; }      /* مقاسُ الترويسة في التطبيق حرفاً بحرف */
+
+  /* ٢) العلامةُ كبيرةً — لتُفحَص حركاتُها الأربع */
+  .mark { font-family: var(--font-brand); color: var(--brand-word); font-weight: 700;
+    font-size: 4rem; line-height: 1.75; text-align: center; }
+
+  /* ٣) الأيقونةُ من أصلها — بمقاسَي شاشة الآيباد */
+  .icons { display: flex; align-items: flex-end; gap: 1rem; justify-content: center; padding: .3rem 0; }
+  .icons iframe { border: 0; display: block; }
+  .icons figure { margin: 0; text-align: center; }
+  .icons figcaption { font-size: .68rem; color: var(--ink-soft); margin-top: .3rem; }
+
+  /* ٤) أرقامُ الخطّ المرشَّح */
+  .digits { font-family: var(--font-brand); font-size: 2.1rem; letter-spacing: .08em;
+    text-align: center; line-height: 1.6; color: var(--ink); }
+  .tally { font-size: .72rem; color: var(--ink-soft); text-align: center; line-height: 1.7; }
+
+  /* ٥) أرقامُ التعليم — بخطّ المادّة، لا تتبدّل بتبدّل العلامة */
+  .teach { margin-top: .9rem; padding-top: .7rem; border-top: 1px dashed var(--line); text-align: center; }
+  .teach .row { font-family: var(--font-num); font-size: 1.8rem; letter-spacing: .06em; color: var(--ink); }
+  .teach small { display: block; font-size: .68rem; color: var(--ink-soft); line-height: 1.6; margin-top: .2rem; }
+</style>
+</head>
+<body>
+<div class="board">
+  <h1>خطُّ علامة «اِحْسِبْ» — أربعةُ أعمدة، والعلامةُ واحدة</h1>
+  <p>
+    <b>حُسم الاختيار: Kufam</b> (حكمُ المالك على هذه اللوحة، ١٢ أغسطس ٢٠٢٦) — وهو العمودُ
+    الأول، ويُقرأ من موضعه المنشور في <code>app/fonts/</code>. ويليه <b>الحاصلُ قبلَه</b>
+    (Marhey — مستعارٌ من اقرأ بالنسخ، <b>مردودٌ بالميثاق</b>) ثم المرشَّحان المردودان،
+    <b>وملفّاتُ الثلاثة محذوفةٌ من الشجرة فتُصيَّر أعمدتُهم بالخطّ الاحتياطيّ</b> (أمرا
+    إعادتهما في ترويسة الملف). والمرشَّحون كلُّهم كانوا <b>عربيّي الأصل بترخيص OFL</b>،
+    وقد سقط قبلهم خمسةٌ صُيِّروا وجُرِّبوا (أسبابُهم في ترويسة هذا الملف: Rakkas · Changa ·
+    Alexandria · Tajawal · Almarai). وفي كل عمودٍ <b>الموضعان اللذان تُرى فيهما العلامةُ فعلاً</b>
+    — ترويسةُ التطبيق من <code>ui.js</code> نفسِها، وأيقونتُه من <code>icon.html</code> نفسِه —
+    ثم الكلمةُ كبيرةً لتُفحَص <b>حركاتُها الأربع</b> (كسرةُ الوصل تحت الألف · سكونُ الحاء ·
+    كسرةُ السين · سكونُ الباء)، ثم <b>أرقامُ الخطّ ٠–٩</b> بجردٍ محسوبٍ في الصفحة.
+    وأسفلَ كلِّ عمودٍ <b>أرقامُ التعليم بخطّ المادّة</b> (Noto Naskh) — لا تتبدّل بتبدّل العلامة.
+  </p>
+
+  <div class="cols" id="cols"></div>
+</div>
+
+<script type="module">
+import { brandMark, arNum, h } from '../app/js/ui.js';
+
+// الأعمدة: الاسمُ · وصفُ رسمه ومصمّمه · ملفُّه. **المُقَرُّ أوّلَها** ثم المردودون،
+// و`now` علامةُ المردود (يُصيَّر عمودُه باهتاً، وملفُّه محذوفٌ من الشجرة).
+const COLS = [
+  { font: 'Kufam', file: '../app/fonts/Kufam-arabic.woff2',
+    head: 'مرشَّح ٢ — المُقَرّ (حكمُ المالك، ١٢ أغسطس ٢٠٢٦)',
+    why: 'كوفيٌّ هندسيّ عن نقوش القرن السابع · Wael Morcos · OFL' },
+  { font: 'Marhey', file: '../app/fonts/Marhey-arabic.woff2', now: true,
+    head: 'الحاصلُ قبلَه — مردودٌ بالميثاق ومحذوفٌ من الشجرة',
+    why: 'خطُّ علامة «اِقْرَأْ» — لا يُورَّث بالنسخ (Nur Syamsi · OFL)' },
+  { font: 'Lemonada', file: 'fonts/Lemonada-arabic.woff2', now: true,
+    head: 'مرشَّح ١ — مردود',
+    why: 'نسخيٌّ مدوّرٌ بأثرٍ ديوانيّ · Mohamed Gaber (القاهرة) · OFL' },
+  { font: 'Lalezar', file: 'fonts/Lalezar-arabic.woff2', now: true,
+    head: 'مرشَّح ٣ — مردود',
+    why: 'عريضٌ لعوبٌ عن خطّ ملصقات السينما · Borna Izadpanah · OFL' },
+];
+
+const WORD = 'اِحْسِبْ';
+const DIGITS = '٠١٢٣٤٥٦٧٨٩';
+const box = document.getElementById('cols');
+
+for (const c of COLS) {
+  const col = h('section', { class: `col${c.now ? ' is-now' : ''}` });
+  // العمودُ يُبدّل متغيّرَ خطّ العلامة وحدَه — فتتبعه كلُّ شريحةٍ فيه كما يتبعها التطبيق
+  col.style.setProperty('--font-brand', `'${c.font}', 'Baloo Bhaijaan 2', 'Geeza Pro', sans-serif`);
+
+  const tag = h('span', { class: 'tag' }, `${c.head} · `, h('b', {}, c.font));
+  tag.append(h('span', { class: 'why' }, c.why));
+  col.append(tag);
+
+  // ١) الترويسة — العلامةُ نفسُها من `ui.js` لا نسخةٌ منها
+  col.append(h('h4', {}, 'الترويسةُ كما تُرى'));
+  col.append(h('div', { class: 'slice' },
+    h('div', { class: 'topbar' },
+      brandMark('h1'),
+      h('span', { class: 'spacer' }),
+      h('span', { class: 'pill pill--stars' }, `★ ${arNum(7)} / ${arNum(52)}`))));
+
+  // ٢) العلامةُ كبيرةً بحركاتها
+  col.append(h('h4', {}, 'الحركاتُ الأربع'));
+  col.append(h('div', { class: 'mark' }, WORD));
+
+  // ٣) الأيقونةُ من أصلها — ١٥٢ مقاسُ أيقونة الآيباد، و٦٠ مقاسُ الصغرى
+  col.append(h('h4', {}, 'الأيقونةُ على الشاشة (١٥٢ · ٦٠)'));
+  const icons = h('div', { class: 'icons' });
+  for (const [size, cap] of [[152, 'شاشةُ الآيباد'], [60, 'صغرى']]) {
+    const q = `size=${size}&font=${encodeURIComponent(c.font)}&src=${encodeURIComponent(c.file)}`;
+    const frame = h('iframe', { src: `icon.html?${q}`, width: size, height: size,
+      scrolling: 'no', title: `أيقونة ${c.font} ${size}` });
+    icons.append(h('figure', {}, frame, h('figcaption', {}, cap)));
+  }
+  col.append(icons);
+
+  // ٤) أرقامُ الخطّ المرشَّح — والجردُ محسوبٌ أسفلَها لا مكتوباً
+  col.append(h('h4', {}, 'أرقامُ الخطّ ٠–٩'));
+  col.append(h('div', { class: 'digits' }, DIGITS));
+  col.append(h('div', { class: 'tally', id: `tally-${c.font}` }, '…'));
+
+  // ٥) أرقامُ التعليم — الثابتُ الذي لا تمسّه العلامة
+  col.append(h('div', { class: 'teach' },
+    h('div', { class: 'row' }, DIGITS),
+    h('small', {}, 'أرقامُ التعليم بخطّ المادّة (Noto Naskh) — لا تتبدّل بتبدّل العلامة')));
+
+  box.append(col);
+}
+
+// ————— الجردُ محسوبٌ في الصفحة: تغطيةُ الأرقام ووزنُ الملف —————
+// **التغطيةُ تُقاس بالرسم لا بالادّعاء**: يُرسَم الرقمُ بالخط ثم بالاحتياطيّ وحدَه،
+// فإن تطابقت البصمتان فالخطُّ لا يملك رسمَه وإنما استعاره — وهو عيبٌ قاتلٌ عندنا.
+function drawn(ch, family) {
+  const c = document.createElement('canvas');
+  c.width = 80; c.height = 90;
+  const g = c.getContext('2d');
+  g.font = `64px ${family}`;
+  g.textBaseline = 'alphabetic';
+  g.fillText(ch, 6, 72);
+  return c.toDataURL();
+}
+
+await document.fonts.ready;
+for (const c of COLS) {
+  // ملفٌّ محذوفٌ يرفض وعدَ التحميل — فلا يُسكِت رفضُه جردَ من بعده
+  await document.fonts.load(`64px '${c.font}'`, WORD + DIGITS).catch(() => {});
+  const missing = [...DIGITS].filter((d) => drawn(d, `'${c.font}', monospace`) === drawn(d, 'monospace'));
+  const have = DIGITS.length - missing.length;
+  // وزنُ الملف يُقرأ من الملف — والمحذوفُ يُعلن حذفَه ولا يُكتب له وزنٌ صفر
+  const bytes = await fetch(c.file)
+    .then((r) => (r.ok ? r.arrayBuffer().then((b) => b.byteLength) : null)).catch(() => null);
+  // **والغِلَظُ حقيقيٌّ أو مصطنع**: العلامةُ تُرسَم بوزنٍ غليظ (`.brand-word` بـ٧٠٠)،
+  // فخطٌّ لا يبلغ مداه ٧٠٠ يُثخِّنه المتصفّحُ اصطناعاً — تشويهُ رسمٍ لا يليق بعلامة.
+  // ويُقرأ المدى **من إعلان الوجه نفسِه** في هذه الصفحة (وهو مدى الملفّ المجلوب)،
+  // لا من جدولٍ يُكتب بيد هنا. (و`fonts.check` لا تصلح: مطابقةُ CSS تُقرِّب أقربَ وزنٍ
+  // موجود فتُجيب «نعم» أبداً — فلا تفرّق غليظاً حقيقياً من مصطنع.)
+  const face = [...document.fonts].find((f) => f.family.replace(/['"]/g, '') === c.font);
+  const range = (face?.weight || '400').split(/\s+/).map(Number);
+  const realBold = Math.max(...range) >= 700;
+  const el = document.getElementById(`tally-${c.font}`);
+  el.textContent = bytes === null
+    ? 'ملفُّه محذوفٌ من الشجرة بعد الحكم — وهذا العمودُ مُصيَّرٌ بالخطّ الاحتياطيّ'
+    : `جردٌ محسوب: ${arNum(have)}/${arNum(DIGITS.length)} رقماً مرسومةً من الخطّ نفسِه`
+      + (missing.length ? ` — ناقصٌ: ${missing.join(' ')}` : '')
+      + ` · وزنُ الملف ${arNum(Math.round(bytes / 1024))} ك.بايت`
+      + ` · غليظٌ حقيقيّ: ${realBold ? 'نعم' : 'لا — يُصطنع اصطناعاً'}`;
+  if (bytes === null || missing.length || !realBold) el.style.color = 'var(--err-text)';
+}
+</script>
+</body>
+</html>

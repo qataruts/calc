@@ -149,9 +149,23 @@
     'الصفحةُ عربيةٌ من اليمين (dir=rtl · lang=ar)');
   ok(brand && brand.textContent === 'اِحْسِبْ',
     `العلامةُ «اِحْسِبْ» مشكولةً في الترويسة (وُجد: «${brand ? brand.textContent : 'لا شيء'}»)`);
+  // **خطُّ العلامة يُقرأ من اللوح لا يُكتب هنا** (الجلسة هـ): كان الاسمُ مكتوباً في هذا
+  // الحارس، فيومَ بدّله المالكُ صار يحرس خطّاً مهجوراً — فالمرجعُ `--font-brand`، وهذا
+  // البابُ يسأل: أوَصلَ الخطُّ المعلَنُ إلى الكلمة فعلاً على الشاشة؟ (و«ليس Marhey»
+  // بابُ `tools/test_identity.mjs`، لأنه حكمُ ميثاقٍ لا حكمُ تصيير.)
+  const declared = win.getComputedStyle(root).getPropertyValue('--font-brand')
+    .split(',')[0].trim().replace(/^['"]|['"]$/g, '');
   const brandFont = brand && win.getComputedStyle(brand).fontFamily;
-  ok(brandFont && brandFont.includes('Marhey'),
-    `وبخطّ العلامة Marhey وحدَه (${brandFont || 'بلا خط'})`);
+  ok(declared && brandFont && brandFont.includes(declared),
+    `وبخطّ العلامة الذي يعلنه اللوح («${declared || 'لا شيء'}») وحدَه (${brandFont || 'بلا خط'})`);
+  // وأنّ ملفَّه وصل فعلاً: يُسأل جردُ خطوط الصفحة عن وجهٍ بهذا الاسم وحالُه «محمَّل».
+  // (لا تصلح `fonts.check` هنا: تُجيب «نعم» بالاحتياطيّ حين لا يوجد الوجهُ أصلاً.)
+  // ويُنتظَر فراغُ الصفحة من تحميل خطوطها، فلا يُحكَم على وجهٍ ما زال في الطريق.
+  await doc.fonts.ready;
+  const face = [...doc.fonts].find((f) => f.family.replace(/['"]/g, '') === declared);
+  ok(!!face && face.status === 'loaded',
+    `وملفُّ خطّ العلامة وصل فعلاً (${face ? face.status : 'لا وجهَ بهذا الاسم'})`
+    + ' — لا احتياطيٌّ يلبس اسمَه');
   ok(doc.querySelector('.brand-owl svg'), 'ومعها المرشدُ رسماً متجهاً (SVG) لا صورةً نقطية');
 
   // ————— ٣) أرقام المشرق في كل موضع (قرار ق١ · METHOD §٩) —————

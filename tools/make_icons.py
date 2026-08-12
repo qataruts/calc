@@ -16,6 +16,7 @@
 import argparse
 import http.server
 import json
+import re
 import shutil
 import socketserver
 import struct
@@ -118,10 +119,25 @@ def self_test() -> int:
              if "export const BRAND = '" in ui else "")
     checks.append((bool(brand) and f"'{brand}'" in src.replace('"', "'"),
                    f"والكلمةُ فيه هي علامةُ `ui.js` نفسُها («{brand or 'لا شيء'}»)"))
-    checks.append(("app/fonts/Marhey" in src and "font-display: block" in src,
-                   "وبخطّ العلامة من `app/fonts/` لا خطّ النظام، ولا يُلتقط قبل وصوله"))
+    # **وخطُّ العلامة يُقرأ من اللوح لا يُكتب هنا** (الجلسة هـ): كان اسمُ الخطّ مكتوباً
+    # في هذا السطر، فيومَ بدّله المالكُ صار الحارسُ يحرس خطّاً مهجوراً — وهو صنفُ عيبٍ
+    # يمرّ أخضرَ أبداً. فالمرجعُ `--font-brand` في `app.css`، وأصلُ الأيقونة يُقابَل به.
+    css = (ROOT / "app" / "css" / "app.css").read_text(encoding="utf-8")
+    stack = re.search(r"^\s*--font-brand:\s*([^;]+);", css, re.M)
+    font = (stack.group(1).split(",")[0].strip().strip("'\"") if stack else "")
+    checks.append((bool(font) and f"app/fonts/{font}" in src and "font-display: block" in src,
+                   f"وبخطّ العلامة الذي يعلنه اللوح («{font or 'لا شيء'}») من `app/fonts/`"
+                   " لا خطّ النظام، ولا يُلتقط قبل وصوله"))
+    checks.append((f"font-family: '{font}'" in css and f"fonts/{font}-arabic.woff2" in css,
+                   "واللوحُ نفسُه يحمّل ملفَّه من `app/fonts/` (لا خطّ علامةٍ مُعلَنٍ بلا ملفّ)"))
+    checks.append((bool(font) and (ROOT / "app" / "fonts" / f"{font}-arabic.woff2").exists(),
+                   "والملفُّ موجودٌ في الشجرة"))
     checks.append(("--ink-lift" in src and "fontBoundingBoxAscent" in src,
                    "ورفعةُ الحبر **مقيسةٌ** لا مقدَّرة (توسيطٌ بصريّ لا هندسيّ)"))
+    # **والمقاسُ مقيسٌ كذلك** (الجلسة هـ): نسبةُ الخطّ سقفٌ يضيق إن كان حبرُ الكلمة
+    # أعرضَ من علبتها — فلا تُقَصُّ علامةٌ في أيقونة يومَ يُبدَّل خطُّها.
+    checks.append(("actualBoundingBoxRight" in src and "SAFE" in src,
+                   "ومقاسُ الكلمة **مقيسٌ** بحبرها لا مربوطٌ برقمٍ ضُبط لخطٍّ بعينه"))
 
     # **البيانُ والمولّدُ يتقابلان**: كلُّ أيقونةٍ يَعِد بها `manifest.webmanifest`
     # يولّدها هذا الملف بمقاسها — وإلا وَعَد التطبيقُ بما لا يُصنَع.
