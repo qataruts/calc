@@ -33,6 +33,7 @@ import './ops.js';
 import './teens.js';
 import './patterns.js';
 import './intro.js';
+import * as install from './install.js';
 import {
   h, icon, faceEl, toast, go, arNum, starsRow, topbar, brandMark, landmark, DEV,
   PAUSE_ACCENT,
@@ -132,6 +133,14 @@ function renderMap() {
         'هذه بذرةُ التطبيق: الهيكلُ والحرّاس وهويةُ «اِحْسِبْ» قائمة،'
         + ' وبياناتُ المنهج (المراحل الثماني ومحطاتها والبوابات الثلاث) تُكتب في'
         + ' الخطوة التالية — فتظهر هنا محطةً محطة بلا سطرٍ يُعدَّل في هذه الشاشة.')));
+  }
+
+  /* **بابُ المرجع في ذيل الخريطة** (سنّةُ اقرأ، الجلسة ٩): من فتح التطبيق وأراد أن
+     يعرف ما هو يجد المرجعَ التعريفيّ هنا — **انتقالُ صفحةٍ لا تنقّلُ تطبيق** (رابطٌ
+     خارج نطاق الـhash، وعاملُ الخدمة يستثني مساره فلا يبتلعه ردُّ التنقّل). وموضعُه
+     الذيلُ لا الصدر: صدرُ الخريطة لدرس الطفل. */
+  if (sections.length) {
+    main.append(h('a', { class: 'map-about', href: 'welcome/' }, 'عن التطبيق ←'));
   }
 
   if (DEV) {
@@ -440,6 +449,11 @@ window.addEventListener('pageshow', resetZoom);
 document.addEventListener('visibilitychange', () => {
   if (document.visibilityState === 'visible') resetZoom();
 });
+
+/* **بابُ التثبيت** (منقولُ اقرأ، الجلسة ٩): شريطٌ يقول لكل جهازٍ ما يخصّه —
+   **ومعفىً في وضع المعاينة**: شريطان فوق الشاشة ضجيجٌ على المقيّم، والمعاينةُ
+   عرضٌ لا جهازُ طفلٍ يُثبَّت عليه. */
+if (!progress.PREVIEW) install.mount();
 
 window.addEventListener('hashchange', render);
 audio.ready();

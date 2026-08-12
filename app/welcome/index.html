@@ -1,0 +1,394 @@
+<!doctype html>
+<html lang="ar" dir="rtl">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+    <meta
+      name="description"
+      content="اِحْسِبْ — يبني الحسّ العددي عند طفل ٤–٧ سنوات: كميةٌ تُرى وتُعَدّ قبل الرمز، وجسورُ الأعداد قبل الجمع والطرح، حتى العشرين. طريقٌ واحد بمحطاتٍ مقفلة وبواباتِ إتقانٍ بلا رسوب. صفحةٌ تعريفية لأولياء الأمور والمعلمين."
+    />
+    <meta name="theme-color" content="#F7F3EC" />
+    <meta name="theme-color" media="(prefers-color-scheme: dark)" content="#23282E" />
+    <title>اِحْسِبْ — الحسّ العددي المبكر</title>
+    <link rel="icon" href="../icons/icon-192.png" />
+    <!--
+      الرئيسة — **بوّابةٌ في ثلاثين ثانية لا مرجعٌ يطول**: ما هو، لمن، ما يميّزه،
+      لقطاتٌ حيّة، أرقامٌ كبرى، وثلاثةُ أبوابٍ إلى الصفحات العميقة. وما كان من تفصيلٍ
+      (الأسسُ ومسوّغاتُها والدليلُ العمليّ) موضعُه `method.html` و`guide.html`.
+
+      وقوانينُ `welcome/` كلُّها قائمة: صفرُ جافاسكربت · خارج قشرة عامل الخدمة
+      (`WELCOME` في `sw.js`) · صفرُ مَوردٍ خارجيّ يُجلَب · لوحُ `app.css` نفسُه ·
+      رموزُ `app/emoji/` · لقطاتٌ من الشاشات بمولّدها (`tools/make_welcome_shots.py`) ·
+      وأرقامٌ يحسبها الحارس (`tools/test_welcome.mjs`) لا تُكتب باليد.
+    -->
+    <link rel="stylesheet" href="../css/app.css" />
+    <link rel="stylesheet" href="welcome.css" />
+  </head>
+  <body>
+    <header class="w-top">
+      <div class="w-top-in">
+        <a class="w-top-brand" href="./"
+          ><img src="../icons/icon-192.png" alt="" width="30" height="30" /><span
+            class="brand"
+            ><span class="brand-word">اِحْسِبْ</span></span
+          ></a
+        >
+        <nav class="w-topnav" aria-label="صفحات المرجع">
+          <a href="./" aria-current="page">الرئيسة</a>
+          <a href="curriculum.html">المنهج</a>
+          <a href="method.html">الأسس</a>
+          <a href="guide.html">الدليل العملي</a>
+          <a class="btn btn--primary" href="../">ابدأ الآن ←</a>
+        </nav>
+      </div>
+    </header>
+
+    <div class="w-wrap">
+      <div class="w-print-head">
+        <img loading="lazy" src="../icons/icon-192.png" alt="" width="44" height="44" />
+        <span class="w-print-brand brand"><span class="brand-word">اِحْسِبْ</span></span>
+        <span class="w-print-title">الحسّ العددي المبكر</span>
+        <a class="w-print-url" href="https://calc.mishkat.qa/">calc.mishkat.qa</a>
+      </div>
+
+      <header class="w-hero">
+        <div class="w-hero-text">
+          <h1 class="w-tagline">
+            يبني طفلك الحسَّ العددي بيده — كميةً يراها ويعدّها، قبل أن يكتب رقماً
+            واحداً.
+          </h1>
+
+          <p class="w-lede">
+            تطبيق ويب مجاني لطفل من أربع إلى سبع سنوات. يمشي على
+            <b>مسارات التعلّم</b> في الرياضيات المبكرة: الكميةُ تُرى وتُعَدّ، ثم
+            يُسمّى رمزُها، ثم تُبنى جسورُ الأعداد، ثم يجمع ويطرح — حتى العشرين.
+            ولا يُعرض على الطفل عددٌ ولا عمليةٌ فوق ما بلغه في الطريق.
+          </p>
+
+          <a class="btn btn--primary w-start" href="../">ابدأ الآن ←</a>
+          <p class="w-under">
+            يفتح في المتصفّح مباشرة — بلا تنزيل، وبلا حساب، وبلا إعلانات.
+          </p>
+        </div>
+
+        <figure class="w-hero-shot">
+          <img
+            src="shots/count.png"
+            alt="شاشة «اِلْمَسْ وَعُدَّ» في التطبيق: كميةٌ مبعثرة، ولمسةٌ لكل عنصر."
+            width="820"
+            height="882"
+          />
+        </figure>
+      </header>
+
+      <!-- ————— أولُ خطوة: التثبيت ————— -->
+      <!--
+        **مقدَّمٌ على كل تفصيل** (سنّةُ العائلة، وأمرُ المالك في اقرأ): بياناتُ الطفل
+        **في جهازه لا في حسابٍ عندنا** — فالتثبيتُ ليس زينةً، بل هو ما يحفظ رحلتَه
+        ويجعله يعمل دون إنترنت.
+      -->
+      <section class="w-section" id="install-first" style="--accent: var(--accent-bond)">
+        <h2>أول خطوة: ثبّته على جهاز طفلك</h2>
+        <p class="w-lede">
+          «اِحْسِبْ» يُضاف إلى شاشة الجهاز بنقرتين —
+          <b>بلا متجر تطبيقات وبلا تنزيل</b>. وليست خطوةً تجميلية:
+          <b>تقدّم طفلك محفوظ في جهازه هو</b>، لا في حسابٍ عندنا ولا على خادم.
+          وبالتثبيت يفتح بأيقونته بلا شريط متصفّح يشتّته، ويحفظ أصواته في الجهاز
+          فيعمل في السيارة وفي صفٍّ بلا شبكة.
+        </p>
+        <p class="w-under">
+          والتطبيق نفسُه يُرشدك: حين يُفتح من متصفّحٍ يظهر أعلاه شريطُ تثبيتٍ يعرف
+          جهازَك — زرُّ <b>«ثبّت الآن»</b> بنقرةٍ واحدة حيث يتيحها النظام، وخطوتا
+          سفاري على الآيباد والآيفون. والخطواتُ الأربع الآتية هي نفسُها إن أحببت
+          فعلَها بيدك.
+        </p>
+        <div class="w-cards w-cards--four">
+          <article class="w-card" style="--accent: var(--accent-bond)">
+            <h3>١ · افتح التطبيق</h3>
+            <p>
+              اضغط <b>«ابدأ الآن»</b> لتكون داخل التطبيق. وعلى الآيباد والآيفون
+              افتحه في <b>سفاري</b> — التثبيت لا يعمل من متصفّحٍ آخر عليهما.
+            </p>
+          </article>
+          <article class="w-card" style="--accent: var(--accent-bond)">
+            <h3>٢ · زرّ المشاركة</h3>
+            <p>
+              اضغط زرّ <b>المشاركة</b> في شريط سفاري — مربّعٌ يخرج منه سهمٌ إلى
+              أعلى.
+            </p>
+          </article>
+          <article class="w-card" style="--accent: var(--accent-bond)">
+            <h3>٣ · أضِف إلى الشاشة</h3>
+            <p>اختر <b>«إضافة إلى الشاشة الرئيسية»</b> ثم <b>«إضافة»</b>.</p>
+          </article>
+          <article class="w-card" style="--accent: var(--accent-bond)">
+            <h3>٤ · افتحه من أيقونته</h3>
+            <p>
+              تظهر أيقونة <b>اِحْسِبْ</b> بين تطبيقات الجهاز. افتحه منها مرّةً
+              <b>وهو متّصل بالإنترنت</b> ودعه دقيقةً ليحفظ الأصوات، ثم يعمل بلا
+              شبكة.
+            </p>
+          </article>
+        </div>
+        <p class="w-under" style="margin-top: 1rem">
+          خطواتُ أندرويد والحاسوب، وكيف تتأكّد أنّ الأصوات اكتملت —
+          <a href="guide.html#install">في الدليل العملي</a>.
+        </p>
+      </section>
+
+      <!-- ————— ما الذي يميّزه ————— -->
+
+      <section class="w-section" id="why" style="--accent: var(--accent-quantity)">
+        <h2>أربعة فروق تراها في أول جلسة</h2>
+        <p class="w-lede">
+          وكلُّ واحدٍ منها يمكنك التحقق منه بنفسك، لأنّ برنامج فحصٍ يطبّقه على
+          المحتوى قبل أن يصل إلى الطفل.
+        </p>
+        <div class="w-cards w-cards--four">
+          <article class="w-card" style="--accent: var(--accent-quantity)">
+            <div class="w-face">
+              <img loading="lazy" src="../emoji/2b50.svg" alt="" width="30" height="30" />
+            </div>
+            <h3>الكميةُ قبل الرمز</h3>
+            <p>
+              لا يرى الطفل رقماً واحداً في أوّل مرحلتين — يقدّر بنظرة، ويعدّ
+              بلمسةٍ لكل عنصر، ويطابق كمّاً بكمّ. ثم يُكشَف الرمزُ
+              <b>فوق الكمية التي عدّها للتوّ</b>، فيكون تسميةً لشيءٍ يعرفه لا
+              تعريفاً لمجهول.
+            </p>
+          </article>
+          <article class="w-card" style="--accent: var(--accent-numeral)">
+            <div class="w-face">
+              <img loading="lazy" src="../emoji/1f34e.svg" alt="" width="30" height="30" />
+            </div>
+            <h3>لا عددَ ولا عمليةَ فوق ما بلغه</h3>
+            <p>
+              لكل محطةٍ <b>جبهةٌ معلَنة</b> (مداها وأشكالُها ورموزُ عملياتها)،
+              وبرنامجُ فحصٍ يمرّ على كل جولةٍ يولّدها التطبيق ويرفض ما تجاوزها.
+              فالطفلُ لا يقابل «+» قبل محطته، ولا عدداً فوق مداه — ليس وعداً بل
+              فحصٌ يمرّ قبل النشر.
+            </p>
+          </article>
+          <article class="w-card" style="--accent: var(--accent-bond)">
+            <div class="w-face">
+              <img loading="lazy" src="../emoji/1f388.svg" alt="" width="30" height="30" />
+            </div>
+            <h3>كلُّ صوتٍ سمعته أذنٌ قبل نشره</h3>
+            <p>
+              في التطبيق <b data-stat="audio">٦٩</b> ملفَّ صوتٍ مسجَّلةً مسبقاً
+              بصوتٍ واحد، <b>استُمع إليها واحداً واحداً</b> قبل نشرها. ولا ينطق
+              التطبيق شيئاً بصوتٍ آليّ لحظيّ. والعدُّ فيه
+              <b>مجرَّدٌ</b>: «واحد، اثنان، ثلاثة» — بلا معدودٍ يُقرن بعدد.
+            </p>
+          </article>
+          <article class="w-card" style="--accent: var(--accent-pattern)">
+            <div class="w-face">
+              <img loading="lazy" src="../emoji/1f331.svg" alt="" width="30" height="30" />
+            </div>
+            <h3>خصوصيةٌ كاملة، ويعمل دون إنترنت</h3>
+            <p>
+              لا حساب، ولا تسجيل دخول، ولا إعلانات، ولا تتبّع. تقدّمُ الطفل في
+              جهازه وحدَه، ولك أن تصدّره ملفاً وتستعيده. وبعد أوّل فتحةٍ متّصلة
+              يعمل في السيارة وفي صفٍّ بلا شبكة.
+            </p>
+          </article>
+        </div>
+      </section>
+
+      <!-- ————— لمن هو ————— -->
+
+      <section class="w-section" id="who" style="--accent: var(--accent-numeral)">
+        <h2>ما «اِحْسِبْ»، ولمن؟</h2>
+        <p class="w-lede">
+          يراه الطفل لعبةَ أعداد، وهو في حقيقته منهجٌ متدرّج. يلعب ثلاث إلى خمس
+          دقائق في المحطة الواحدة، والتطبيق يسجّل كل تعثّرٍ ويعيده عليه في وقته.
+        </p>
+        <div class="w-cards">
+          <article class="w-card">
+            <div class="w-face">
+              <img loading="lazy" width="32" height="32" src="../emoji/1f423.svg" alt="" />
+            </div>
+            <h3>للطفل (٤–٧ سنوات)</h3>
+            <p>
+              لا يحتاج أن يقرأ ليستعمله: الصورةُ والصوتُ وموضعُ الزرّ تدلّه.
+              الأزرار كبيرةٌ تناسب إصبعه، ولا مؤقّت ولا عدّ تنازلي ولا شاشة
+              «خطأ». وإذا أخطأ <b>تُعَدُّ الكميةُ أمامه</b> ثم يحاول ثانية.
+            </p>
+          </article>
+          <article class="w-card">
+            <div class="w-face">
+              <img loading="lazy" width="32" height="32" src="../emoji/1f333.svg" alt="" />
+            </div>
+            <h3>لوليّ الأمر</h3>
+            <p>
+              لوحةٌ خلف بوابةٍ بسيطة تقول بالكلام لا بالدرجات: ما الذي
+              <b>يفعله</b> طفلك الآن، وما الذي <b>يحتاج تثبيته</b>، وكم دقيقةً
+              تعلّم في كل يوم من الأسبوع. وفيها نسخةٌ احتياطية تحفظها بنفسك.
+            </p>
+          </article>
+          <article class="w-card">
+            <div class="w-face">
+              <img loading="lazy" width="32" height="32" src="../emoji/1f4d0.svg" alt="" />
+            </div>
+            <h3>للمعلم والمدرسة</h3>
+            <p>
+              ترتيبٌ واضح يُدقَّق محطةً محطة، وقاعدةُ «لا عددَ فوق جبهته» يفرضها
+              برنامجُ فحصٍ لا ذوقُ مؤلّف، وثلاثُ صفحاتٍ في هذا المرجع تبيّن كل
+              محطةٍ وسببَ كل قرار.
+            </p>
+          </article>
+        </div>
+      </section>
+
+      <!-- ————— أرقام ولقطات ————— -->
+
+      <section class="w-section" id="journey" style="--accent: var(--accent-bond)">
+        <h2>رحلةٌ واحدة من «كم ترى؟» إلى العشرين</h2>
+        <p class="w-lede">
+          دربٌ واحد متّصل، والتالي مقفلٌ حتى يُتمّ الذي قبله. واللقطات أدناه
+          <b>من التطبيق نفسه</b> لا رسومَ عرضٍ — تُلتقط آلياً من شاشاته.
+        </p>
+
+        <ul class="w-figs">
+          <li><b data-stat="nodes">٥٢</b><span>محطة في الرحلة</span></li>
+          <li><b data-stat="stars">١٥٦</b><span>نجمة تُكتسب</span></li>
+          <li><b data-stat="stages">٨</b><span>مراحل متدرّجة</span></li>
+          <li><b data-stat="gates">٣</b><span>بوابات إتقان</span></li>
+          <li><b data-stat="max">٢٠</b><span>حدُّ المستوى الأول</span></li>
+          <li><b data-stat="skills">٥١</b><span>مفتاح قياسٍ يُتابَع</span></li>
+          <li><b data-stat="audio">٦٩</b><span>ملفَّ صوتٍ مراجَعاً</span></li>
+          <li><b data-stat="types">٢٢</b><span>نوعَ محطةٍ بتمرينها</span></li>
+        </ul>
+
+        <div class="w-shots">
+          <figure>
+            <img
+              src="shots/map.png"
+              width="820"
+              height="1180"
+              loading="lazy"
+              alt="خريطة الرحلة: محطاتٌ متتابعة بنجومها، وزرّ «تابع من هنا» في أعلاها."
+            />
+            <figcaption>
+              <b>درب الرحلة</b>
+              محطةٌ بعد محطة، والتالي مقفلٌ حتى يُتمّ الذي قبله — فلا يضيع الطفل
+              في قائمة.
+            </figcaption>
+          </figure>
+          <figure>
+            <img
+              src="shots/numeral.png"
+              width="820"
+              height="821"
+              loading="lazy"
+              alt="محطة الرموز: كميةٌ في إطار العشرة، ورمزُها يُكشَف فوقها."
+            />
+            <figcaption>
+              <b>الرمزُ بعد الكمّ</b>
+              تُعَدّ الكميةُ أوّلاً، ثم يُكشَف رمزُها فوقها — والمطابقةُ ذهاباً
+              وإياباً في المحطة الواحدة.
+            </figcaption>
+          </figure>
+          <figure>
+            <img
+              src="shots/bond.png"
+              width="820"
+              height="821"
+              loading="lazy"
+              alt="محطة أصدقاء العشرة: إطارُ عشرةٍ فيه خاناتٌ ممتلئة وأخرى فارغة."
+            />
+            <figcaption>
+              <b>جسورُ الأعداد</b>
+              قبل «+» و«−» بمرحلةٍ كاملة: يركّب العددَ من جزأين، ويرى ما بقي
+              للعشرة في خانات الإطار.
+            </figcaption>
+          </figure>
+          <figure>
+            <img
+              src="shots/parent.png"
+              width="820"
+              height="1180"
+              loading="lazy"
+              alt="لوحة وليّ الأمر: أقسامُ الحساب السبعة، ولكلٍّ جملةٌ تصف ما يفعله الطفل."
+            />
+            <figcaption>
+              <b>لوحة وليّ الأمر</b>
+              مفهومٌ بعملية لا درجة: «يقدّر حتى ٥ فوراً» — ودقائقُ الأسبوع،
+              ونسخةٌ احتياطية تحفظها بنفسك.
+            </figcaption>
+          </figure>
+        </div>
+      </section>
+
+      <!-- ————— ثلاثة أبواب ————— -->
+
+      <section class="w-section" id="more" style="--accent: var(--accent-pattern)">
+        <h2>وللمعلّم ووليّ الأمر: ثلاثةُ أبواب</h2>
+        <p class="w-lede">
+          هذه الصفحة بوّابة. وما وراءها مرجعٌ يُدقَّق: كلُّ محطةٍ بميكانيكيتها، وكل
+          قرارٍ بسببه، وكل أداةٍ بطريقة استعمالها.
+        </p>
+        <div class="w-cards">
+          <article class="w-card" style="--accent: var(--accent-quantity)">
+            <div class="w-face">
+              <img loading="lazy" src="../emoji/1f5fa.svg" alt="" width="30" height="30" />
+            </div>
+            <h3><a href="curriculum.html">المنهج — الرحلة محطةً محطة</a></h3>
+            <p>
+              <b data-stat="nodes">٥٢</b> محطة في
+              <b data-stat="stages">٨</b> مراحل: ماذا يتعلّم الطفل في كلٍّ، وكيف
+              يعمل تمرينُها، وما دورُك أنت. وتُطبَع ورقةً تُسلَّم لمدرسة.
+            </p>
+          </article>
+          <article class="w-card" style="--accent: var(--accent-numeral)">
+            <div class="w-face">
+              <img loading="lazy" src="../emoji/1f9e0.svg" alt="" width="30" height="30" />
+            </div>
+            <h3><a href="method.html">الأسس — لماذا هذا الترتيب</a></h3>
+            <p>
+              مسارات التعلّم، والتقدير الفوريّ قبل العدّ، والجسور قبل العمليات،
+              وقرارُ الأرقام المشرقية، وقرارُ العدّ المجرد —
+              <b>وأسبابُ قراراتنا وحدودُ ما لا يفعله التطبيق</b>.
+            </p>
+          </article>
+          <article class="w-card" style="--accent: var(--accent-bond)">
+            <div class="w-face">
+              <img loading="lazy" src="../emoji/1f393.svg" alt="" width="30" height="30" />
+            </div>
+            <h3><a href="guide.html">الدليل العملي — في البيت وفي الصفّ</a></h3>
+            <p>
+              كيف تكون الجلسة، وكيف تُقرأ لوحةُ وليّ الأمر، و<b
+                >كيف تجرّب التطبيق من أوله</b
+              >، والتثبيتُ وحفظُ التقدّم واستعادتُه.
+            </p>
+          </article>
+        </div>
+      </section>
+
+      <div class="w-end">
+        <h2 style="margin-top: 0">ابدأ من أوّل كميّة</h2>
+        <p class="w-lede" style="margin-inline: auto">
+          لا تنزيلَ ولا حساب — تفتح الصفحة فيبدأ الطفل من «كَمْ تَرَى؟».
+        </p>
+        <a class="btn btn--primary w-start" href="../">ابدأ الآن ←</a>
+      </div>
+
+      <footer class="w-foot">
+        <p>
+          «اِحْسِبْ» تطبيق ويب مفتوح البنية، بلا إطارات عملٍ ولا أدوات بناء.
+          ومرجعُه المنهجيّ <b>مسارات التعلّم في الرياضيات المبكرة</b> (Clements
+          &amp; Sarama)، ورموزُه المرسومة من <b>Twemoji</b> (رخصة CC-BY 4.0)
+          محفوظةً في الجهاز.
+        </p>
+        <p>
+          وهذه الصفحة تعريفٌ بالتطبيق — ولا تجمع عنك شيئاً ولا تضع في جهازك
+          شيئاً.
+        </p>
+        <p class="w-contact">
+          للتواصل والملاحظات:
+          <a href="mailto:info@mishkat.qa">info@mishkat.qa</a>
+        </p>
+      </footer>
+    </div>
+  </body>
+</html>

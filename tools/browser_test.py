@@ -42,6 +42,10 @@ REPORT_FROM = "ihsib"
 PAGES = {
     "/__test.html": TOOLS / "browser_test.html",
     "/__device.html": TOOLS / "browser_device.html",
+    # المرجعُ التعريفيّ (الجلسة ٩) — يُقاس في متصفّحٍ حقيقيّ لأنّ ثلاثةً من شروطه
+    # لا يراها فحصُ نصّ: الطلبُ الشبكيّ الخارجيّ، والتمريرُ الأفقيّ، وابتلاعُ عامل
+    # الخدمة للصفحة بعد تفعيله.
+    "/__welcome.html": TOOLS / "browser_welcome.html",
 }
 
 # مقاسات الآيباد الخمسة (نقاط CSS، طولاً) — عليها تُقاس الشاشات في `--device`.
@@ -363,6 +367,8 @@ def main() -> int:
     ap.add_argument("--render-shots", action="store_true",
                     help="مع --shots DIR: لقطةٌ مرجعية لكل نمطٍ من أنماط المصيِّر")
     ap.add_argument("--device", action="store_true", help="مقاسات الآيباد الخمسة")
+    ap.add_argument("--welcome", action="store_true",
+                    help="المرجعُ التعريفيّ: لا طلبَ خارجيّ، ولا يبتلعه عاملُ الخدمة")
     ap.add_argument("--size", help="مقاس النافذة W,H")
     ap.add_argument("--show", action="store_true", help="متصفّح مرئي")
     ap.add_argument("--self-test", action="store_true", help="فحصُ العدّة بلا Chrome")
@@ -400,7 +406,8 @@ def main() -> int:
             print(("✓ اللقطة في " if out.exists() else "✗ تعذّرت اللقطة: ") + str(out))
             return 0 if out.exists() else 1
 
-        proc = run_chrome(f"http://127.0.0.1:{args.port}/__test.html", profile,
+        page = "__welcome.html" if args.welcome else "__test.html"
+        proc = run_chrome(f"http://127.0.0.1:{args.port}/{page}", profile,
                           [f"--window-size={args.size or '834,1194'}"], args.show)
         deadline = time.time() + args.timeout
         while time.time() < deadline and not results:

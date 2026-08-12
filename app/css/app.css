@@ -899,6 +899,21 @@ button {
 
 /* ————— أدوات التجربة والرسالة العابرة ————— */
 
+/* بابُ المرجع التعريفي في ذيل الخريطة (الجلسة ٩) — **هادئٌ عمداً**: سطرُ كبارٍ
+   في ذيل شاشةٍ للطفل، فلا يزاحم «تابع من هنا» ولا يشبه زرَّ محطة. */
+.map-about {
+  display: block;
+  margin: 2rem auto .5rem;
+  padding: .6rem 1rem;
+  width: fit-content;
+  color: var(--ink-soft);
+  font-size: .95rem;
+  text-decoration: none;
+  border-bottom: 1px solid var(--line);
+}
+
+.map-about:hover { color: var(--ink); }
+
 .dev {
   margin-top: 1.5rem;
   padding: .9rem 1rem;
@@ -1108,6 +1123,36 @@ button {
   font-size: .9rem;
   color: #fff;
   border-color: color-mix(in srgb, #fff 55%, transparent);
+}
+
+/* **شريطُ التثبيت** (منقولُ اقرأ `read@260bf48` — أمرُ المالك للعائلة كلِّها،
+   الجلسة ٩): رسالةٌ لكل جهازٍ بلسانه، وزرٌّ حقيقيّ حيث يتيحه النظام — ويغيب كلياً
+   في التطبيق المثبَّت (`install.js`). وهيئتُه هادئةٌ فوق الورق: سطرُ كبارٍ لا زرُّ
+   طفل، فلا يزاحم شاشةَ الدرس. */
+.install-bar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: .5rem .85rem;
+  padding: .6rem 1rem;
+  background: var(--paper-deep);
+  border-bottom: 1px solid var(--line);
+  font-size: .95rem;
+  line-height: 1.6;
+}
+
+.install-bar .install-text { flex: 1 1 16rem; }
+
+.install-bar .install-go { min-height: 3rem; padding: .35rem 1.15rem; font-size: 1rem; }
+
+.install-x {
+  min-width: 2.75rem;
+  min-height: 2.75rem;
+  background: none;
+  border: 0;
+  color: var(--ink-soft);
+  font-size: 1rem;
+  cursor: pointer;
 }
 
 /* ————— حلقةُ المحطة وشاشاتُ التمارين (الجلسة ٣ — `METHOD.md §٤`) —————

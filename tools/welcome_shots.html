@@ -1,0 +1,152 @@
+<!doctype html>
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <title>لقطات المرجع التعريفي — شاشات «اِحْسِبْ» نفسُها</title>
+  <link rel="stylesheet" href="css/app.css">
+  <style>
+    /* لا زينةَ ولا إطار: اللقطة شاشةُ التطبيق كما يراها الطفل، وإلا كانت دعايةً لا صدقاً */
+    html, body { margin: 0; }
+    .dev { display: none; }        /* أدوات التجربة تقود ولا تدخل اللقطة */
+  </style>
+</head>
+<body>
+<div id="app" class="app" aria-live="polite"></div>
+<div id="toast" class="toast" hidden></div>
+
+<script>
+// عطبٌ يُكتب في الصفحة نفسِها — فاللقطة البيضاء الصامتة تحيّر (سنّةُ `browser_device.html`)
+const shout = (what) => {
+  const box = document.createElement('pre');
+  box.style.cssText = 'color:#b00;font:14px/1.6 monospace;white-space:pre-wrap';
+  box.textContent = 'عطب: ' + what;
+  document.body.prepend(box);
+};
+window.addEventListener('error', (e) => shout(e.message));
+window.addEventListener('unhandledrejection', (e) => shout(e.reason?.stack || e.reason));
+
+// صفحةُ لقطاتٍ لا تُسجّل عاملَ خدمة: `main.js` يسجّله عند استيراده، ولا شأنَ للقطةٍ
+// بخزنِ شيءٍ على القرص.
+Object.defineProperty(navigator, 'serviceWorker', {
+  configurable: true,
+  value: { register: () => Promise.resolve(), addEventListener() {} },
+});
+</script>
+
+<script type="module">
+/**
+ * لقطاتُ المرجع التعريفي (`app/welcome/`) — **من التطبيق نفسِه لا من رسمٍ له**.
+ *
+ * لماذا صفحةٌ لا يدُ مصمّم: المرجعُ يَعِد المعلّمَ ووليَّ الأمر بما في التطبيق، فصورتُه
+ * يجب أن تكون التطبيقَ. فهذه الصفحة تزرع تقدُّمَ طفلٍ حقيقيّ ثم تفتح **الشاشةَ نفسَها
+ * عبر موجِّه التطبيق** (`main.js` بمساره في العنوان) — فما يُلتقط هو ما يُرسَم للطفل،
+ * وأيُّ تغيّرٍ في الشاشة يظهر في اللقطة بإعادة التوليد لا بتحرير صورة.
+ *
+ * **والطفلُ المزروع واحدٌ في كل اللقطات**: أتمّ الرحلةَ إلى محطة القياس (فكلُّ ما
+ * يُلتقَط مفتوحٌ له — والقفلُ يُحرَس في الموجِّه لا في أزرار الخريطة وحدها)، وله
+ * سجلُّ ليتنر متفاوتٌ ودقائقُ أسبوع — فتصدُق لوحةُ وليّ الأمر والخريطةُ معاً، ولا
+ * تتناقض لقطتان أمام مَن يقرؤهما جميعاً.
+ */
+import * as progress from './js/progress.js';
+
+// صوتٌ لا ينتهي: الحالةُ المعروضة تتجمّد فلا تنتقل الخطوةُ تلقائياً قبل اللقطة
+window.Audio = class { play() { return new Promise(() => {}); } pause() {} load() {} };
+Element.prototype.scrollIntoView = () => {};
+
+const params = new URLSearchParams(location.search);
+const screen = params.get('screen') || 'map';
+
+// ————— تقدُّمُ طفلٍ في أواخر الرحلة —————
+//
+// **والحدُّ مشتقٌّ لا مكتوب**: يقف عند أوّل محطة قياسٍ — فما قبلها كلُّه مفتوح،
+// ويبقى للخريطة «تابع من هنا» فلا تُرى رحلةً منتهية.
+const all = progress.allNodes();
+const front = all.findIndex((n) => n.type === 'measure');
+for (const node of all.slice(0, front)) progress.setStars(node.id, node.type === 'gate' ? 2 : 3);
+
+// سجلُّ ليتنر: متقَنٌ ومتعثّرٌ وما بينهما — **من مفاتيح المنهج نفسِها** لا من مفاتيحَ
+// تُخترَع هنا (لوحةُ وليّ الأمر تُترجم ما في السجلّ، فلو زُرع فيه مفتاحٌ لا يعرفه
+// المنهجُ لَعرضت اللوحةُ ما لا وجودَ له).
+const day = progress.dayNumber();
+const drill = (concept, range, kind, right, wrong) => {
+  for (let i = 0; i < right; i++) progress.recordAttempt(concept, range, kind, true, day - (right - i));
+  for (let i = 0; i < wrong; i++) progress.recordAttempt(concept, range, kind, false, day);
+};
+for (const [c, r, k, right, wrong] of [
+  ['subitize', 5, 'flash', 6, 0],
+  ['count', 10, 'touch', 6, 0],
+  ['count', 10, 'give', 4, 1],
+  ['numeral', 7, 'match', 5, 0],
+  ['numeral', 9, 'match', 3, 1],
+  ['compare', 10, 'pick', 4, 0],
+  ['order', 10, 'sort', 3, 1],
+  ['bond', 10, 'make', 2, 2],
+  ['add', 10, 'solve', 3, 1],
+  ['sub', 10, 'solve', 2, 2],
+  ['teen', 20, 'build', 3, 0],
+]) drill(c, r, k, right, wrong);
+
+// دقائقُ أسبوعٍ: أيامٌ متفاوتة كما تقع فعلاً (لوحةُ وليّ الأمر ترسمها عموداً عموداً)
+const today = new Date();
+for (const [back, minutes] of [[6, 4], [5, 7], [4, 0], [3, 6], [2, 9], [1, 5], [0, 3]]) {
+  const d = new Date(today);
+  d.setDate(d.getDate() - back);
+  if (minutes) progress.addSeconds(minutes * 60, progress.dayKey(d));
+}
+
+// ————— المسارُ الذي يُفتَح لكل لقطة —————
+//
+// **بالمسار لا بنداءِ مُصيِّرٍ بعينه**: فتُلتقط الشاشةُ من الموجِّه كما تُفتَح للطفل
+// (بقفلها وشريطها وحلقتها)، ولا يعرف هذا الملفُّ اسمَ دالّةٍ في وحدةِ تمارين.
+const ROUTES = {
+  map: '#/',
+  subitize: '#/subitize/five',
+  count: '#/count/ten',
+  numeral: '#/numeral/six-seven',
+  compare: '#/compare/ten',
+  bond: '#/bond/ten',
+  add: '#/add/ten',
+  teen: '#/teen/fifteen',
+  pattern: '#/pattern/abab',
+  measure: '#/measure/size',
+  gate: '#/gate/quantity',
+  parent: '#/parent',
+};
+
+location.hash = ROUTES[screen] || ROUTES.map;
+await import('./js/main.js');
+
+/* **وبوابةُ وليّ الأمر تُجاز بالحساب لا بالتفافٍ عليها**: اللوحةُ خلف سؤالٍ ضربيّ
+   (`parent.js` — قفلُ جلسةٍ لا يُحفَظ في تخزين)، فلو لم تُجَز لَخرجت «لقطةُ اللوحة»
+   صورةَ بوّابة. فتُقرأ من الشاشة نفسِها ويُدخَل جوابُها — كما يفعل الوالد. */
+if (screen === 'parent') {
+  await new Promise((r) => setTimeout(r, 400));
+  const ask = document.querySelector('.gate .giant');
+  const text = (ask?.textContent || '').replace(/[٠-٩]/g,
+    (d) => '٠١٢٣٤٥٦٧٨٩'.indexOf(d));
+  const [a, b] = text.split(/[^0-9]+/).filter(Boolean).map(Number);
+  const input = document.querySelector('.gate input');
+  if (input && Number.isFinite(a) && Number.isFinite(b)) {
+    input.value = String(a * b);
+    input.dispatchEvent(new Event('input', { bubbles: true }));
+    document.querySelector('.gate-go')?.click();
+  }
+  await new Promise((r) => setTimeout(r, 400));
+}
+
+/* القياسُ يُرسَل بعد أن يُرسَم كلُّ شيء (خطوطٌ وصورٌ ومُصيِّر)، فيُقتطع الورقُ الخاوي.
+   **والمقيسُ صندوقُ الشاشة لا صندوقُ المستند**: للجسم ارتفاعٌ أدنى بطول المنظور
+   (`100vh`)، فقياسُ المستند في نافذةِ قياسٍ طولها أربعةُ آلاف بكسل يردّ أربعةَ آلاف
+   دائماً — فتخرج كلُّ لقطةٍ بطول الجهاز كلِّه وتحتها ورقٌ خاوٍ. */
+if (params.get('measure')) {
+  await document.fonts.ready;
+  await new Promise((r) => setTimeout(r, 900));
+  const app = document.getElementById('app');
+  const height = Math.ceil(app.getBoundingClientRect().bottom + 16);
+  navigator.sendBeacon('/result', new Blob([JSON.stringify([{ screen, height }])],
+    { type: 'text/plain' }));
+}
+</script>
+</body>
+</html>

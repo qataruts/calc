@@ -440,6 +440,28 @@ _ENCODER = None
 SILENCE_RATIO = 0.02        # ٢٪ من الذروة يُعَدّ صمتاً
 SILENCE_PAD_MS = 60         # هامشٌ يبقى قبل الصوت وبعده
 
+NO_ENCODER = "يلزم ffmpeg أو الحزمة lameenc:  .venv/bin/pip install lameenc"
+
+
+def encoder_name() -> str:
+    """اسمُ المرمِّز الذي سيحوّل PCM إلى mp3 — أو `""` إن لم يوجد واحدٌ منهما.
+
+    **ويُسأل قبل أوّل طلبٍ شبكيّ لا بعده** (قيدُ الجلسة ٩ الافتتاحيّ — خرقُ «الحارس
+    عند البوابة» المرصود في الدفعة الصوتية الثالثة): كان جردُ `lameenc` داخل
+    `pcm_to_mp3` — أي **بعد** أن يُطلَب الصوتُ من النموذج ويصل ويُدفع ثمنُه، فمات
+    الأمرُ وقد ضاع طلبٌ من سقف اليوم وصوتٌ وصل ولم يُحفَظ. والقاعدةُ في هذا المستودع
+    أنّ ما يمنع العملَ **يُجرَد على البوابة**، فلا يُدفع ثمنُ نقصٍ معروفٍ سلفاً.
+
+    ودالّةٌ نقيّةٌ تُجرَّب: لا تكتب شيئاً ولا تطلب من شبكة، وإنما تقول ما وجدت.
+    """
+    if _HAVE_FFMPEG:
+        return "ffmpeg"
+    try:
+        import lameenc  # noqa: F401, PLC0415
+    except ImportError:
+        return ""
+    return "lameenc"
+
 
 def trim_pcm(pcm: bytes, rate: int) -> bytes:
     """قصُّ صمت الطرفين من PCM خام (١٦ بت أحادي) **قبل الترميز**.
@@ -485,10 +507,10 @@ def pcm_to_mp3(pcm: bytes, rate: int, path: Path, trim: bool = True) -> None:
         return
     global _ENCODER
     if _ENCODER is None:
-        try:
-            import lameenc  # noqa: PLC0415
-        except ImportError:
-            sys.exit("يلزم ffmpeg أو الحزمة lameenc:  .venv/bin/pip install lameenc")
+        # وهنا لا يُتوقَّع فقدُه: البوّابةُ في `main` جردته قبل أوّل طلب (`encoder_name`)
+        if not encoder_name():
+            sys.exit(NO_ENCODER)
+        import lameenc  # noqa: PLC0415
         _ENCODER = lameenc
     enc = _ENCODER.Encoder()
     enc.set_bit_rate(64)
@@ -1022,6 +1044,28 @@ def self_test() -> int:
     ok(day, "و429 اليوميّ يُميَّز فلا تُحرَق محاولاتٌ قبل التجدد")
     ok(per, "و429 الدقيقيّ يُقرأ منه زمنُ الانتظار الذي يطلبه الخادم")
 
+    print("\n— المرمِّزُ يُجرَد قبل أوّل طلب (قيدُ الجلسة ٩) —")
+    # **الموضعُ هو المحروس لا الوجود**: أن يوجد مرمِّزٌ على هذا الحاسوب لا يثبت شيئاً —
+    # المقيسُ أنّ السؤالَ يقع **قبل** أوّل طلبٍ شبكيّ. فيُقرأ نصُّ `main` ويُقابَل موضعُ
+    # جردِ المرمِّز بموضع أوّل نداءٍ يطلب من الشبكة (`drain_queue`).
+    # (وتُقتطَع `main` بترويستها كاملةً: «def main()» وحدَها تقع في **هذا السطر نفسِه**
+    #  قبل موضعها، فيقيس الحارسُ شيفرتَه هو — عيبٌ أمسكته التجربةُ السالبة.)
+    src = Path(__file__).read_text(encoding="utf-8")
+    body = src[src.index("\ndef main() -> int:"):]
+    gate = body.find("encoder = encoder_name()")
+    first_request = body.find("drain_queue(")
+    ok(gate > 0 and first_request > 0 and gate < first_request,
+       "جردُ المرمِّز يقع قبل أوّل طلبٍ شبكيّ في `main` "
+       f"(البوّابة عند {gate if gate > 0 else '؟'}، وأوّلُ طلبٍ عند {first_request if first_request > 0 else '؟'})")
+    ok("sys.exit(NO_ENCODER)" in body,
+       "وفقدُه يوقف الأمرَ عند البوّابة بعلّته لا بعد أن يصل صوتٌ فيضيع")
+    ok(encoder_name() in ("ffmpeg", "lameenc", ""),
+       f"ودالّةُ الجرد تسمّي ما وجدت في هذا المفسِّر: «{encoder_name() or 'لا مرمِّز'}»")
+    ok("المرمِّز {encoder" in body,
+       "ويُعلَن اسمُه في سطر الافتتاح — فيرى المصرِّفُ بأيّ مرمِّزٍ يعمل قبل أن يبدأ")
+    # **ولا يُحكَم على وجوده هنا**: السَّوقةُ تعمل بمفسِّر النظام والتصريفُ من `.venv`
+    # (وفيها `lameenc`) — فوجودُه في هذا المفسِّر ليس شرطَ صحّةٍ للحارس.
+
     print("\n— الاستجابةُ الفارغة تُميَّز عن الصوت —")
     audio = {"candidates": [{"content": {"parts": [{"inlineData": {
         "mimeType": "audio/L16;rate=24000", "data": base64.b64encode(b"\x01\x02").decode()}}]}}]}
@@ -1113,8 +1157,13 @@ def main() -> int:
     keys = read_keys()
     if not keys and not args.dry_run:
         sys.exit("التصريف يحتاج GEMINI_API_KEY في البيئة أو في .env")
+    # **الحارسُ عند البوّابة**: المرمِّزُ يُجرَد **قبل** أوّل طلبٍ شبكيّ لا بعده — فلا
+    # يُدفَع ثمنُ نقصٍ معروفٍ سلفاً (`encoder_name` أعلاه، وقيدُ الجلسة ٩).
+    encoder = encoder_name()
+    if not encoder and not args.dry_run:
+        sys.exit(NO_ENCODER)
     set_rpm(args.rpm)
-    print(f"تصريف القائمة · النموذج {MODEL} · الصوت {VOICE} "
+    print(f"تصريف القائمة · النموذج {MODEL} · الصوت {VOICE} · المرمِّز {encoder or 'لا شيء'} "
           f"· ≤{args.rpm:g} طلب/دقيقة لكل مفتاح · مفاتيح: {'، '.join(n for n, _v in keys) or 'لا شيء'}")
     failed = drain_queue(KeyPool(keys), args.dry_run, args.limit)
     if args.dry_run:

@@ -1,0 +1,223 @@
+<!doctype html>
+<html lang="ar" dir="rtl">
+<head><meta charset="utf-8"><title>اختبار المرجع التعريفي في متصفّح حقيقي</title></head>
+<body>
+<pre id="out" style="font:14px/1.6 monospace"></pre>
+<iframe id="frame" src="welcome/" style="width:420px;height:900px;border:1px solid #ccc"></iframe>
+<iframe id="app" src="/" style="width:420px;height:600px;border:1px solid #ccc"></iframe>
+<script>
+// **بصمةُ التقرير ومفتاحُ صفوفه من عقد الخادم** (`REPORT_FROM` و`rows` في
+// `browser_test.py`): بصمةٌ ناقصة أو مفتاحٌ مخالف ⇒ يُهمَل التقرير وتنتهي المهلةُ
+// صامتة — وهو عينُ ما وقع أوّلَ تشغيلٍ لهذه الصفحة.
+const report = (what) => fetch('/result', { method: 'POST', body: JSON.stringify(
+  { from: 'ihsib', rows: [{ ok: false, msg: 'استثناء في صفحة الاختبار: ' + what }] }) });
+window.addEventListener('error', (e) => report(e.message));
+window.addEventListener('unhandledrejection', (e) => report(e.reason?.stack || e.reason));
+</script>
+<script type="module">
+/* المرجعُ التعريفيّ في Chrome حقيقي (الجلسة ٩). المقيسُ أربعة:
+     ١) يُفتَح ويُعرَض كاملاً: أقسامُه ولقطاتُه محمَّلة، **وبلا سطر جافاسكربت**.
+     ٢) **لا طلبَ شبكيّ خارجيّ واحد** — يُقرأ من سجلّ الأداء لا من نصّ الملفّ.
+     ٣) **لا تمريرَ أفقيّ** في ثلاثة مقاسات، وأهدافُ اللمس على قاعدة الواجهة،
+        وزرُّ البدء **ينقل إلى التطبيق فعلاً** (يُنقر ويُتحقّق من الوجهة).
+     ٤) **عاملُ الخدمة لا يبتلعه**: بعد أن يُسجَّل ويُفعَّل من التطبيق، تبقى فتحةُ
+        `welcome/` صفحةَ مرجعٍ لا تطبيقاً، ولا يدخل منها شيءٌ في المخزون. */
+
+const out = document.getElementById('out');
+const results = [];
+const post = () => fetch('/result', { method: 'POST', body: JSON.stringify({ from: 'ihsib', rows: results }) });
+const ok = (cond, msg) => {
+  results.push({ ok: !!cond, msg });
+  out.textContent += `${cond ? '✓' : '✗'} ${msg}\n`;
+};
+setTimeout(() => { ok(false, 'انتهت المهلة الكلية'); post(); }, 150000);
+
+const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
+async function waitFor(fn, label = '', ms = 8000) {
+  const t0 = Date.now();
+  for (;;) {
+    let v; try { v = await fn(); } catch { v = null; }
+    if (v) return v;
+    if (Date.now() - t0 > ms) throw new Error('انتظار طويل: ' + label);
+    await sleep(25);
+  }
+}
+
+const frame = document.getElementById('frame');
+const appFrame = document.getElementById('app');
+const jsErrors = [];
+
+const load = (el, src) => new Promise((done) => {
+  el.addEventListener('load', done, { once: true });
+  el.src = src;
+});
+
+await waitFor(() => frame.contentDocument?.querySelector('.w-hero'), 'فتح المرجع');
+let doc = frame.contentDocument;
+frame.contentWindow.addEventListener('error', (e) => jsErrors.push(String(e.message)));
+
+// ————— ١) الصفحة تُعرض كاملةً وبلا جافاسكربت —————
+
+ok(/اِحْسِبْ/.test(doc.title), `عنوان الصفحة: ${doc.title}`);
+for (const [id, label] of [
+  ['install-first', 'أول خطوة: التثبيت'],
+  ['why', 'ما الذي يميّزه'],
+  ['who', 'ما «اِحْسِبْ» ولمن'],
+  ['journey', 'رحلة التعلّم'],
+  ['more', 'ثلاثة أبواب'],
+]) {
+  ok(!!doc.getElementById(id), `قسم «${label}» معروض`);
+}
+const tabs = [...doc.querySelectorAll('.w-topnav a')].map((a) => a.getAttribute('href'));
+ok(['./', 'curriculum.html', 'method.html', 'guide.html'].every((h) => tabs.includes(h)),
+  `وشريطُ التنقّل الواحد بصفحاته الأربع (${tabs.join('، ')})`);
+ok(doc.querySelectorAll('.w-topnav [aria-current="page"]').length === 1,
+  'وصفحتُها الحالية معلَّمةٌ فيه');
+ok(doc.scripts.length === 0, 'ولا سطرَ جافاسكربت في الصفحة (لا شيء فيها ينكسر)');
+ok(!doc.querySelector('link[rel="manifest"]'), 'ولا تصل بيانَ التطبيق (لا تُثبَّت مكانه)');
+
+// اللقطات `loading="lazy"` فلا تُطلب وهي خارج لوح الاختبار — تُستعجَل هنا
+for (const im of doc.images) im.loading = 'eager';
+await doc.fonts.ready;
+await waitFor(() => [...doc.images].every((im) => im.complete), 'تحميل الصور', 25000);
+
+/* **العلامةُ بخطّها المُقَرّ**: اللوحُ من `app.css`، فلو انقطع الخطُّ عن الصفحة صارت
+   علامتُنا سطرَ واجهةٍ عاديّاً — وهو ما يحرسه `test_identity` على التطبيق نفسِه.
+   **وموضعُ القياس بعد `fonts.ready`**: وجودُ عنصرٍ في الـDOM لا يعني أنّ لوحَ التطبيق
+   طُبِّق بعد — قِيس قبلها فقرأ «لا خطّ» ولا خطأ في الصفحة. */
+const brandEl = doc.querySelector('.brand-word');
+const brandFont = getComputedStyle(doc.documentElement).getPropertyValue('--font-brand').trim();
+const brandFirst = brandFont.split(',')[0].replace(/'/g, '').trim();
+ok(!!brandEl && !!brandFirst && getComputedStyle(brandEl).fontFamily.includes(brandFirst),
+  `وعلامةُ «اِحْسِبْ» بخطّها المُعلَن في اللوح (${brandFirst || 'لا خطّ'})`);
+
+const imgs = [...doc.images];
+const broken = imgs.filter((im) => !im.complete || !im.naturalWidth);
+ok(imgs.length >= 7 && broken.length === 0,
+  `وكلُّ صورةٍ محمَّلة (${imgs.length} صورة${broken.length ? '، مكسورة: ' + broken.length : ''})`);
+const shots = imgs.filter((im) => im.src.includes('/welcome/shots/'));
+ok(shots.length >= 3 && shots.every((im) => im.naturalWidth === 820),
+  `ولقطاتُ الرحلة من التطبيق نفسِه بمقاس الجهاز (${shots.length})`);
+
+// ————— ١ب) الصفحاتُ الثلاث الأخرى —————
+
+for (const [page, marker, label] of [
+  ['curriculum.html', '.w-station[data-covers]', 'المنهج — بطاقاتُ أنواع المحطات'],
+  ['method.html', '#limits', 'الأسس — حدودُ النطاق'],
+  ['guide.html', '#try', 'الدليل — جرّبه من أوله'],
+]) {
+  await load(frame, `welcome/${page}`);
+  await waitFor(() => frame.contentDocument?.querySelector('.w-top'), `فتح ${page}`, 8000);
+  const d = frame.contentDocument;
+  ok(!!d.querySelector(marker), `${label}: الصفحةُ تُفتَح وقسمُها المميِّز فيها`);
+  ok(d.scripts.length === 0 && !d.querySelector('link[rel="manifest"]'),
+    `${label}: بلا جافاسكربت وبلا بيان تطبيق`);
+  ok(d.querySelectorAll('.w-topnav a').length >= 4, `${label}: وشريطُ التنقّل فيها`);
+  ok(d.documentElement.scrollWidth <= d.documentElement.clientWidth + 1,
+    `${label}: ولا تمريرَ أفقيّ`);
+}
+
+// صفحةُ المنهج: **بطاقةٌ لكل نوع محطة تُعدّ على الشاشة لا في النصّ**
+await load(frame, 'welcome/curriculum.html');
+await waitFor(() => frame.contentDocument?.querySelector('.w-station'), 'إعادة فتح المنهج', 8000);
+const covers = [...frame.contentDocument.querySelectorAll('.w-station[data-covers]')];
+ok(covers.length >= 20, `وبطاقاتُ أنواع المحطات معروضةٌ كلُّها (${covers.length})`);
+ok(covers.every((c) => c.querySelectorAll('.w-what dt').length === 3),
+  'ولكلٍّ ثلاثةُ حقولٍ بنمطها الواحد');
+
+await load(frame, 'welcome/');
+await waitFor(() => frame.contentDocument?.querySelector('.w-hero'), 'العودة إلى الرئيسة', 8000);
+doc = frame.contentDocument;
+for (const im of doc.images) im.loading = 'eager';
+await waitFor(() => [...doc.images].every((im) => im.complete), 'تحميل صور الرئيسة', 25000);
+
+// ————— ٢) لا طلب شبكيّ خارجيّ —————
+
+const entries = frame.contentWindow.performance.getEntriesByType('resource');
+const foreign = entries.filter((e) => !e.name.startsWith(location.origin));
+ok(entries.length > 0 && foreign.length === 0,
+  `لا طلبَ شبكيّ خارجيّ واحد (${entries.length} طلباً كلُّها محلّية)`
+  + (foreign.length ? ' — خارجيّ: ' + foreign.map((e) => e.name).join('، ') : ''));
+const failed = entries.filter((e) => e.responseStatus && e.responseStatus >= 400);
+ok(failed.length === 0,
+  `ولا طلبَ مكسور${failed.length ? ' — ' + failed.map((e) => e.name).join('، ') : ''}`);
+const fonts = entries.filter((e) => e.name.includes('/fonts/'));
+ok(fonts.length > 0, `وخطوطُها من ملفات المستودع المحلّية (${fonts.length} ملفاً)`);
+
+// ————— ٣) المقاسات وأهداف اللمس وزرّ البدء —————
+
+for (const width of [390, 820, 1280]) {
+  frame.style.width = `${width}px`;
+  await sleep(140);
+  const el = doc.documentElement;
+  ok(el.scrollWidth <= el.clientWidth + 1,
+    `لا تمريرَ أفقيّ عند عرض ${width}px`);
+}
+frame.style.width = '820px';
+await sleep(140);
+
+const start = [...doc.querySelectorAll('a.w-start')];
+ok(start.length >= 1 && start.every((a) => new URL(a.href).pathname === new URL('./', location.href).pathname),
+  `زرُّ «ابدأ الآن» يشير إلى جذر التطبيق (${start.length} موضعاً)`);
+ok(start.every((a) => a.getBoundingClientRect().height >= 64),
+  'وهدفُ لمسه ≥ ٦٤ بكسل (الفعل الرئيس — وحدُّ «اِحْسِبْ» أعلى لسنٍّ أصغر)');
+const small = [...doc.querySelectorAll('a.btn')]
+  .filter((a) => a.getBoundingClientRect().height < 48);
+ok(small.length === 0,
+  `وكلُّ رابطٍ أزراريّ ≥ ٤٨ بكسل${small.length ? ' — ' + small.map((a) => a.textContent.trim()).join('، ') : ''}`);
+
+// النقرُ نفسه: الوجهةُ التطبيقُ لا صفحةٌ أخرى (ولا صفحةُ خطأ)
+const gone = new Promise((done) => frame.addEventListener('load', done, { once: true }));
+start[0].click();
+await gone;
+await waitFor(() => frame.contentDocument?.getElementById('app'), 'فتح التطبيق من زرّ البدء', 8000);
+ok(!!frame.contentDocument.getElementById('app')
+  && /اِحْسِبْ/.test(frame.contentDocument.title),
+  'ونقرُه يفتح التطبيقَ نفسَه (لا صفحةَ خطأ ولا وجهةً أخرى)');
+
+// ————— ٤) عاملُ الخدمة لا يبتلع الصفحة ولا يخزنها —————
+
+const reg = await waitFor(async () => {
+  const regs = await navigator.serviceWorker.getRegistrations();
+  return regs.find((r) => r.active) || null;
+}, 'تفعيل عامل الخدمة', 60000);
+ok(!!reg, `عاملُ الخدمة مسجَّلٌ ونشط (${new URL(reg.scope).pathname})`);
+
+const names = await waitFor(async () => {
+  const all = await caches.keys();
+  return all.some((n) => n.startsWith('ihsib-shell')) ? all : null;
+}, 'مخزون الهيكل', 40000);
+ok(names.some((n) => n.startsWith('ihsib-shell')), `ومخزونُ التطبيق مُنشأ (${names.join('، ')})`);
+
+// أ) الفتحةُ بعد التفعيل: مرجعٌ لا تطبيق (لولا الاستثناء لابتلعها ردُّ التنقّل)
+await load(frame, 'welcome/');
+await waitFor(() => frame.contentDocument?.querySelector('.w-hero'), 'إعادة فتح المرجع', 8000);
+doc = frame.contentDocument;
+ok(!!doc.querySelector('.w-hero') && !doc.getElementById('app'),
+  'والفتحةُ بعده تعطي المرجعَ لا التطبيق (ردُّ التنقّل لا يبتلعه)');
+ok(!!doc.getElementById('more'), 'وبكامل أقسامه');
+
+// ب) ولا يدخل منه شيءٌ في المخزون — لا صفحةً ولا تنسيقاً ولا لقطة
+const cachedWelcome = [];
+for (const name of await caches.keys()) {
+  const keys = await (await caches.open(name)).keys();
+  cachedWelcome.push(...keys.map((r) => new URL(r.url).pathname)
+    .filter((p) => p.includes('/welcome/')));
+}
+ok(cachedWelcome.length === 0,
+  `ولا يُخزَّن منه شيء${cachedWelcome.length ? ' — خُزن: ' + cachedWelcome.join('، ') : ''}`);
+
+// ج) والتطبيقُ نفسُه بخير: مخزونُه قائمٌ كما كان (الاستثناء لم يمسّه)
+const shell = await caches.open((await caches.keys()).find((n) => n.startsWith('ihsib-shell')));
+const shellPaths = (await shell.keys()).map((r) => new URL(r.url).pathname);
+ok(shellPaths.some((p) => p.endsWith('/index.html')) && shellPaths.some((p) => p.endsWith('/css/app.css')),
+  `والتطبيقُ مخزونٌ كما كان (${shellPaths.length} ملفاً)`);
+ok(!!appFrame.contentDocument?.querySelector('.map, .screen, .boot'),
+  'والتطبيق يعمل في اللوح المجاور (الصفحة لم تُفسد شيئاً)');
+
+ok(jsErrors.length === 0,
+  jsErrors.length ? 'أخطاء جافاسكربت: ' + jsErrors.join(' | ') : 'لا أخطاء جافاسكربت');
+post();
+</script>
+</body>
+</html>

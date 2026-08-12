@@ -24,7 +24,7 @@ import * as progress from './progress.js';
 import { registerScreen } from './registry.js';
 import { h, icon, pick, shuffle, seeded, shake, pop, QUANTITY_ACCENT } from './ui.js';
 import {
-  AFTER_RIGHT_MS, BEAT, NUMBER_NAME, SAY, say, praiseThen, span, nearOptions, seeder, skillOf,
+  AFTER_RIGHT_MS, BEAT, FLASH_MS, NUMBER_NAME, SAY, say, praiseThen, span, nearOptions, seeder, skillOf,
   stationById, stationForSkill, figureBox, quantityCard, touchLayer, countAloud,
   clearCount, usedOf, registerExercise, stationScreen,
 } from './station.js';
@@ -118,8 +118,16 @@ function touchRound(station, rnd, { wide = false, restage = false } = {}) {
  *
  * **والنموذجُ كمّيةٌ لا رمز** (المرحلة ٢ بلا رمز): يُنطَق العددُ اسماً ويُرى كمّاً،
  * والمقيسُ **إنتاجُ كمٍّ بقدرٍ معلوم** — وهو عينُ التناظر الفرديّ من جهته الأخرى.
+ *
+ * **ويُخطَف النموذجُ في «وحدك» وحدَها** (قيدُ الجلسة ٩ الافتتاحيّ — القرارُ المؤجَّل
+ * في مراجعة الدفعة الصوتية الثالثة، حُسم مُقَرّاً): نموذجٌ مرئيٌّ **دائم** يحوّل
+ * «أعطني ن» **مطابقةً بصرية** — يضع الطفلُ إصبعاً على نقطةٍ هنا ونقطةٍ هناك حتى
+ * يستوي المنظران، فلا يُقاس إنتاجُ كمٍّ بقدرٍ معلوم أصلاً. فصار المطلوبُ **يُسمّى
+ * باسمه** (وشرطُه تحقّق: أسماءُ الأعداد مصروفةٌ مُقَرّة) و**يُرى خطفةً ثم يُغطّى** —
+ * فيحمله الطفلُ في ذهنه ويلتقط بقدره. و`flash` علامةُ الخطوة لا خاصّةَ الجولة:
+ * «جرِّب معي» يبقى ظاهرَ النموذج (عونٌ مرئيّ في خطوة التعلّم بعون).
  */
-function giveRound(station, rnd) {
+function giveRound(station, rnd, flash = false) {
   const f = station.frontier;
   const skill = skillOf(station, 'count', 'give');
   const lo = Math.max(f.min, 2);
@@ -129,7 +137,7 @@ function giveRound(station, rnd) {
   const model = { display: cardDisplay(f, [target]), count: target, seed: next() };
   const field = { display: touchDisplay(f, rnd), count: pool, seed: next() };
   return {
-    kind: 'give', concept: skill.concept, range: skill.range,
+    kind: 'give', concept: skill.concept, range: skill.range, flash,
     ask: ASK.give, model, field, figures: [model, field],
     sig: `${station.id}|${field.seed}`,
   };
@@ -191,9 +199,10 @@ export function buildStation(stationId, seed) {
     touchRound(station, rnd, { restage }),
     touchRound(station, rnd, { restage }),
     touchRound(station, rnd, { restage }),
-    gives ? giveRound(station, rnd) : touchRound(station, rnd, { restage }),
+    // **وهي جولاتُ «وحدك»** — فنموذجُها يُخطَف (أعلاه)
+    gives ? giveRound(station, rnd, true) : touchRound(station, rnd, { restage }),
   ];
-  if (gives) solo.push(giveRound(station, rnd));
+  if (gives) solo.push(giveRound(station, rnd, true));
 
   return {
     model: {
@@ -344,6 +353,25 @@ function giveView(round, hooks) {
   const picked = new Set();
   let locked = false;
 
+  /* **غطاءُ الخطف** — غطاءُ «كم ترى؟» نفسُه بعلّته نفسِها (`METHOD.md §٢.٧`): ورقةٌ
+     هادئة تحلّ محلّ النموذج، **لا عدّادَ ولا شريطَ يفرغ**. وهو مرفوعٌ في «جرِّب معي»
+     ومسدولٌ في «وحدك» بعد الخطفة. */
+  const cover = h('div', { class: 'q-cover', 'aria-hidden': 'true' }, icon('eye'));
+  model.box.append(cover);
+  const show = () => { cover.hidden = true; };
+  const hide = () => { cover.hidden = false; };
+  show();
+
+  /** الخطفةُ: يُرى النموذجُ لحظةً ثم يُغطّى — وتُعاد **بلا حدٍّ ولا احتساب**. */
+  async function flash() {
+    if (!round.flash) return;
+    clearCount(model);
+    show();
+    await new Promise((r) => setTimeout(r, FLASH_MS));
+    if (!hooks.alive()) return;
+    hide();
+  }
+
   touchLayer(field, (index, btn) => {
     if (locked) return;
     // **الالتقاطُ يُراجَع بالإصبع**: ما التُقط يُترَك بلمسةٍ ثانية — وهو غيرُ العدّ
@@ -371,19 +399,42 @@ function giveView(round, hooks) {
     if (!hooks.alive()) return;
     await new Promise((r) => setTimeout(r, BEAT / 2));
     if (!hooks.alive()) return;
+    show();                                   // الغطاءُ يُرفع ليُعَدَّ المطلوبُ أمامه
     await countAloud([model], hooks.alive);   // يرى المطلوبَ عدّاً، ثم يُصحّح بيده
     if (!hooks.alive()) return;
     clearCount(model);
+    if (round.flash) hide();                  // ثم يعود الغطاءُ ويحاول ثانية
     locked = false;
   });
 
-  say(round.ask);
+  const foot = h('div', { class: 'row foot' });
+  if (round.flash) {
+    foot.append(h('button', { class: 'btn', onclick: flash },
+      icon('repeat'), ' أَعِدِ الْعَرْض'));
+  }
+  foot.append(done);
+
+  /* **يُسمّى المطلوبُ ثم يُخطَف نموذجُه** (قيدُ الجلسة ٩): الاسمُ يُنتظَر تامّاً قبل
+     الخطفة — وإلّا جرت فوق الكلام فاختلف زمنُ العرض بطول جملةٍ لا يملكها الطفل
+     (درسُ «كم ترى؟»). **والاسمُ من المرسوم لا من المطلوب**: يُنطق `NUMBER_NAME`
+     لِما رسمه المصيِّرُ فعلاً، فلا يسمع الطفلُ اسماً يخالف ما رأى. */
+  (async () => {
+    await say(round.ask);
+    if (!hooks.alive()) return;
+    if (round.flash) {
+      await say(NUMBER_NAME[model.drawn]);
+      if (!hooks.alive()) return;
+    }
+    flash();
+  })();
 
   return h('div', {},
     h('h2', {}, round.ask),
-    h('p', { class: 'hint' }, 'اِلْتَقِطْ مِنَ الصُّنْدُوقِ بِقَدْرِ الْبِطَاقَة'),
+    h('p', { class: 'hint' }, round.flash
+      ? 'اِلْتَقِطْ مِنَ الصُّنْدُوقِ بِقَدْرِ مَا سَمِعْتَ وَرَأَيْت'
+      : 'اِلْتَقِطْ مِنَ الصُّنْدُوقِ بِقَدْرِ الْبِطَاقَة'),
     h('div', { class: 'q-give' }, model.box, field.box),
-    h('div', { class: 'row foot' }, done),
+    foot,
   );
 }
 
@@ -491,5 +542,6 @@ const single = (build) => (skill, rnd) => {
 };
 
 registerExercise('touch', { build: single((s, r) => touchRound(s, r)), view: viewOf });
-registerExercise('give', { build: single(giveRound), view: viewOf });
+// **والمراجعةُ «وحدك» بطبعها** (لا خطوةَ عونٍ فيها): فنموذجُها يُخطَف كذلك
+registerExercise('give', { build: single((s, r) => giveRound(s, r, true)), view: viewOf });
 registerExercise('make', { build: single(equalRound), view: viewOf });

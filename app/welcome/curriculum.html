@@ -1,0 +1,1189 @@
+<!doctype html>
+<html lang="ar" dir="rtl">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+    <meta
+      name="description"
+      content="منهج «اِحْسِبْ» محطةً محطة: ثماني مراحل و٥٢ محطة وثلاث بوابات إتقان — ماذا يتعلّم الطفل في كل محطة، وكيف يعمل تمرينُها، وما دورُ وليّ الأمر."
+    />
+    <meta name="theme-color" content="#F7F3EC" />
+    <meta name="theme-color" media="(prefers-color-scheme: dark)" content="#23282E" />
+    <title>المنهج — الرحلة محطةً محطة | اِحْسِبْ</title>
+    <link rel="icon" href="../icons/icon-192.png" />
+    <!--
+      **بطاقةٌ لكل نوع محطة، لا لكل محطة**: الرحلةُ اثنتان وخمسون محطة، وأنواعُها
+      اثنان وعشرون — والنوعُ هو ما يختلف فيه التمرين. فلكل نوعٍ بطاقةٌ بنمطٍ واحد
+      (ماذا يتعلّم · كيف يعمل التمرين · دورُك أنت) ومعها **عددُ محطاته محسوباً**،
+      ويحرس `tools/test_welcome.mjs` أن يكون لكل نوعٍ في الرحلة بطاقتُه وأن يطابق
+      عددُها ما في المنهج — فنوعٌ جديد يدخل الرحلةَ غداً يُحمِرّ الفحصَ حتى يُكتب هنا.
+    -->
+    <link rel="stylesheet" href="../css/app.css" />
+    <link rel="stylesheet" href="welcome.css" />
+  </head>
+  <body>
+    <header class="w-top">
+      <div class="w-top-in">
+        <a class="w-top-brand" href="./"
+          ><img src="../icons/icon-192.png" alt="" width="30" height="30" /><span
+            class="brand"
+            ><span class="brand-word">اِحْسِبْ</span></span
+          ></a
+        >
+        <nav class="w-topnav" aria-label="صفحات المرجع">
+          <a href="./">الرئيسة</a>
+          <a href="curriculum.html" aria-current="page">المنهج</a>
+          <a href="method.html">الأسس</a>
+          <a href="guide.html">الدليل العملي</a>
+          <a class="btn btn--primary" href="../">ابدأ الآن ←</a>
+        </nav>
+      </div>
+    </header>
+
+    <div class="w-wrap">
+      <div class="w-print-head">
+        <img loading="lazy" src="../icons/icon-192.png" alt="" width="44" height="44" />
+        <span class="w-print-brand brand"><span class="brand-word">اِحْسِبْ</span></span>
+        <span class="w-print-title">المنهج — الرحلة محطةً محطة</span>
+        <a class="w-print-url" href="https://calc.mishkat.qa/">calc.mishkat.qa</a>
+      </div>
+
+      <header class="w-head">
+        <h1>المنهج — الرحلة محطةً محطة</h1>
+        <p class="w-lede">
+          <b data-stat="nodes">٥٢</b> محطة في
+          <b data-stat="stages">٨</b> مراحل، تفصلها
+          <b data-stat="gates">٣</b> بوابات إتقان. والتالي مقفلٌ حتى يُتمّ الذي
+          قبله — فالطريق واحد، ولا قائمةَ يختار منها الطفل. وفي كل محطةٍ
+          <b>جبهةٌ معلَنة</b>: أقصى عددٍ يُستعمل فيها، وأشكالُ الكميات التي تُرسم،
+          ورموزُ العمليات المسموح بها — وبرنامجُ فحصٍ يرفض كل جولةٍ تتجاوزها.
+        </p>
+      </header>
+
+      <section class="w-section" id="loop" style="--accent: var(--accent-quantity)">
+        <h2>حلقةُ المحطة — أربعُ خطواتٍ في ٣–٥ دقائق</h2>
+        <div class="w-cards w-cards--four">
+          <article class="w-card" style="--accent: var(--accent-quantity)">
+            <h3>١ · شاهِدْ</h3>
+            <p>
+              نمذجةٌ بلا مطالبة: تُعَدّ الكميةُ أمامه عنصراً عنصراً بالصوت، فيرى
+              الدرسَ قبل أن يُسأل عنه.
+            </p>
+          </article>
+          <article class="w-card" style="--accent: var(--accent-quantity)">
+            <h3>٢ · جَرِّبْ مَعِي</h3>
+            <p>
+              جولتان بعونٍ مرئيّ — <b>غيرُ محسوبتين في القياس</b>، فلا يُحاسَب على
+              خطوةِ تعلُّمٍ بعون.
+            </p>
+          </article>
+          <article class="w-card" style="--accent: var(--accent-quantity)">
+            <h3>٣ · وَحْدَكْ</h3>
+            <p>
+              أربعُ جولاتٍ إلى ستّ مستقلّة — <b>وهي المقيسة وحدَها</b>. والخطأ
+              فيها يُعَدّ أمامه ثم يحاول ثانية.
+            </p>
+          </article>
+          <article class="w-card" style="--accent: var(--accent-quantity)">
+            <h3>٤ · كافِئْ</h3>
+            <p>
+              نجومٌ بعتبةٍ تناسب طولَ النشاط، وميداليةٌ تحمل <b>معلمَ مرحلته</b>
+              لا أيقونةً محايدة.
+            </p>
+          </article>
+        </div>
+        <p class="w-under">
+          ولا مؤقّتَ ضغطٍ في التطبيق كلِّه، ولا شاشةَ «خطأ»، ولا عقاب. و«الخطف»
+          (عرضُ الكمية لحظةً ثم تغطيتها) <b>طبيعةُ تمرينٍ لا سباقُ وقت</b>: يمنع
+          العدَّ فيُجبِر التقدير، وزرُّ إعادة العرض تحته
+          <b>بلا حدٍّ ولا احتساب</b>.
+        </p>
+      </section>
+
+      <!-- ————— المرحلة ١ ————— -->
+
+      <section class="w-section" id="stage1" style="--accent: var(--accent-quantity)">
+        <h2>المرحلة ١ — الكَمُّ بِلَا رَمْز</h2>
+        <p class="w-lede">
+          ستُّ محطات، <b>ولا رمزٍ عدديّ واحد على الشاشة فيها</b>: خطواتُ الحلقة
+          أسماؤها، وجولاتُها خرزاتٌ تمتلئ، وجوابُ التمرين بطاقةُ كمٍّ لا رقم.
+          والمقصودُ أن يصير العددُ شيئاً يُرى قبل أن يصير علامةً تُقرأ.
+        </p>
+
+        <div class="w-stations">
+          <div class="w-pair">
+            <article
+              class="w-station"
+              data-covers="subitize"
+              data-count="٣"
+              style="--accent: var(--accent-quantity)"
+            >
+              <div class="w-station-head">
+                <div>
+                  <span class="w-kicker">نوع محطة · تقديرٌ فوريّ</span>
+                  <h3>كَمْ تَرَى؟</h3>
+                </div>
+                <span class="w-station-n"><b>٣</b>محطات</span>
+              </div>
+              <dl class="w-what">
+                <div>
+                  <dt>ماذا يتعلّم الطفل</dt>
+                  <dd>
+                    أن يعرف الكميةَ الصغيرة <b>بنظرةٍ واحدة بلا عدّ</b> — واحداً
+                    واثنين، ثم ثلاثة، ثم أربعةً وخمسة — على وجه النرد والمبعثر
+                    وأشياء عالمه.
+                  </dd>
+                </div>
+                <div>
+                  <dt>كيف يعمل التمرين</dt>
+                  <dd>
+                    تُعرَض الكميةُ لحظةً ثم تُغطّى، ويختار البطاقةَ التي فيها
+                    مثلُها. والغطاءُ يمنع العدَّ فيُجبِر التقدير، ومعه
+                    <b>زرُّ إعادة عرضٍ بلا حدّ</b>. وعند الخطأ يُرفع الغطاء
+                    وتُعَدّ الكميةُ أمامه ثم يحاول.
+                  </dd>
+                </div>
+                <div>
+                  <dt>دورُك أنت</dt>
+                  <dd>
+                    لا تعدّ معه هنا. إن تردّد فقُل «انظر ثم قل» — فالمقصود لمحةٌ
+                    لا حساب.
+                  </dd>
+                </div>
+              </dl>
+            </article>
+            <figure class="w-figure">
+              <img
+                loading="lazy"
+                src="shots/subitize.png"
+                width="820"
+                height="882"
+                alt="شاشة «كم ترى؟»: كميةٌ مغطّاة وبطاقاتُ كمٍّ للاختيار."
+              />
+            </figure>
+          </div>
+
+          <article
+            class="w-station"
+            data-covers="match"
+            data-count="١"
+            style="--accent: var(--accent-quantity)"
+          >
+            <div class="w-station-head">
+              <div>
+                <span class="w-kicker">نوع محطة · مطابقة</span>
+                <h3>طَابِقِ الكَمِّيَّتَيْن</h3>
+              </div>
+              <span class="w-station-n"><b>١</b>محطة</span>
+            </div>
+            <dl class="w-what">
+              <div>
+                <dt>ماذا يتعلّم الطفل</dt>
+                <dd>
+                  أنّ الكميةَ واحدةٌ وإن اختلف شكلُها: ثلاثُ نقاطٍ على النرد هي
+                  ثلاثُ تفاحاتٍ مبعثرة.
+                </dd>
+              </div>
+              <div>
+                <dt>كيف يعمل التمرين</dt>
+                <dd>
+                  كميةٌ فوقها، وثلاثُ بطاقاتٍ <b>بنمطٍ آخر</b> — يختار التي
+                  تساويها عدداً. والحكمُ على ما رُسِم فعلاً لا على ما طُلب رسمه.
+                </dd>
+              </div>
+              <div>
+                <dt>دورُك أنت</dt>
+                <dd>اسأله بعدها: «كيف عرفت؟» — الجواب يريك أيقدّر أم يعدّ.</dd>
+              </div>
+            </dl>
+          </article>
+
+          <article
+            class="w-station"
+            data-covers="more"
+            data-count="٢"
+            style="--accent: var(--accent-quantity)"
+          >
+            <div class="w-station-head">
+              <div>
+                <span class="w-kicker">نوع محطة · أكثرُ وأقلّ</span>
+                <h3>أَيُّهُمَا أَكْثَر؟</h3>
+              </div>
+              <span class="w-station-n"><b>٢</b>محطتان</span>
+            </div>
+            <dl class="w-what">
+              <div>
+                <dt>ماذا يتعلّم الطفل</dt>
+                <dd>
+                  المقارنةَ بالكمّ قبل الرقم: أكثرُ وأقلُّ وسواء — والتسويةُ
+                  ممكنةٌ فليست كلُّ مقارنةٍ فوزاً.
+                </dd>
+              </div>
+              <div>
+                <dt>كيف يعمل التمرين</dt>
+                <dd>
+                  كميّتان متجاورتان بمقاسٍ واحد للعنصر — فتقع المقارنةُ على العدد
+                  لا على المساحة. وعند الخطأ تُعَدّان أمامه صفّاً تحت صفّ.
+                </dd>
+              </div>
+              <div>
+                <dt>دورُك أنت</dt>
+                <dd>
+                  لا تصحّح بالرقم («هذه خمسة») — دعه يعدّ الصفّين، فالمقارنةُ
+                  هنا كمّيةٌ لا رمزية.
+                </dd>
+              </div>
+            </dl>
+          </article>
+        </div>
+      </section>
+
+      <!-- ————— المرحلة ٢ ————— -->
+
+      <section class="w-section" id="stage2" style="--accent: var(--accent-quantity)">
+        <h2>المرحلة ٢ — العَدُّ المُرْتَبِطُ بِالكَمّ</h2>
+        <p class="w-lede">
+          ستُّ محطات تُدرَّس فيها مبادئُ العدّ قصداً لا عرَضاً: لمسةٌ لكل عنصر،
+          وثباتُ ترتيب الأسماء، و<b>آخِرُ ما نطقتَ هو الجواب</b>، وكلُّ شيءٍ
+          يُعَدّ، والترتيبُ لا يغيّر العدد. ولا رمزَ عدديّ بعدُ.
+        </p>
+
+        <div class="w-stations">
+          <div class="w-pair">
+            <article
+              class="w-station"
+              data-covers="count"
+              data-count="٥"
+              style="--accent: var(--accent-quantity)"
+            >
+              <div class="w-station-head">
+                <div>
+                  <span class="w-kicker">نوع محطة · عدٌّ باللمس</span>
+                  <h3>اِلْمَسْ وَعُدَّ</h3>
+                </div>
+                <span class="w-station-n"><b>٥</b>محطات</span>
+              </div>
+              <dl class="w-what">
+                <div>
+                  <dt>ماذا يتعلّم الطفل</dt>
+                  <dd>
+                    أن يعدّ ١–٣ ثم ١–٥ ثم ٦–٧ ثم ٨–١٠ <b>بلمسةٍ لكل عنصر</b>، ثم
+                    يجيب «كم صارت كلُّها؟». وفي آخرها: تُبعثَر الكميةُ نفسُها
+                    وتُعَدّ ثانيةً — والعددُ هو هو.
+                  </dd>
+                </div>
+                <div>
+                  <dt>كيف يعمل التمرين</dt>
+                  <dd>
+                    كلُّ لمسةٍ تُعلّم عنصراً وتنطق اسمَ رتبته، <b>والعنصرُ
+                    الملموس يُعطَّل</b> فلا يُعَدّ مرتين — امتناعٌ في البنية لا
+                    تنبيهٌ بعد الخطأ. وفي محطة ٨–١٠ يزيد سؤال «أَعْطِنِي هَذَا
+                    الْعَدَدْ»: يُسمّى المطلوبُ صوتاً ويُرى نموذجُه خطفةً ثم
+                    يُغطّى، فيلتقط الطفلُ بقدره من صندوقٍ أوسع.
+                  </dd>
+                </div>
+                <div>
+                  <dt>دورُك أنت</dt>
+                  <dd>
+                    اترك إصبعَه يسبق الصوت — فالتطبيق ينتظره ولا يدهس عدَّه.
+                    وإن أخطأ فلا تقل الجواب: سيُعَدُّ أمامه.
+                  </dd>
+                </div>
+              </dl>
+            </article>
+            <figure class="w-figure">
+              <img
+                loading="lazy"
+                src="shots/count.png"
+                width="820"
+                height="882"
+                alt="شاشة «المس وعُدّ»: كميةٌ مبعثرة تُلمَس عنصراً عنصراً."
+              />
+            </figure>
+          </div>
+
+          <article
+            class="w-station"
+            data-covers="equal"
+            data-count="١"
+            style="--accent: var(--accent-quantity)"
+          >
+            <div class="w-station-head">
+              <div>
+                <span class="w-kicker">نوع محطة · تسوية</span>
+                <h3>اِجْعَلْهُمَا سَوَاء</h3>
+              </div>
+              <span class="w-station-n"><b>١</b>محطة</span>
+            </div>
+            <dl class="w-what">
+              <div>
+                <dt>ماذا يتعلّم الطفل</dt>
+                <dd>
+                  أن يغيّر الكميةَ بيده حتى تساوي أختَها — وهي أوّلُ صورةٍ
+                  للجمع والطرح <b>قبل أن يكون لهما رمز</b>.
+                </dd>
+              </div>
+              <div>
+                <dt>كيف يعمل التمرين</dt>
+                <dd>
+                  تحت كل كميةٍ زرّا «أَضِفْ» و«أَزِلْ» — كلمتان لا علامتان،
+                  فالعلامةُ تدخل الرحلةَ في المرحلة ٦. ولا يخرج بالعدد عن جبهة
+                  محطته.
+                </dd>
+              </div>
+              <div>
+                <dt>دورُك أنت</dt>
+                <dd>اسأله: «كم أضفتَ؟» — سؤالٌ يجعل الفعلَ عدداً في ذهنه.</dd>
+              </div>
+            </dl>
+          </article>
+        </div>
+      </section>
+
+      <!-- ————— المرحلة ٣ ————— -->
+
+      <section class="w-section" id="stage3" style="--accent: var(--accent-numeral)">
+        <h2>المرحلة ٣ — الرُّمُوزُ ١–١٠</h2>
+        <p class="w-lede">
+          ثماني محطات: <b>الرمزُ تسميةٌ لكمٍّ عرفه</b> لا تعريفٌ لمجهول. ويأتي
+          الصفرُ آخرَها عمداً — كميةُ «لا شيء» أصعبُ إدراكاً، وتقديمُها مبكراً
+          يشوّش المطابقة.
+        </p>
+
+        <div class="w-stations">
+          <div class="w-pair">
+            <article
+              class="w-station"
+              data-covers="numeral"
+              data-count="٨"
+              style="--accent: var(--accent-numeral)"
+            >
+              <div class="w-station-head">
+                <div>
+                  <span class="w-kicker">نوع محطة · رمزٌ بعد كمّ</span>
+                  <h3>رُمُوزُ الأَعْدَاد</h3>
+                </div>
+                <span class="w-station-n"><b>٨</b>محطات</span>
+              </div>
+              <dl class="w-what">
+                <div>
+                  <dt>ماذا يتعلّم الطفل</dt>
+                  <dd>
+                    رموزَ ١–١٠ <b>رمزين رمزين</b> ومعها إطارُ الخمسة وإطارُ
+                    العشرة، ثم الصفرَ في محطته. ولكلِّ رمزٍ مفتاحُ قياسٍ مستقلّ —
+                    فلا يُخفى تعثّرُه في «٧» تحت إتقانه لِـ«٣».
+                  </dd>
+                </div>
+                <div>
+                  <dt>كيف يعمل التمرين</dt>
+                  <dd>
+                    تُعَدُّ الكميةُ أوّلاً، ثم <b>يُكشَف رمزُها فوقها</b>، ثم
+                    تدور المطابقةُ في الاتجاهين في المحطة نفسِها: «أيُّ رمزٍ
+                    لهذه؟» و«أين هذا العدد؟».
+                  </dd>
+                </div>
+                <div>
+                  <dt>دورُك أنت</dt>
+                  <dd>
+                    لا تطلب منه كتابةَ الرقم — الكتابةُ ليست في هذا التطبيق،
+                    والمقصودُ هنا أن يقرأه ويعرف كمَّه.
+                  </dd>
+                </div>
+              </dl>
+            </article>
+            <figure class="w-figure">
+              <img
+                loading="lazy"
+                src="shots/numeral.png"
+                width="820"
+                height="821"
+                alt="محطة الرموز: كميةٌ في إطار العشرة ورمزُها مكشوفاً فوقها."
+              />
+            </figure>
+          </div>
+        </div>
+      </section>
+
+      <!-- ————— المرحلة ٤ ————— -->
+
+      <section class="w-section" id="stage4" style="--accent: var(--accent-numeral)">
+        <h2>المرحلة ٤ — قَارِنْ وَرَتِّبْ</h2>
+        <p class="w-lede">
+          أربعُ محطات تنقل المقارنةَ من الكمّ إلى الرمز، وتضع الأعدادَ على خطٍّ
+          <b>يبدأ من اليمين</b> — اتفاقاً مع إطار العشرة الذي يُملأ من اليمين،
+          ومع اتجاه قراءة الطفل العربيّ.
+        </p>
+
+        <div class="w-stations">
+          <div class="w-pair">
+            <article
+              class="w-station"
+              data-covers="compare"
+              data-count="١"
+              style="--accent: var(--accent-numeral)"
+            >
+              <div class="w-station-head">
+                <div>
+                  <span class="w-kicker">نوع محطة · مقارنةُ رموز</span>
+                  <h3>أَكْبَرُ وَأَصْغَر</h3>
+                </div>
+                <span class="w-station-n"><b>١</b>محطة</span>
+              </div>
+              <dl class="w-what">
+                <div>
+                  <dt>ماذا يتعلّم الطفل</dt>
+                  <dd>
+                    أن يقارن رمزين بلا عدٍّ — ومعرفتُه بموضع كلٍّ منهما هي
+                    المقصودة، لا حفظُ علامتَي «أكبر من» و«أصغر من».
+                  </dd>
+                </div>
+                <div>
+                  <dt>كيف يعمل التمرين</dt>
+                  <dd>
+                    رمزان يُسأل عن أكبرهما أو أصغرهما، وعند الخطأ
+                    <b>تُكشَف كميّتاهما صفّين متحاذيين</b> وتُعَدّان — فيرى الفرق
+                    ولا يُلقَّن.
+                  </dd>
+                </div>
+                <div>
+                  <dt>دورُك أنت</dt>
+                  <dd>سلْه: «كم بينهما؟» — سؤالُ الفرق بابُ المرحلة السادسة.</dd>
+                </div>
+              </dl>
+            </article>
+            <figure class="w-figure">
+              <img
+                loading="lazy"
+                src="shots/compare.png"
+                width="820"
+                height="821"
+                alt="محطة المقارنة: رمزان ويُسأل عن أكبرهما."
+              />
+            </figure>
+          </div>
+
+          <article
+            class="w-station"
+            data-covers="line"
+            data-count="١"
+            style="--accent: var(--accent-numeral)"
+          >
+            <div class="w-station-head">
+              <div>
+                <span class="w-kicker">نوع محطة · خطُّ الأعداد</span>
+                <h3>أَيْنَ يَقَع؟ ٠–١٠</h3>
+              </div>
+              <span class="w-station-n"><b>١</b>محطة</span>
+            </div>
+            <dl class="w-what">
+              <div>
+                <dt>ماذا يتعلّم الطفل</dt>
+                <dd>
+                  أنّ للعدد <b>موضعاً</b> لا كمّاً فقط — وهو أساسُ الحساب الذهنيّ
+                  لاحقاً (العدُّ تصاعداً ونزولاً على الخطّ).
+                </dd>
+              </div>
+              <div>
+                <dt>كيف يعمل التمرين</dt>
+                <dd>
+                  خطٌّ بعلاماتٍ تُعَدّ، يضع عليه العددَ المطلوب. وعند الخطأ
+                  يُعَدُّ عليه من الصفر علامةً علامة.
+                </dd>
+              </div>
+              <div>
+                <dt>دورُك أنت</dt>
+                <dd>أشِر إلى الخطّ لا إلى الجواب — والعدُّ عليه هو الدرس.</dd>
+              </div>
+            </dl>
+          </article>
+
+          <article
+            class="w-station"
+            data-covers="order"
+            data-count="١"
+            style="--accent: var(--accent-numeral)"
+          >
+            <div class="w-station-head">
+              <div>
+                <span class="w-kicker">نوع محطة · ترتيب</span>
+                <h3>رَتِّبْ</h3>
+              </div>
+              <span class="w-station-n"><b>١</b>محطة</span>
+            </div>
+            <dl class="w-what">
+              <div>
+                <dt>ماذا يتعلّم الطفل</dt>
+                <dd>ترتيبَ ثلاثة رموزٍ من الأصغر إلى الأكبر.</dd>
+              </div>
+              <div>
+                <dt>كيف يعمل التمرين</dt>
+                <dd>
+                  يختار الأصغرَ فالأصغر، والاختيارُ الخاطئ لا ينقل — يُعرَض
+                  الترتيبُ الصحيح كمّاً ثم يُعاد السؤال.
+                </dd>
+              </div>
+              <div>
+                <dt>دورُك أنت</dt>
+                <dd>رتّبْ معه أشياءَ البيت بالعدد — الترتيبُ عادةٌ لا شاشة.</dd>
+              </div>
+            </dl>
+          </article>
+
+          <article
+            class="w-station"
+            data-covers="neighbor"
+            data-count="١"
+            style="--accent: var(--accent-numeral)"
+          >
+            <div class="w-station-head">
+              <div>
+                <span class="w-kicker">نوع محطة · الجارَان</span>
+                <h3>السَّابِقُ وَالتَّالِي</h3>
+              </div>
+              <span class="w-station-n"><b>١</b>محطة</span>
+            </div>
+            <dl class="w-what">
+              <div>
+                <dt>ماذا يتعلّم الطفل</dt>
+                <dd>
+                  ما قبل العدد وما بعده مباشرةً — وهو ما يجعل «واحداً أكثر»
+                  و«واحداً أقلّ» معنىً لا حفظاً.
+                </dd>
+              </div>
+              <div>
+                <dt>كيف يعمل التمرين</dt>
+                <dd>
+                  رمزٌ في وسط الشاشة، ويُسأل عن سابقه أو تاليه، والخطُّ حاضرٌ
+                  عوناً عند الخطأ.
+                </dd>
+              </div>
+              <div>
+                <dt>دورُك أنت</dt>
+                <dd>العبْ معه «ما بعد ٦؟» في السيارة — دقيقةٌ تكفي.</dd>
+              </div>
+            </dl>
+          </article>
+        </div>
+      </section>
+
+      <!-- ————— البوابات ————— -->
+
+      <section class="w-section" id="gates" style="--accent: var(--accent-gate)">
+        <h2>البوابات الثلاث — إتقانٌ بلا رسوب</h2>
+        <p class="w-lede">
+          بين المراحل ثلاثُ بوابات: <b data-stat="gates">٣</b> محطاتٍ من نوعٍ
+          واحد، وكلُّ واحدةٍ منها جلسةٌ من <b>أضعف ما في يد الطفل</b> ضمن مدىً
+          معلَن. ولا رسوبَ فيها ولا عودةَ إلى الوراء: تُعاد حتى تُعبَر.
+        </p>
+        <div class="w-stations">
+          <div class="w-pair">
+            <article
+              class="w-station"
+              data-covers="gate"
+              data-count="٣"
+              style="--accent: var(--accent-gate)"
+            >
+              <div class="w-station-head">
+                <div>
+                  <span class="w-kicker">نوع محطة · بوابةُ إتقان</span>
+                  <h3>عُبُورُ الكَمّ · عُبُورُ العَمَلِيَّات · خِتَامُ التَّأْسِيس</h3>
+                </div>
+                <span class="w-station-n"><b>٣</b>بوابات</span>
+              </div>
+              <dl class="w-what">
+                <div>
+                  <dt>ماذا يتعلّم الطفل</dt>
+                  <dd>
+                    لا شيءَ جديداً — البوابةُ <b>تثبيتٌ لا تدريس</b>: عشرةُ
+                    تمارينَ مما درسه، تُختار من أضعف مهاراته في مدى البوابة
+                    المعلَن (الأولى من المرحلتين ١–٤، والثانية من العمليات،
+                    والثالثة من الرحلة كلِّها).
+                  </dd>
+                </div>
+                <div>
+                  <dt>كيف يعمل التمرين</dt>
+                  <dd>
+                    تمارينُ الرحلة نفسُها بشاشاتها نفسِها، والخطأُ فيها كالخطأ
+                    فيها: يُعَدُّ أمامه ويحاول. وعند العبور نجمةٌ ووجهُ بوابة —
+                    <b>وليس فيها لفظُ رسوب</b>.
+                  </dd>
+                </div>
+                <div>
+                  <dt>دورُك أنت</dt>
+                  <dd>
+                    اجلس معه في البوابة إن أحببت — فهي أطولُ من محطةٍ عادية،
+                    وهي أصدقُ ما يريك أين هو.
+                  </dd>
+                </div>
+              </dl>
+            </article>
+            <figure class="w-figure">
+              <img
+                loading="lazy"
+                src="shots/gate.png"
+                width="820"
+                height="1180"
+                alt="شاشة بوابة الإتقان: جلسةٌ من أضعف مهارات الطفل."
+              />
+            </figure>
+          </div>
+        </div>
+      </section>
+
+      <!-- ————— المرحلة ٥ ————— -->
+
+      <section class="w-section" id="stage5" style="--accent: var(--accent-bond)">
+        <h2>المرحلة ٥ — رَكِّبْ وَفَكِّكْ (الجسور)</h2>
+        <p class="w-lede">
+          ستُّ محطات، <b>ولا رمزَ عمليةٍ واحد فيها</b>: العددُ يُركَّب من جزأين
+          ويُفكَّك إليهما. وهذه المرحلةُ هي التي تجعل الجمعَ لاحقاً
+          <b>تركيبَ معلومٍ لا طقساً رمزياً</b>.
+        </p>
+
+        <div class="w-stations">
+          <div class="w-pair">
+            <article
+              class="w-station"
+              data-covers="bond"
+              data-count="٦"
+              style="--accent: var(--accent-bond)"
+            >
+              <div class="w-station-head">
+                <div>
+                  <span class="w-kicker">نوع محطة · جسورُ الأعداد</span>
+                  <h3>اِصْنَعِ العَدَد · أَصْدِقَاءُ العَشَرَة</h3>
+                </div>
+                <span class="w-station-n"><b>٦</b>محطات</span>
+              </div>
+              <dl class="w-what">
+                <div>
+                  <dt>ماذا يتعلّم الطفل</dt>
+                  <dd>
+                    جسورَ ٣ و٤ ثم ٥ ثم ٦ و٧ ثم ٨ و٩ ثم <b>أصدقاءَ العشرة</b>،
+                    ومعها أنّ العددَ الواحد يُصنَع <b>بأكثر من طريق</b>.
+                  </dd>
+                </div>
+                <div>
+                  <dt>كيف يعمل التمرين</dt>
+                  <dd>
+                    وجهان: جزآن يُوضَعان في خانتَي الكلّ، و«ما بقي للعشرة» حيث
+                    <b>خاناتُ الإطار الفارغة هي السؤال</b>. وما يزيد على المطلوب
+                    <b>لا يُلمَس أصلاً</b> (البطاقةُ تُعطَّل)، وما وُضع يُرَدّ
+                    بلمسة.
+                  </dd>
+                </div>
+                <div>
+                  <dt>دورُك أنت</dt>
+                  <dd>
+                    اسأله «وبطريقةٍ أخرى؟» — تعدُّدُ الطرق هو الفكرة كلُّها.
+                  </dd>
+                </div>
+              </dl>
+            </article>
+            <figure class="w-figure">
+              <img
+                loading="lazy"
+                src="shots/bond.png"
+                width="820"
+                height="821"
+                alt="محطة أصدقاء العشرة: إطارُ عشرةٍ فيه خاناتٌ فارغة هي السؤال."
+              />
+            </figure>
+          </div>
+        </div>
+      </section>
+
+      <!-- ————— المرحلة ٦ ————— -->
+
+      <section class="w-section" id="stage6" style="--accent: var(--accent-bond)">
+        <h2>المرحلة ٦ — اِجْمَعْ وَاطْرَحْ ضِمْنَ ١٠</h2>
+        <p class="w-lede">
+          ثماني محطات، والعمليةُ فيها <b>تُفعَل قبل أن تُسمّى</b>: أوّلُ محطةٍ
+          بلا علامةٍ البتّة (كميتان تلتقيان فتُعَدّ الحصيلة)، ثم تُعرَض الجملةُ
+          وكمّيتُها معاً أوّلَ لقاء، ثم بالرمز وحدَه <b>والكمّيةُ عونٌ عند
+          النقر</b> بلا حدٍّ ولا احتساب.
+        </p>
+
+        <div class="w-stations">
+          <div class="w-pair">
+            <article
+              class="w-station"
+              data-covers="add"
+              data-count="٣"
+              style="--accent: var(--accent-bond)"
+            >
+              <div class="w-station-head">
+                <div>
+                  <span class="w-kicker">نوع محطة · جمع</span>
+                  <h3>آلَةُ الجَمْع · رَمْزُ + · اِجْمَعْ ضِمْنَ ١٠</h3>
+                </div>
+                <span class="w-station-n"><b>٣</b>محطات</span>
+              </div>
+              <dl class="w-what">
+                <div>
+                  <dt>ماذا يتعلّم الطفل</dt>
+                  <dd>
+                    أنّ الجمعَ التقاءُ مجموعتين في حصيلةٍ واحدة، ثم أنّ «+»
+                    اسمٌ لذلك الفعل، ثم الجمعَ ضمن العشرة بالرمز.
+                  </dd>
+                </div>
+                <div>
+                  <dt>كيف يعمل التمرين</dt>
+                  <dd>
+                    لوحُ الآلة <b>صورةُ الجسر مقلوبةً</b>: مجموعتان فوق
+                    وحصيلتُهما تحتهما، ولونُ كل مجموعةٍ لونُ شقّها. والجوابُ
+                    يُقرأ <b>من المرسوم</b>، والخطأُ يُعَدّ بعدِّ درسِه (تصاعدياً
+                    من العدد الأكبر).
+                  </dd>
+                </div>
+                <div>
+                  <dt>دورُك أنت</dt>
+                  <dd>
+                    لا تُملِ الحقائق حفظاً. الطلاقةُ تأتي من الجسور، وهي محطةٌ
+                    قبل هذه.
+                  </dd>
+                </div>
+              </dl>
+            </article>
+            <figure class="w-figure">
+              <img
+                loading="lazy"
+                src="shots/add.png"
+                width="820"
+                height="821"
+                alt="محطة الجمع ضمن ١٠: جملةٌ بالرمز وكميةٌ عوناً."
+              />
+            </figure>
+          </div>
+
+          <article
+            class="w-station"
+            data-covers="sub"
+            data-count="٣"
+            style="--accent: var(--accent-bond)"
+          >
+            <div class="w-station-head">
+              <div>
+                <span class="w-kicker">نوع محطة · طرح</span>
+                <h3>رَمْزُ − · اِطْرَحْ ضِمْنَ ١٠ · وَضِمْنَ ٢٠</h3>
+              </div>
+              <span class="w-station-n"><b>٣</b>محطات</span>
+            </div>
+            <dl class="w-what">
+              <div>
+                <dt>ماذا يتعلّم الطفل</dt>
+                <dd>
+                  أنّ الطرحَ <b>إزالةٌ مرئية</b>: ما شُطب غادر، والباقي هو
+                  الجواب. وآخرُها في المرحلة ٧: طرحٌ يعبر العشرة نازلاً.
+                </dd>
+              </div>
+              <div>
+                <dt>كيف يعمل التمرين</dt>
+                <dd>
+                  تُشطَب العناصرُ المغادِرة أمامه ويُقرأ الباقي من الرسم. والعدُّ
+                  عند الخطأ <b>تنازليٌّ مع كل مغادر</b> — عدُّ درسِه لا عدٌّ واحد
+                  للجميع.
+                </dd>
+              </div>
+              <div>
+                <dt>دورُك أنت</dt>
+                <dd>قُل «كم بقي؟» لا «كم الناتج؟» — لغةُ الطرح إزالةٌ لا حساب.</dd>
+              </div>
+            </dl>
+          </article>
+
+          <article
+            class="w-station"
+            data-covers="diff"
+            data-count="١"
+            style="--accent: var(--accent-bond)"
+          >
+            <div class="w-station-head">
+              <div>
+                <span class="w-kicker">نوع محطة · فرق</span>
+                <h3>كَمِ الفَرْقُ بَيْنَهُمَا؟</h3>
+              </div>
+              <span class="w-station-n"><b>١</b>محطة</span>
+            </div>
+            <dl class="w-what">
+              <div>
+                <dt>ماذا يتعلّم الطفل</dt>
+                <dd>
+                  الوجهَ الثاني للطرح: المقارنةُ لا الإزالة — «كم يزيد هذا على
+                  ذاك؟».
+                </dd>
+              </div>
+              <div>
+                <dt>كيف يعمل التمرين</dt>
+                <dd>
+                  صفّان متحاذيان يُرصّ أحدهما تحت الآخر، والفائضُ ظاهرٌ للعين —
+                  وهو الجواب مقروءاً من الرسم.
+                </dd>
+              </div>
+              <div>
+                <dt>دورُك أنت</dt>
+                <dd>قارِنْ معه أشياءَ متجاورة في البيت — الفرقُ يُرى قبل أن يُحسب.</dd>
+              </div>
+            </dl>
+          </article>
+
+          <article
+            class="w-station"
+            data-covers="zero"
+            data-count="١"
+            style="--accent: var(--accent-bond)"
+          >
+            <div class="w-station-head">
+              <div>
+                <span class="w-kicker">نوع محطة · الصفر في العمليات</span>
+                <h3>الصِّفْرُ فِي العَمَلِيَّات</h3>
+              </div>
+              <span class="w-station-n"><b>١</b>محطة</span>
+            </div>
+            <dl class="w-what">
+              <div>
+                <dt>ماذا يتعلّم الطفل</dt>
+                <dd>
+                  أنّ إضافة لا شيءٍ لا تغيّر، وأنّ طرحَ الكلِّ يُبقي لا شيء —
+                  وهي قاعدةٌ تُرى ولا تُحفَظ.
+                </dd>
+              </div>
+              <div>
+                <dt>كيف يعمل التمرين</dt>
+                <dd>
+                  جملٌ فيها الصفر، وكمّيتُها مرسومةٌ عوناً — و«لا شيء»
+                  <b>إطارٌ فارغٌ خاناتُه مرسومة</b> لا ساحةٌ خالية.
+                </dd>
+              </div>
+              <div>
+                <dt>دورُك أنت</dt>
+                <dd>لا شيءَ يُطلب — هذه محطةٌ قصيرة، وهي أصعبُ مما تبدو.</dd>
+              </div>
+            </dl>
+          </article>
+
+          <article
+            class="w-station"
+            data-covers="fluent"
+            data-count="١"
+            style="--accent: var(--accent-bond)"
+          >
+            <div class="w-station-head">
+              <div>
+                <span class="w-kicker">نوع محطة · طلاقة</span>
+                <h3>طَلَاقَةٌ ضِمْنَ ١٠</h3>
+              </div>
+              <span class="w-station-n"><b>١</b>محطة</span>
+            </div>
+            <dl class="w-what">
+              <div>
+                <dt>ماذا يتعلّم الطفل</dt>
+                <dd>
+                  أن يستدعي ما بناه — جمعاً وطرحاً ضمن العشرة — بالرمز وحدَه،
+                  <b>بلا مؤقّتٍ ولا سباق</b>.
+                </dd>
+              </div>
+              <div>
+                <dt>كيف يعمل التمرين</dt>
+                <dd>
+                  جملٌ متتابعة، والكمّيةُ تحضر بالنقر لمن أرادها — والاستعانةُ
+                  بها <b>لا تُحتسَب</b> عليه.
+                </dd>
+              </div>
+              <div>
+                <dt>دورُك أنت</dt>
+                <dd>
+                  لا تقس الوقت. الطلاقةُ عندنا صحّةٌ لا سرعة — والسرعةُ تأتي
+                  بالتكرار المتباعد.
+                </dd>
+              </div>
+            </dl>
+          </article>
+        </div>
+      </section>
+
+      <!-- ————— المرحلة ٧ ————— -->
+
+      <section class="w-section" id="stage7" style="--accent: var(--accent-bond)">
+        <h2>المرحلة ٧ — العَشَرَةُ وَمَا بَعْدَهَا ١١–٢٠</h2>
+        <p class="w-lede">
+          ستُّ محطات، وقاعدتُها أنّ ما فوق العشرة <b>يُبنى ولا يُعَدّ فرادى</b>:
+          حزمةُ عشرةٍ تُعلَّم دفعةً واحدة وتُسمّى تامّة، ثم تُعَدّ الآحادُ فوقها.
+        </p>
+
+        <div class="w-stations">
+          <div class="w-pair">
+            <article
+              class="w-station"
+              data-covers="teen"
+              data-count="٤"
+              style="--accent: var(--accent-bond)"
+            >
+              <div class="w-station-head">
+                <div>
+                  <span class="w-kicker">نوع محطة · عشرةٌ وآحاد</span>
+                  <h3>حُزْمَةُ العَشَرَة · ١١–٢٠</h3>
+                </div>
+                <span class="w-station-n"><b>٤</b>محطات</span>
+              </div>
+              <dl class="w-what">
+                <div>
+                  <dt>ماذا يتعلّم الطفل</dt>
+                  <dd>
+                    أنّ «أَرْبَعَةَ عَشَرْ» <b>عشرةٌ وأربعة</b>: يبنيها في
+                    إطارين، ثم يقرأ اسمَها — والقراءةُ بعد البناء لا قبله.
+                  </dd>
+                </div>
+                <div>
+                  <dt>كيف يعمل التمرين</dt>
+                  <dd>
+                    خانتان: حزمةُ عشرةٍ ممتلئة وآحادٌ فوقها. ولا لمسَ ولا عدَّ
+                    آحادٍ فوق العشرة — <b>الحزمةُ تُسمّى تامّةً ثم يُعَدُّ فوقها</b>.
+                  </dd>
+                </div>
+                <div>
+                  <dt>دورُك أنت</dt>
+                  <dd>
+                    استعمل اللفظَ نفسَه في البيت: «عشرةٌ وثلاثة» قبل «ثلاثةَ
+                    عشر».
+                  </dd>
+                </div>
+              </dl>
+            </article>
+            <figure class="w-figure">
+              <img
+                loading="lazy"
+                src="shots/teen.png"
+                width="820"
+                height="821"
+                alt="محطة ١١–١٥: حزمةُ عشرةٍ ممتلئة وآحادٌ فوقها."
+              />
+            </figure>
+          </div>
+
+          <article
+            class="w-station"
+            data-covers="bridge"
+            data-count="١"
+            style="--accent: var(--accent-bond)"
+          >
+            <div class="w-station-head">
+              <div>
+                <span class="w-kicker">نوع محطة · عبورُ العشرة</span>
+                <h3>اِصْنَعْ عَشَرَةً أَوَّلًا</h3>
+              </div>
+              <span class="w-station-n"><b>١</b>محطة</span>
+            </div>
+            <dl class="w-what">
+              <div>
+                <dt>ماذا يتعلّم الطفل</dt>
+                <dd>
+                  استراتيجيةَ العبور: يُكمل العشرةَ أوّلاً ثم يضيف ما بقي — وهي
+                  ثمرةُ «أصدقاء العشرة» في المرحلة ٥.
+                </dd>
+              </div>
+              <div>
+                <dt>كيف يعمل التمرين</dt>
+                <dd>
+                  سؤالان لا واحد: «كم بقي لتمتلئ العشرة؟» ثم «كم صارت معاً؟» —
+                  والحصيلةُ تُرى حزمةً وآحاداً في الإطارين.
+                </dd>
+              </div>
+              <div>
+                <dt>دورُك أنت</dt>
+                <dd>
+                  إن تعثّر فارجع معه إلى «أصدقاء العشرة» — التطبيق نفسُه يفعلها
+                  في المراجعة.
+                </dd>
+              </div>
+            </dl>
+          </article>
+        </div>
+      </section>
+
+      <!-- ————— المرحلة ٨ ————— -->
+
+      <section class="w-section" id="stage8" style="--accent: var(--accent-pattern)">
+        <h2>المرحلة ٨ — الأَنْمَاطُ وَالقِيَاسُ الوَصْفِيّ</h2>
+        <p class="w-lede">
+          خمسُ محطات تُقاس <b>بالوجه لا بالعدد</b>: النمطُ إيقاعٌ يُرى، والقياسُ
+          مقارنةُ مقاديرَ بلا مسطرة، وآخرُها محطةُ تعارفٍ على الأرقام المغربية.
+        </p>
+
+        <div class="w-stations">
+          <div class="w-pair">
+            <article
+              class="w-station"
+              data-covers="pattern"
+              data-count="٢"
+              style="--accent: var(--accent-pattern)"
+            >
+              <div class="w-station-head">
+                <div>
+                  <span class="w-kicker">نوع محطة · نمط</span>
+                  <h3>نَمَطُ (أ ب أ ب) وَ(أ ب ج)</h3>
+                </div>
+                <span class="w-station-n"><b>٢</b>محطتان</span>
+              </div>
+              <dl class="w-what">
+                <div>
+                  <dt>ماذا يتعلّم الطفل</dt>
+                  <dd>
+                    أن يرى القاعدةَ في تكرارٍ ويُتمّه — وهو أوّلُ تفكيرٍ جبريّ
+                    في حياته.
+                  </dd>
+                </div>
+                <div>
+                  <dt>كيف يعمل التمرين</dt>
+                  <dd>
+                    شريطٌ من رموز عالمه وآخرُه خانةُ سؤال، والجوابُ ما يبعد
+                    <b>دورةً كاملة</b> مقروءاً من الشريط المرسوم. وبالإصابة تتمّ
+                    الخانةُ فيُرى النمطُ تامّاً.
+                  </dd>
+                </div>
+                <div>
+                  <dt>دورُك أنت</dt>
+                  <dd>
+                    اصنعا نمطاً بالملاعق على الطاولة — ثم اسأله: «ما التالي؟».
+                  </dd>
+                </div>
+              </dl>
+            </article>
+            <figure class="w-figure">
+              <img
+                loading="lazy"
+                src="shots/pattern.png"
+                width="820"
+                height="821"
+                alt="محطة النمط: شريطٌ من رموزٍ وآخرُه خانةُ سؤال."
+              />
+            </figure>
+          </div>
+
+          <div class="w-pair">
+            <article
+              class="w-station"
+              data-covers="measure"
+              data-count="٢"
+              style="--accent: var(--accent-pattern)"
+            >
+              <div class="w-station-head">
+                <div>
+                  <span class="w-kicker">نوع محطة · قياسٌ وصفيّ</span>
+                  <h3>أَطْوَلُ وَأَثْقَل · قَبْلُ وَبَعْد</h3>
+                </div>
+                <span class="w-station-n"><b>٢</b>محطتان</span>
+              </div>
+              <dl class="w-what">
+                <div>
+                  <dt>ماذا يتعلّم الطفل</dt>
+                  <dd>
+                    أن يقارن مقاديرَ بلا أداة: الأطولَ والأقصر، والأثقلَ والأخفّ،
+                    وترتيبَ ما قبلُ وما بعد.
+                  </dd>
+                </div>
+                <div>
+                  <dt>كيف يعمل التمرين</dt>
+                  <dd>
+                    وجهان يقفان على خطٍّ واحد: مقاديرُ الشيء الواحد في الطول،
+                    و<b>أشياءُ مختلفة بمقدارٍ واحد</b> في الثقل والزمن — فالفيلُ
+                    أثقلُ من الريشة <b>بيانُ منهجٍ لا حجمُ رسم</b>، ولا حكمَ في
+                    الحجم أبداً.
+                  </dd>
+                </div>
+                <div>
+                  <dt>دورُك أنت</dt>
+                  <dd>
+                    زِنْ بيديه شيئين في البيت — الثقلُ إحساسٌ قبل أن يكون كلمة.
+                  </dd>
+                </div>
+              </dl>
+            </article>
+            <figure class="w-figure">
+              <img
+                loading="lazy"
+                src="shots/measure.png"
+                width="820"
+                height="821"
+                alt="مشهد القياس: شيئان بمقدارين يقفان على خطٍّ واحد."
+              />
+            </figure>
+          </div>
+
+          <article
+            class="w-station"
+            data-covers="intro"
+            data-count="١"
+            style="--accent: var(--accent-pattern)"
+          >
+            <div class="w-station-head">
+              <div>
+                <span class="w-kicker">نوع محطة · تعارُف</span>
+                <h3>تَعَارُفٌ: أَرْقَامٌ أُخْرَى</h3>
+              </div>
+              <span class="w-station-n"><b>١</b>محطة</span>
+            </div>
+            <dl class="w-what">
+              <div>
+                <dt>ماذا يتعلّم الطفل</dt>
+                <dd>
+                  أنّ للرقم الذي يعرفه (١٢٣) رسماً آخر يراه على الساعات والكتب
+                  (123) — تعارفٌ لا تدريس.
+                </dd>
+              </div>
+              <div>
+                <dt>كيف يعمل التمرين</dt>
+                <dd>
+                  <b>عرضٌ بلا سؤالٍ ولا خطأ</b>: صفّان متقابلان، ونجمتُها تُنال
+                  بالمشاهدة. وهي المحطةُ الوحيدة في التطبيق التي فيها رقمٌ
+                  مغربيّ.
+                </dd>
+              </div>
+              <div>
+                <dt>دورُك أنت</dt>
+                <dd>أرِه رقمَ الباب أو المصعد — الرسمُ الآخر حولنا كلَّ يوم.</dd>
+              </div>
+            </dl>
+          </article>
+        </div>
+      </section>
+
+      <!-- ————— القياس والمراجعة ————— -->
+
+      <section class="w-section" id="measure" style="--accent: var(--accent-gate)">
+        <h2>القياس والمراجعة — كيف يتذكّر التطبيقُ ما تعثّر فيه</h2>
+        <p class="w-lede">
+          لكل (مفهومٍ × مدى × نوعِ تمرين) <b>مفتاحُ قياسٍ</b> مستقلّ —
+          <b data-stat="skills">٥١</b> مفتاحاً في الرحلة كلِّها. والمفتاحُ يصعد
+          صندوقاً بالإصابة وينزل بالخطأ، ويعود في موعده (يوم، يومان، أربعة،
+          ثمانية، ستةَ عشر). ولذلك يتعثّر الطفلُ في «٧» ولا يخفيه إتقانُه لِـ«٣».
+        </p>
+        <p class="w-under">
+          و«مراجعةُ اليوم» بطاقةٌ فوق الخريطة تجمع ستةَ تمارينَ من
+          <b>أضعف ما في يده</b> — تمارينُ الرحلة نفسُها لا اختباراً آخر. وتفصيلُ
+          ما تريه اللوحةُ لوليّ الأمر <a href="guide.html#panel">في الدليل العملي</a>.
+        </p>
+      </section>
+
+      <div class="w-end">
+        <h2 style="margin-top: 0">الرحلةُ كلُّها في جهازك</h2>
+        <p class="w-lede" style="margin-inline: auto">
+          <b data-stat="nodes">٥٢</b> محطة و<b data-stat="stars">١٥٦</b> نجمة —
+          بلا حساب، وبلا إنترنت بعد أوّل فتحة.
+        </p>
+        <a class="btn btn--primary w-start" href="../">ابدأ الآن ←</a>
+      </div>
+
+      <footer class="w-foot">
+        <p>
+          هذه الصفحة جزءٌ من المرجع التعريفي لتطبيق «اِحْسِبْ» — وأرقامُها كلُّها
+          محسوبةٌ من بيانات المنهج نفسِها، يتحقّق منها فحصٌ آليّ قبل النشر.
+        </p>
+        <p class="w-contact">
+          للتواصل والملاحظات:
+          <a href="mailto:info@mishkat.qa">info@mishkat.qa</a>
+        </p>
+      </footer>
+    </div>
+  </body>
+</html>

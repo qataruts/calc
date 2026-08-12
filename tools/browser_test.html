@@ -548,6 +548,96 @@
   ok(answer && answer.length >= 2 && answer.every((c) => c.querySelector('.figure [data-mark]')),
     `وبعد العدّ يُسأل «كم صارت كلها؟» وجوابُه بطاقةُ كمّ (${answer ? answer.length : 0} بطاقة)`);
 
+  /* ————— ج) «أَعْطِنِي هَذَا الْعَدَدْ»: النموذجُ يُسمّى ثم يُخطَف (قيدُ الجلسة ٩) —————
+
+     **العلّة**: نموذجٌ مرئيٌّ **دائم** يحوّل «أعطني ن» مطابقةً بصرية — إصبعٌ على نقطةٍ
+     هنا وأخرى هناك حتى يستوي المنظران، فلا يُقاس إنتاجُ كمٍّ بقدرٍ معلوم أصلاً.
+     فالمحروسُ هنا ثلاثة: أن **يُسمَع اسمُ المطلوب** (وشرطُه تحقّق: أسماءُ الأعداد
+     مصروفةٌ مُقَرّة)، وأن **يُغطّى النموذجُ فعلاً على الشاشة** (لا برمجياً وحدَه —
+     درسُ `hidden`)، وأن تكون **الإعادةُ بلا حدٍّ ولا احتساب** (عهدُ الخطف القائم).
+
+     **واسمُ العدد مكتوبٌ هنا بيدٍ عمداً**: لو قُرئ من `NUMBER_NAME` لصدّق الحارسُ ما
+     يفحصه — فتُبدَّل تسميةٌ في التطبيق ويبقى أخضر. وهو **جدولُ حقيقةٍ** كجدول رتب
+     المشاهد (الجلسة ٨ب) وجدولِ النرد في `check_render`. */
+  const NAME_HEARD = ['صِفْرْ', 'وَاحِدْ', 'اِثْنَانْ', 'ثَلَاثَةْ', 'أَرْبَعَةْ', 'خَمْسَةْ',
+    'سِتَّةْ', 'سَبْعَةْ', 'ثَمَانِيَةْ', 'تِسْعَةْ', 'عَشَرَةْ'];
+
+  sdoc = await open('#/count/ten');
+  const giveFrom = played.length;
+  // سَوقٌ باللمس حتى تقع جولةُ «أعطني»: كلُّ عنصرٍ يُلمَس مرّةً، ثم تُختار البطاقةُ
+  // التي رُسِم فيها مثلُ ما عُدَّ — وهو عينُ ما يفعله الطفلُ المصيب.
+  // (والسَّوقُ **بانتظار الحالة لا بمهلةٍ ثابتة**: سبعُ جولاتٍ تسبق «أعطني» في هذه
+  //  المحطة، فمهلةٌ ثابتةٌ لكل خطوةٍ تُطيل الصفحةَ حتى تبلغ مهلتَها الحارسة.)
+  for (let step = 0; step < 24 && !sdoc.querySelector('.q-give'); step++) {
+    const ready = await until(sdoc, (d) => d.querySelector('.q-give')
+      || d.querySelector('.fig-tap:not([disabled])')
+      || d.querySelector('.q-choices .qcard')
+      || d.querySelector('.station-body .next'), 12000);
+    if (!ready || sdoc.querySelector('.q-give')) break;
+    const tapsNow = [...sdoc.querySelectorAll('.fig-tap:not([disabled])')];
+    const stageNow = sdoc.querySelector('.q-stage');
+    const cardsNow = [...sdoc.querySelectorAll('.q-choices .qcard')];
+    if (tapsNow.length) {
+      for (const tap of tapsNow) tap.click();
+      await until(sdoc, (d) => d.querySelector('.q-choices .qcard'), 9000);
+    } else if (cardsNow.length && stageNow) {
+      cardsNow.find((c) => drawnOf(c) === drawnOf(stageNow))?.click();
+      await until(sdoc, (d) => d.querySelector('.q-give')
+        || d.querySelector('.fig-tap:not([disabled])'), 9000);
+    } else {
+      sdoc.querySelector('.station-body .next')?.click();
+      await new Promise((r) => setTimeout(r, 260));
+    }
+  }
+  const give = sdoc.querySelector('.q-give');
+  const giveModel = give?.querySelector('.q-model .figure');
+  const giveWant = giveModel ? Number(giveModel.dataset.drawn) : NaN;
+  ok(!!give && Number.isFinite(giveWant) && giveWant > 0,
+    `وجولةُ «أَعْطِنِي هَذَا الْعَدَدْ» تقع في «وحدك» (المطلوبُ المرسوم: ${giveWant || '؟'})`);
+
+  // ١) **والنموذجُ يُغطّى فعلاً** — قياساً بعد التنسيق لا قراءةً لِـ`hidden`.
+  //    (وهو أوّلُ ما يُنتظَر: سدلُ الغطاء يقع **بعد** تمام السؤال والاسم، فانتظارُه
+  //     يجعل قراءةَ القناة أدناه على حالٍ مستقرّة لا على سباقٍ مع الكلام.)
+  const giveCover = await until(sdoc, (d) => {
+    const c = d.querySelector('.q-give .q-cover');
+    return c && !c.hidden ? c : null;
+  });
+  const coverPainted = giveCover
+    && sdoc.defaultView.getComputedStyle(giveCover).display !== 'none';
+  const modelStill = sdoc.querySelector('.q-give .q-model .figure');
+  ok(!!giveCover && !!coverPainted && !!modelStill,
+    `والنموذجُ يُخطَف ثم يُغطّى **رسماً على الشاشة** (الغطاء: ${giveCover
+      ? sdoc.defaultView.getComputedStyle(giveCover).display : 'لا غطاء'})`);
+
+  /* ٢) **واسمُ المطلوب يُسمَع — بعد سؤال الجولة مباشرةً**. ولا يكفي أن يقع الاسمُ في
+     القناة: أسماءُ الأعداد تُنطَق في كل عدٍّ باللمس قبل هذه الجولة، فيمرّ البابُ من
+     ضجيج ما سبق (عيبٌ أمسكته التجربةُ السالبة هنا: كان أخضرَ والخطفُ مردود). فالمقيسُ
+     **التتابع**: «أَعْطِنِي هَذَا الْعَدَدْ» ثم اسمُ المطلوب يليه في القناة نفسِها. */
+  const giveSeq = played.slice(giveFrom).map((key) => bank[key]);
+  const askAt = giveSeq.lastIndexOf('أَعْطِنِي هَذَا الْعَدَدْ');
+  const namedNext = askAt >= 0 ? giveSeq[askAt + 1] : undefined;
+  ok(namedNext === NAME_HEARD[giveWant],
+    `و**المطلوبُ يُسمّى باسمه بعد السؤال**: «${NAME_HEARD[giveWant] || '؟'}»`
+    + (namedNext === NAME_HEARD[giveWant] ? '' : ` — وما تلا السؤالَ: «${namedNext || 'لا شيء'}»`));
+
+  // ٣) **والإعادةُ بلا حدٍّ ولا احتساب** — ثلاثُ إعاداتٍ لا تُقدِّم الجولةَ ولا تحكم
+  const giveReplay = [...sdoc.querySelectorAll('.station-body button')]
+    .find((b) => b.textContent.includes('أَعِدِ الْعَرْض'));
+  const beadAtGive = beadNow(sdoc);
+  for (let i = 0; i < 3; i++) {
+    giveReplay?.click();
+    await new Promise((r) => setTimeout(r, 260));
+  }
+  const stillCovered = await until(sdoc, (d) => {
+    const c = d.querySelector('.q-give .q-cover');
+    return c && !c.hidden ? c : null;
+  });
+  ok(!!giveReplay && !!stillCovered && beadNow(sdoc) === beadAtGive
+    && !sdoc.querySelector('.q-give ~ .row .good, .q-give ~ .row .bad'),
+    'وزرُّ إعادةِ العرض بلا حدٍّ ولا احتساب: ثلاثُ إعاداتٍ لم تُقدِّم الجولةَ ولم تحكم');
+  ok(!sdoc.querySelector('.station-body progress, .station-body .countdown, .station-body .timer'),
+    'ولا عدّادَ يقيس زمنَ الخطفة (الخطفُ طبيعةُ تمرينٍ لا مؤقّتُ ضغط)');
+
   /* ————— ١١) شاشاتُ المرحلتين ٣–٤: الرمزُ والمقارنة (الجلسة ٤) —————
 
      أربعةُ عهودٍ لا يُثبتها إلا متصفّح:
