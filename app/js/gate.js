@@ -85,7 +85,8 @@ export function renderGate(gateId) {
           starsRow(starsForReview(errors, items.length), 'big-stars'),
           score,
           h('div', { class: 'row foot' },
-            h('button', { class: 'btn btn--primary', onclick: () => go('#/') }, '→ الخريطة')),
+            h('button', { class: 'btn btn--primary', onclick: () => go('#/') },
+              icon('map'), ' الخريطة')),
         )
         : h('div', { class: 'celebrate celebrate--again' },
           mascot('mascot mascot--hello'),
@@ -95,8 +96,9 @@ export function renderGate(gateId) {
           score,
           h('p', { class: 'note' }, 'أعِد المحاولة متى شئت — بتمارين جديدة في كل مرة.'),
           h('div', { class: 'row foot' },
-            h('button', { class: 'btn btn--primary', onclick: again }, '↻ أعِد المحاولة'),
-            h('button', { class: 'btn', onclick: () => go('#/') }, '→ الخريطة')),
+            h('button', { class: 'btn btn--primary', onclick: again },
+              icon('repeat'), ' أعِد المحاولة'),
+            h('button', { class: 'btn', onclick: () => go('#/') }, icon('map'), ' الخريطة')),
         );
     },
   });

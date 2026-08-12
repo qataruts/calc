@@ -160,10 +160,23 @@ function gridFor(count, field) {
   return { cols, rows };
 }
 
-function scatterPlan(count, rnd, view) {
+/**
+ * **المُبعثَر — ويسعُ لوحُه ما قد يبلغه** (`room`، الجلسة م٥).
+ *
+ * الأصلُ أن تُحسَب شبكةُ اللوح على العدد المطلوب وحدَه، فيتبدّل موضعُ كلِّ عنصرٍ كلما
+ * تبدّل العدد. وذلك يكفي شاشةً تعرض كمّيةً ثابتة، **ولا يكفي لوحاً يعدّله الطفلُ
+ * بإصبعه** (اجعلهما سواء — `FIELD.md §٤`): يلمس واحداً فيقفز الباقون أماكنَهم، فلا
+ * يُقرأ الفعلُ «ذهب واحد» بل «تبدّل كلُّ شيء».
+ *
+ * فمن أعلن `room` حسبت له الشبكةُ والقرعةُ على **سعته** لا على عدده، ورُسم منها أوّلُ
+ * `count` موضعاً. وأثرُه المقيس: **ما بقي لا يزحزحه ما زاد** — مواضعُ `n` هي أوائلُ
+ * مواضع `n+1` بالبذرة نفسِها (بابُه في `check_render.mjs`).
+ */
+function scatterPlan(count, rnd, view, opts = {}) {
   // الساحةُ متراجعةٌ عن حافة البطاقة بهامشها، فلا يلتصق عنصرٌ بالحدّ فيُقرأ نصفَ شيء
   const field = { x: PAD, y: PAD, w: view.w - 2 * PAD, h: view.h - 2 * PAD };
-  const { cols, rows } = gridFor(count, field);
+  const room = Math.max(count, opts.room ?? count);
+  const { cols, rows } = gridFor(room, field);
   const cellW = field.w / cols;
   const cellH = field.h / rows;
   const inset = R + GAP / 2;                    // تراجُعُ القرص عن حدود خليته
@@ -493,6 +506,18 @@ export function plan(display, count, opts = {}) {
     const want = Array.from({ length: count }, (_, i) => i + 1).join('،');
     if (!Array.isArray(opts.ranks) || [...opts.ranks].sort((a, b) => a - b).join('،') !== want) {
       throw new RangeError(`رتبُ المشهد ليست ١..${count} كلَّها مرّةً واحدة`);
+    }
+  }
+  // **والسَّعةُ لِمَن يتبدّل عددُه بيد الطفل** (`room` — الجلسة م٥): تُطلَب من نمطٍ
+  // موضعُه رهنُ عدده (المُبعثَر وعناصرُه)، ولا معنى لها في نمطٍ مواضعُه ثابتةٌ أصلاً
+  // (الإطارُ يُملأ من اليمين، ووجهُ النرد صورةٌ لعدده) — فتُرمى هناك ولا تُبتلَع صامتة.
+  if (opts.room !== undefined) {
+    if (painter.plan !== scatterPlan) {
+      throw new RangeError(`«${display}» مواضعُه لا تتبدّل بالعدد — فلا سَعةَ تُطلَب له`);
+    }
+    if (!Number.isInteger(opts.room) || opts.room < count || opts.room > painter.max) {
+      throw new RangeError(
+        `سَعةُ اللوح ${opts.room} خارج [${count}..${painter.max}] — واللوحُ لا يضيق عمّا رُسم فيه`);
     }
   }
   const split = opts.split ?? null;

@@ -1677,6 +1677,212 @@
       ? ` — مخالفة: ${blindMedals.map((m) => `${m.title}${m.neutral ? ' (أيقونةُ واجهة)'
         : m.same ? ' (لا يُرى على القرص)' : ' (معلمٌ آخر)'}`).join('، ')}` : ''));
 
+  /* ————— ١١ي) **جردُ الصنف**: لا زرَّ إلزاميٍّ وسيلتُه الوحيدة نصّ (الجلسة م٥) —————
+
+     **بلاغُ الميدان ٤** (`docs/FIELD.md §٤` — أوّلُ امتحان طفلٍ حقيقيّ): أتمّ المجموعةَ
+     الأولى وحدَه ثم **وقف عند زرّ «هُمَا سَوَاء»** «فلم يعلم ما يصنع حتى شرحتُ له»،
+     ثم «كلام أَضِفْ أَزِلْ غير مفهومة للطفل». وجمهورُنا (٤–٧) **قبل-قارئ**: لم يمرّ
+     باقرأ بعد. **فالقاعدةُ تُرقّى**: النصُّ في شاشات الطفل **زينةٌ للوالد لا وسيلةُ
+     تشغيل** — ولا فعلَ يلزم الطفلَ وسيلتُه الوحيدة قراءة.
+
+     وهذا حارسُ **الصنف لا الموضع**: لا يعرف زرّاً بعينه، وإنما يجرد كلَّ زرٍّ ظاهرٍ
+     على شاشات الطفل فيسأل: **أفيه ما يُرى** (أيقونةٌ أو معلمٌ أو كمّيةٌ مرسومة أو
+     رمزُ عالم)؟ فمن لم يكن فيه إلا حروفٌ سقط — إلا أن يكون في قائمة الإعفاء **بسببٍ
+     مكتوب**. فزرٌّ جديد يُكتب غداً بنصٍّ وحدَه يحمرّ من تلقائه.
+
+     (والزرُّ الفارغ يمرّ: طبقةُ اللمس فوق كمّيةٍ مرسومة زرٌّ حقيقيّ بلا حرفٍ ولا صورة
+      — لا نصَّ فيه أصلاً، فليس ممّا يُقرأ.) */
+
+  const EXEMPT = [
+    ['.dev', 'أدواتُ التجربة (`?dev=1`) — للبالغ المقيّم، ولا طريقَ إليها من شاشة طفل'],
+    ['.preview-bar', 'شريطُ المعاينة — يخاطب المعلّم أو وليَّ الأمر لا الطفل'],
+    ['.gate', 'بوابةُ لوحة وليّ الأمر الحسابية — بابٌ للبالغ بطبعه'],
+    ['.install-bar', 'بابُ التثبيت — يخاطب وليَّ الأمر على جهازه'],
+    ['.node, .continue, .station-head',
+      'عقدُ الخريطة وبطاقةُ المتابعة ورأسُ المحطة: لغتُها **وجهٌ ولونٌ ونجومٌ وموضعٌ '
+      + 'على الدرب** لا كلمات — الوجهُ رقمُ موضعها أو نجمةُ بوابتها (محرفٌ واحد لا '
+      + 'يُقرأ نصّاً)، وبطاقةُ «تابع من هنا» تتصدّر الخريطةَ وعقدةُ الطفل التالية '
+      + 'معلَّمة. فلا فعلَ هنا وسيلتُه قراءة. وما زاد على هذه الثلاثة يُقاس'],
+  ];
+  /** ما يُرى في الزرّ: أيقونةُ واجهةٍ أو معلمٌ أو كمّيةٌ مرسومة أو رمزُ عالمِ طفل. */
+  const SEEN_IN = '.ui-icon svg, .station-mark svg, .figure, img.emoji';
+  const bareButtons = (d) => [...d.querySelectorAll('button, a.btn, label.btn')]
+    .filter((el) => el.offsetParent !== null)
+    .filter((el) => (el.textContent || '').trim().length > 0)
+    .filter((el) => !el.querySelector(SEEN_IN))
+    .filter((el) => !EXEMPT.some(([sel]) => el.closest(sel)));
+  const bareNames = (rows) => rows
+    .map((el) => `«${(el.textContent || '').trim().slice(0, 24)}»`).join('، ');
+
+  /* والمشهد: خريطةٌ ثم نمذجةٌ بزرَّيها، ثم الشاشتان اللتان وقف عندهما الطفلُ نفسُه
+     («أيُّهما أكثر» بزرّ التساوي، و«اجعلهما سواء» التي كانت خمسةَ نصوص)، ثم ميدالية. */
+  const textOnly = [];
+  let seenScreens = 0;
+  for (const [hash, what] of [
+    ['', 'الخريطة'],
+    ['#/subitize/two', '«كم ترى؟»'],
+    ['#/more/five', '«أيُّهما أكثر؟» — وفيها زرُّ التساوي'],
+    ['#/equal/five', '«اِجْعَلْهُمَا سَوَاء»'],
+  ]) {
+    const cdoc = await open(hash, hash ? '&dev=1' : '');
+    await until(cdoc, (d) => d.querySelector('.station-body .next')
+      || d.querySelector('main.map'), 22000);
+    seenScreens++;
+    textOnly.push(...bareButtons(cdoc).map((el) => `${what} (نمذجة): ${bareNames([el])}`));
+    if (!hash) continue;
+    // ثم شاشةُ التمرين نفسِها — حيث الأزرارُ التي يلمسها الطفلُ ليجيب
+    cdoc.querySelector('.station-body .next')?.click();
+    await until(cdoc, (d) => d.querySelector('.q-choices .qcard')
+      || d.querySelector('.same-btn') || d.querySelector('.q-equal'), 22000);
+    seenScreens++;
+    textOnly.push(...bareButtons(cdoc).map((el) => `${what} (تمرين): ${bareNames([el])}`));
+    // ثم ميداليةُ الختام — زرّا «الخريطة» و«أَعِدْ»
+    [...cdoc.querySelectorAll('.dev button')]
+      .find((b) => b.textContent.includes('إنهاء المحطة'))?.click();
+    await until(cdoc, (d) => d.querySelector('.celebrate'), 12000);
+    seenScreens++;
+    textOnly.push(...bareButtons(cdoc).map((el) => `${what} (ميدالية): ${bareNames([el])}`));
+  }
+  ok(textOnly.length === 0 && seenScreens === 10,
+    `وكلُّ زرٍّ على ${seenScreens} شاشةِ طفلٍ فيه ما يُرى لا حروفٌ وحدَها `
+    + `(${EXEMPT.length} معفىً بسببه: ${EXEMPT.map(([sel, why]) => `${sel} — ${why}`).join(' · ')})`
+    + (textOnly.length ? ` — **نصٌّ بلا صورة: ${textOnly.join(' | ')}**` : ''));
+
+  /* **ويُجرَّب سالباً بزرٍّ نصيٍّ مصنوع**: يُدسّ في شاشةٍ حيّة زرٌّ لا صورةَ فيه،
+     فإن لم يمسكه الحارسُ فليس حارساً. (ثم يُرفَع، فلا يبقى أثرُ فحصٍ في شاشة.) */
+  const planted = await open('#/equal/five');
+  await until(planted, (d) => d.querySelector('.station-body .next'), 22000);
+  const cleanBefore = bareButtons(planted).length;
+  const fake = planted.createElement('button');
+  fake.className = 'btn';
+  fake.textContent = 'زرٌّ نصيٌّ مصنوع';
+  planted.querySelector('.station-body')?.append(fake);
+  const caught = bareButtons(planted);
+  fake.remove();
+  ok(cleanBefore === 0 && caught.length === 1 && bareButtons(planted).length === 0,
+    `**وحارسُ الصنف مُجرَّبٌ سالباً**: زرٌّ نصيٌّ دُسّ في شاشةٍ حيّة فأُمسِك `
+    + `(${caught.length} قبل رفعه، و${bareButtons(planted).length} بعده)`);
+
+  /* ————— ١١ي‌ب) «اجعلهما سواء» تُجتاز **لمساً مباشراً** (الجلسة م٥) —————
+
+     حكمُ `FIELD.md §٤` الأول بحرفه: نقرُ عنصرٍ يُزيله، ونقرُ فراغِ اللوح يضيف،
+     **وزرُّ التأكيد يسقط أصلاً** — بلوغُ التساوي هو إتمامُ المهمة. فيُقاس هنا الفعلُ
+     كلُّه على الشاشة الحيّة: أنّ **لا زرَّ نصيٍّ واحداً** عليها، وأنّ اللمسَ يُنقص
+     ويزيد **في المرسوم لا في النيّة**، وأنّ الميزانَ يظهر عند التساوي فتمضي الجولة. */
+
+  const eqDoc = await open('#/equal/five');
+  await until(eqDoc, (d) => d.querySelector('.station-body .next'), 22000);
+  eqDoc.querySelector('.station-body .next')?.click();
+  await until(eqDoc, (d) => d.querySelector('.q-equal'), 22000);
+  const eqSides = () => [...eqDoc.querySelectorAll('.q-equal .q-side')];
+  const eqDrawn = (i) => Number(eqSides()[i]?.querySelector('.figure')?.dataset.drawn);
+  ok(eqSides().length === 2 && Number.isFinite(eqDrawn(0)) && eqDrawn(0) !== eqDrawn(1),
+    `«اِجْعَلْهُمَا سَوَاء» تفتح بلوحين مختلفين (${eqDrawn(0)} و${eqDrawn(1)} مرسومين)`);
+
+  // **ولا زرَّ نصيٍّ واحدٍ عليها** — سقطت خمستُها، وبقي اللمسُ على اللوح وعناصره
+  const eqCard = eqDoc.querySelector('main.screen-card');
+  const eqWords = [...eqDoc.querySelectorAll('.station-body .btn')];
+  const eqDigits = [...new Set(shownIn(eqCard).match(DIGITS) || [])];
+  ok(eqWords.length === 0 && eqDigits.length === 0,
+    'ولا زرَّ نصيٍّ واحدٍ عليها ولا رمزَ عدديّ (المرحلة ٢)'
+    + (eqWords.length ? ` — أزرارٌ نصيّة: ${eqWords.map((b) => b.textContent.trim()).join('، ')}` : '')
+    + (eqDigits.length ? ` — أرقام: ${eqDigits.join('، ')}` : ''));
+
+  /* **ولكلِّ جولةٍ وسيلتُها وحدَها**: الأولى تُسوَّى بالإبعاد (يُلمَس عنصرٌ من الأكثر
+     حتى يبلغ الأقلّ) والثانية بالإتيان (يُلمَس فراغُ الأقلّ حتى يبلغ الأكثر). وكلا
+     المسارين **تقريبٌ لا مباعدة** في كل خطوة، فلا يقع فيهما عدُّ الخطأ — ويُقاسان
+     **في المرسوم** لمسةً لمسة. (ولولا الفصلُ بين الجولتين لَتعلّق القياسُ بقرعة
+     الفارق: فارقُ واحدٍ يُسوّى بلمسةٍ واحدة، فلا تُجرَّب الوسيلةُ الأخرى أصلاً.) */
+  const eqSteps = { remove: 0, add: 0 };
+  let balanceSeen = 0;
+  let eqMoved = 0;
+  let eqLevels = [];
+  for (const mode of ['remove', 'add']) {
+    await until(eqDoc, (d) => d.querySelector('.q-equal'), 22000);
+    for (let step = 0; step < 8 && eqDrawn(0) !== eqDrawn(1); step++) {
+      const big = eqDrawn(0) > eqDrawn(1) ? 0 : 1;
+      const at = mode === 'remove' ? big : 1 - big;
+      const was = eqDrawn(at);
+      const want = mode === 'remove' ? was - 1 : was + 1;
+      eqSides()[at]?.querySelector(mode === 'remove' ? '.fig-tap' : '.q-add')?.click();
+      await until(eqDoc, () => (eqDrawn(at) === want ? true : null), 4000);
+      if (eqDrawn(at) !== want) break;
+      eqSteps[mode]++;
+    }
+    eqLevels.push(eqDrawn(0) === eqDrawn(1) ? eqDrawn(0) : NaN);
+    const eqBead = beadNow(eqDoc);
+    const balance = await until(eqDoc, (d) => {
+      const b = d.querySelector('.q-balance');
+      return b && !b.hidden && d.defaultView.getComputedStyle(b).display !== 'none' ? b : null;
+    }, 6000);
+    if (balance && balance.querySelector('svg')) balanceSeen++;
+    // وبلوغُ التساوي وحدَه ينقل — بلا زرِّ تأكيد
+    if (await until(eqDoc, (d) => (beadNow(d) !== eqBead
+      || d.querySelector('.celebrate') ? true : null), 9000)) eqMoved++;
+  }
+  ok(eqSteps.remove > 0 && eqSteps.add > 0 && eqLevels.every(Number.isFinite),
+    `ونقرُ عنصرٍ يُبعد واحداً ونقرُ فراغِ اللوح يأتي بواحد — **مقيسَين في المرسوم** `
+    + `(${eqSteps.remove} إبعاداً و${eqSteps.add} إتياناً، واللوحان استويا على `
+    + `${eqLevels.join(' ثم ')})`);
+  ok(balanceSeen === 2,
+    `**والميزانُ المتوازن يظهر بينهما** لحظةَ التساوي رسماً على الشاشة `
+    + `(${balanceSeen} من ٢ جولة)`);
+  ok(eqMoved === 2,
+    `**وبلوغُ التساوي هو إتمامُ المهمة**: الجولةُ تمضي بعد وقفتها بلا زرِّ تأكيد `
+    + `(${eqMoved} من ٢)`);
+
+  /* ————— ١١ك) **تسريبُ العدّ عبر التنقل** (بلاغ الميدان ٥ · الجلسة م٥) —————
+
+     **بلفظ المالك** (ثلاثُ تأكيدات، آخرُها من الحيّ): «قطعته عند اثنان ثم رجعت
+     للصفحة الرئيسية ودخلت من جديد فيبدأ العد من ثلاثة ويعمل عدادين معاً»، ثم
+     «التطبيق يتابع العدَّ بعد العودة للصفحة الرئيسية».
+
+     وعلّتُه أنّ حياةَ الحلقة كانت **رقماً في الشاشة** (`token`) لا حياةً لها: يتبدّل
+     عند رسم جولةٍ جديدة داخلها، ولا يعلم شيئاً عن مغادرتها. فصارت الحياةُ من **بقاء
+     جذر الشاشة في المستند** (`onScreen` في `ui.js`).
+
+     **والمشهدُ ثلاثةُ أحكام**: يُغادَر عند «اثنين» بزرّ الخريطة نفسِه، فيُقاس بعد
+     لحظة المغادرة **صمتٌ تام**، ثم عودةٌ تسمع **عدّاً واحداً يبدأ من واحد**. */
+
+  /* **والمحطةُ أطولُ ما يُعَدّ في الرحلة** (١–١٠) عمداً: عدٌّ يُقطَع عند «اثنين» يترك
+     خلفه ثمانيَ جملٍ — فيتجاوز التسريبُ نافذةَ الصمت **ويبلغ العودةَ نفسَها**،
+     فيُقاس العَرَضان معاً: «يواصل فوق الخريطة» و«عدّادان معاً» بعد الرجوع. */
+  const leakDoc = await open('#/count/ten');
+  const leakFrom = played.length;
+  // يُنتظَر أن يبلغ عدُّ النمذجة «اثنين» — بالحال لا بمهلةٍ ثابتة
+  const reached = await until(leakDoc, () =>
+    (played.slice(leakFrom).map((k) => bank[k]).includes(NAME_HEARD[2]) ? true : null), 20000);
+  const leaveBtn = leakDoc.querySelector('.station-screen .topbar .btn');
+  const heardBefore = played.slice(leakFrom).map((k) => bank[k]);
+  leaveBtn?.click();
+  const onMap = await until(leakDoc, (d) => d.querySelector('main.map'), 5000);
+  /* **وتُقاس اللحظةُ من استقرار الخريطة**: بين النقرة ووصول الخريطة أجزاءٌ من ثانية
+     قد تبدأ فيها جملةٌ صُفَّت قبل النقرة — فتُقرأ تسريباً وليست منه. وما بعد استقرارها
+     لا عذرَ له: العطبُ الأصليّ يواصل العدَّ كلَّ ٦٨٠ مللي، فلا يفوته هذا القياس. */
+  const leaveAt = performance.now();
+  await new Promise((r) => setTimeout(r, 3000));   // أطولُ من ثلاث جملِ عدٍّ بفواصلها
+  const afterLeave = timeline.filter((row) => row.t0 >= leaveAt);
+  ok(!!reached && !!leaveBtn && !!onMap,
+    `مشهدُ التسريب: عُدَّ حتى «${NAME_HEARD[2]}» (${heardBefore.length} جملةً) ثم `
+    + `غُودِرَ إلى الخريطة بزرّها (${onMap ? 'وصلت' : '**لم تصل**'})`);
+  ok(afterLeave.length === 0,
+    `و**الخريطةُ صامتة**: لا جملةَ واحدة تُشغَّل بعد استقرارها `
+    + `(٣ ثوانٍ مقيسة، ${afterLeave.length} جملةً)`
+    + (afterLeave.length ? ` — **واصل العدُّ فوقها: ${afterLeave
+      .map((r) => bank[r.key] || r.key).join('، ')}**` : ''));
+
+  const backFrom = played.length;
+  leakDoc.defaultView.location.hash = '#/count/ten';
+  await until(leakDoc, (d) => d.querySelector('.station-body .next'), 20000);
+  await new Promise((r) => setTimeout(r, 900));
+  const namesBack = played.slice(backFrom).map((k) => bank[k])
+    .filter((t) => NAME_HEARD.includes(t));
+  const drawnBack = Number(leakDoc.querySelector('.q-stage .figure')?.dataset.drawn);
+  const cleanRun = NAME_HEARD.slice(1, drawnBack + 1);
+  ok(namesBack.length === cleanRun.length && namesBack.every((t, i) => t === cleanRun[i]),
+    `**والعودةُ تبدأ من صفر**: عدٌّ واحدٌ من «${NAME_HEARD[1]}» إلى ما رُسِم `
+    + `(المرسومُ ${drawnBack}، وسُمع: ${namesBack.join('، ') || 'لا شيء'})`);
+
   /* ————— ١٢) **تعاقبُ الصوت**: صوتٌ واحدٌ في الجوّ، والانتقالُ بعد تمامه —————
 
      ما بلّغ عنه الميدان (`docs/FIELD.md §١`) ثلاثةُ أعراضٍ لعلّةٍ واحدة، وهنا تُقاس

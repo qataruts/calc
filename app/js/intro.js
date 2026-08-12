@@ -107,7 +107,8 @@ export function renderIntro(part) {
       starsRow(3, 'big-stars'),
       h('p', { class: 'hint' }, 'عَرَفْتَ أنّ للأعداد رسماً آخر — ولن تُسأل عنه.'),
       h('div', { class: 'row foot' },
-        h('button', { class: 'btn btn--primary', onclick: () => go('#/') }, '→ الخريطة')),
+        h('button', { class: 'btn btn--primary', onclick: () => go('#/') },
+          icon('map'), ' الخريطة')),
     ));
   };
 
@@ -118,13 +119,14 @@ export function renderIntro(part) {
     grid,
     h('p', { class: 'note note--tip' }, icon('ear'), ' اِنْقُرْ عَلَى أيِّ صَفٍّ لِتَسْمَعَ اسْمَهُ'),
     h('div', { class: 'row foot' },
-      h('button', { class: 'btn btn--primary next', onclick: finish }, 'تَابِعْ ←')),
+      h('button', { class: 'btn btn--primary next', onclick: finish },
+        icon('onward'), ' تَابِعْ')),
   ));
   say(ASK.meet);
 
   return h('div', { class: 'screen station-screen', css: { '--accent': PATTERN_ACCENT } },
     topbar(
-      h('button', { class: 'btn', onclick: () => go('#/') }, '→ الخريطة'),
+      h('button', { class: 'btn', onclick: () => go('#/') }, icon('map'), ' الخريطة'),
       h('span', { class: 'spacer' }),
       h('span', { class: 'pill' }, station.title),
     ),

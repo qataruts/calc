@@ -1308,9 +1308,52 @@ button {
 }
 
 .q-side { padding: .35rem; }
-.q-tools { gap: .5rem; margin-top: .35rem; }
-.q-tools .btn { min-height: 3.5rem; min-width: 6rem; }
 .same-btn { max-width: 22rem; margin: 0 auto; min-height: 3.5rem; }
+.same-btn .station-mark { position: static; width: 2.4rem; flex: none; color: inherit; opacity: 1; }
+
+/* ————— «اجعلهما سواء»: لوحان يُعدَّلان باللمس (الجلسة م٥ · `FIELD.md §٤`) —————
+
+   **ولوحان فوق بعضهما لا جنباً إلى جنب**: العنصرُ هنا **يُلمَس** لا يُنظَر إليه،
+   وهدفُ لمسه لا يقلّ عن ٤٤ بكسلاً (`METHOD.md §١١`) — ولوحان متجاوران على أضيق
+   آيباد يهبطان بالعنصر دون ذلك. فيُرَصّان صفّاً تحت صفّ بمقاسٍ يبلغ الإصبع،
+   وبينهما موضعُ الميزان. (وهو فوق ذلك تحاذٍ يُقارَن به الصفّان بالنظر.) */
+.q-equal { flex-direction: column; gap: .35rem; }
+.q-pair.q-equal .q-figure > .figure { --unit: 1.05px; }
+
+/* اللوحُ نفسُه هدفُ لمسٍ لِما يأتي: أرضٌ لها حدٌّ يُرى، فيُعرَف أين يُنقَر ليزيد واحد */
+.q-board {
+  margin: 0;
+  padding: .3rem;
+  border-radius: 22px;
+  background: color-mix(in srgb, var(--accent) 5%, var(--mix));
+  box-shadow: inset 0 0 0 3px color-mix(in srgb, var(--accent) 18%, transparent);
+  cursor: pointer;
+}
+
+/* الميزانُ المتوازن — معلمُ مرحلة المقارنة نفسُه (`landmark` في `ui.js`)، حبرُه
+   حبرُ موضعه كما في الخريطة والميدالية: يقول اللونَ هذا الموضعُ مرّةً واحدة.
+   **و`display` هنا ينقض `hidden`** (درسُ الجلسة ص: `hidden` وعدٌ من اللغة تنقضه
+   كلُّ قاعدة `display` من أصلِنا)، فيُردّ صراحةً — وإلّا ظهر الميزانُ قبل أوانه. */
+/* زرُّ اللوح: يملأ صندوقَ الشكل تحت طبقة اللمس — فنقرةُ الفراغ تأتي بواحد */
+.q-add {
+  position: absolute;
+  inset: 0;
+  padding: 0;
+  border: 0;
+  border-radius: 20px;
+  background: transparent;
+}
+
+.q-balance { display: block; line-height: 0; }
+.q-balance[hidden] { display: none; }
+
+.q-balance .station-mark {
+  position: static;
+  width: 4.2rem;
+  margin: 0 auto;
+  color: var(--accent);
+  opacity: 1;
+}
 
 .q-give { display: flex; flex-wrap: wrap; justify-content: center; align-items: center; gap: 1rem; }
 
@@ -1319,7 +1362,9 @@ button {
    **والرقمُ يدخل الشاشةَ هنا لا قبلها**: عهدُ «لا رمزَ عدديّ» عهدُ المرحلتين ١–٢
    (`METHOD.md §٣`)، وهذه المرحلةُ درسُها الرمزُ نفسُه — فبطاقتُه بطلُ الشاشة. */
 
-.q-reveal { margin: .25rem 0 1rem; display: flex; justify-content: center; gap: .75rem; }
+.q-reveal { margin: .25rem 0 1rem; display: flex; justify-content: center; align-items: center; gap: .75rem; }
+/* والميزانُ في الكشف أصغرُ منه في الشاشة: هو بين شكلين مصغَّرين لا بين لوحين */
+.q-reveal .q-balance .station-mark { width: 3rem; }
 .q-reveal .figure { --unit: .85px; }
 
 .q-aid { margin: -.5rem 0 1rem; display: flex; justify-content: center; }
@@ -1615,10 +1660,14 @@ button {
    `<button>` لا مستمعٌ على شكل: بذلك يجرده **حارسُ هدف اللمس** من تلقائه، وتصله
    لوحةُ المفاتيح كما يصله الإصبع. */
 
-.fig-taps { position: absolute; inset: 0; }
+/* **والطبقةُ لا تعترض ما ليس فوق عنصر** (الجلسة م٥): كانت تبتلع كلَّ نقرةٍ في
+   صندوقها ولو وقعت على فراغٍ بين العناصر. ولوحُ التسوية يحتاج أن تبلغ نقرةُ الفراغ
+   زرَّ اللوح تحتها (`q-add`) — فصارت الطبقةُ شفّافةً للنقر وأزرارُها وحدَها تلتقطه. */
+.fig-taps { position: absolute; inset: 0; pointer-events: none; }
 
 .fig-tap {
   position: absolute;
+  pointer-events: auto;
   left: var(--x);
   top: var(--y);
   width: var(--d);
@@ -1783,6 +1832,9 @@ button {
   .q-figure > .figure { --unit: .8px; }
   .q-choices .figure { --unit: .4px; }
   .q-pair .q-figure > .figure { --unit: .55px; }
+  /* ولوحُ التسوية لا يصغر عن هدف اللمس: عنصرُه يُلمَس، فيبقى فوق ٤٤ بكسلاً */
+  .q-pair.q-equal .q-figure > .figure { --unit: 1px; }
+  .q-balance .station-mark { width: 3.2rem; }
   .q-model > .figure { --unit: .5px; }
   .q-touch > .figure { --unit: 1.05px; }
   .q-rail > .figure { --unit: .5px; }

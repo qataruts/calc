@@ -22,7 +22,7 @@
 
 import * as progress from './progress.js';
 import { registerScreen } from './registry.js';
-import { h, icon, pick, shuffle, seeded, shake, pop, QUANTITY_ACCENT } from './ui.js';
+import { h, icon, landmark, pick, shuffle, seeded, shake, pop, QUANTITY_ACCENT } from './ui.js';
 import {
   AFTER_RIGHT_MS, BEAT, FLASH_MS, NUMBER_NAME, SAY, say, praiseThen, span, nearOptions, seeder, skillOf,
   stationById, stationForSkill, figureBox, quantityCard, touchLayer, countAloud,
@@ -145,8 +145,15 @@ function giveRound(station, rnd, flash = false) {
 
 /**
  * جولةُ «اجعلهما سواء»: كمّيتان مختلفتان، ويزيد الطفلُ في إحداهما أو ينقص من الأخرى
- * حتى تتساويا. **ولا رمزَ عمليةٍ ولا علامة** (المرحلة ٢ بلا عملياتٍ أصلاً): الفعلُ
- * كلمتان — «أَضِفْ» و«أَزِلْ» — لا «+» و«−»، فالعلامةُ تدخل الرحلةَ في ٦·٢ لا هنا.
+ * حتى تتساويا. **ولا رمزَ عمليةٍ ولا علامة** (المرحلة ٢ بلا عملياتٍ أصلاً)، **ولا
+ * كلمةَ تشغيلٍ واحدة**: كان الفعلُ زرَّي «أَضِفْ» و«أَزِلْ» تحت كلِّ لوح وزرَّ تأكيدٍ
+ * ثالثاً — خمسةُ نصوصٍ في شاشةٍ واحدة أمام جمهورٍ **قبل-قارئ**، فوقف عندها طفلٌ حقيقيّ
+ * (`docs/FIELD.md §٤`). فصار الفعلُ **لمساً مباشراً**: يُلمَس عنصرٌ فيذهب، ويُلمَس
+ * فراغُ اللوح فيأتي واحد — وهو عينُ ما تعلّمه في «المس وعُدّ» قبل محطتين.
+ *
+ * **واللوحُ يسعُ ما قد يبلغه** (`room` في `render.js`): تُحسَب مواضعُه على الجبهة كلِّها
+ * لا على عدده اليوم — فلا يقفز الباقون أماكنَهم كلما تبدّل العدد، ويُقرأ الفعلُ
+ * «ذهب واحدٌ من هنا» لا «تبدّل كلُّ شيء».
  */
 function equalRound(station, rnd) {
   const f = station.frontier;
@@ -157,8 +164,8 @@ function equalRound(station, rnd) {
   const b = pick(mates, rnd);
   const next = seeder(rnd);
   const display = touchDisplay(f, rnd);
-  const left = { display, count: a, seed: next() };
-  const right = { display, count: b, seed: next() };
+  const left = { display, count: a, seed: next(), room: f.max };
+  const right = { display, count: b, seed: next(), room: f.max };
   return {
     kind: 'make', concept: skill.concept, range: skill.range,
     ask: ASK.equal, left, right, lo: f.min, hi: f.max,
@@ -179,13 +186,27 @@ export function buildStation(stationId, seed) {
 
   if (station.type === 'equal') {
     const display = touchDisplay(f, rnd);
+    const big = next();
+    const small = next();
+    /* **والنمذجةُ تُري الغايةَ وتسمّيها**: تُعَدُّ الكميتان المختلفتان، ثم يُكشَف
+       اللوحان **مستويين** وبينهما الميزانُ المتوازن مع «صَارَا سَوَاءْ» — فيعرف
+       الطفلُ ما المطلوبُ منه ومتى يتمّ، بلا سطرٍ يُقرأ (أمرُ المالك، الجلسة م٥).
+       واللوحُ الأصغرُ يُكشَف بقدر الأكبر **ببذرته هو**: هو نفسُه وقد نما في مكانه. */
     return {
       model: {
         title: ASK.equal, hint: 'نَعُدُّ هَذِهِ وَهَذِهِ، ثُمَّ نُسَوِّي بَيْنَهُمَا',
         figures: [
-          { display, count: f.max, seed: next() },
-          { display, count: Math.max(f.min, f.max - 2), seed: next() },
+          { display, count: f.max, seed: big, room: f.max },
+          { display, count: Math.max(f.min, f.max - 2), seed: small, room: f.max },
         ],
+        reveal: {
+          sign: 'scales',
+          say: SAY.revealSame,
+          figures: [
+            { display, count: f.max, seed: big, room: f.max },
+            { display, count: f.max, seed: small, room: f.max },
+          ],
+        },
       },
       guided: Array.from({ length: GUIDED }, () => equalRound(station, rnd)),
       solo: Array.from({ length: SOLO }, () => equalRound(station, rnd)),
@@ -255,7 +276,9 @@ function countBoard(spec, { onFinish, alive }) {
     // تعجّل وقف الاسمُ في الطابور ولم يدهس سابقَه — **ولا يُسأل «كم صارت؟» إلا بعد
     // أن يتمّ اسمُ آخر عنصر**، فلا يقع السؤالُ فوق عدّه.
     await say(NUMBER_NAME[counted]);
-    if (last && alive()) setTimeout(onFinish, BEAT);
+    // **وسؤالُ العدديّة لا يقع بعد المغادرة** (بلاغ الميدان ٥ · م٥): يُصَفّ بعد مهلة،
+    // فيُسأل الحياةُ **عند وقوعه** لا عند تأجيله — وإلّا نطق فوق الخريطة.
+    if (last && alive()) setTimeout(() => { if (alive()) onFinish(); }, BEAT);
   });
   return { fig, taps, reset: () => {
     counted = 0;
@@ -381,7 +404,13 @@ function giveView(round, hooks) {
     field.marks[index]?.classList.toggle('is-counted', picked.has(index));
   });
 
-  const done = h('button', { class: 'btn btn--primary btn--wide next' }, 'تَمَّ');
+  /* **و«تَمَّ» يُرى بصورته** (جردُ الصنف — م٥): زرٌّ تتوقف عليه الجولةُ ووسيلتُه
+     الوحيدة كلمةٌ حاجزٌ أمام قبل-قارئ. فصار صحّاً يُرى، والكلمةُ زينةُ الوالد.
+     (ولا يسقط الزرُّ نفسُه كما سقط زرُّ «صارا سواء»: هناك بلوغُ التساوي **حالٌ**
+     تُرى فتُحكَم، وهنا الالتقاطُ **بناءٌ** لا يُعرَف تمامُه إلا بقول صاحبه — فحكمٌ
+     تلقائيّ على كمٍّ في منتصف بنائه خطأٌ يُسجَّل على طفلٍ لم يفرغ بعد.) */
+  const done = h('button', { class: 'btn btn--primary btn--wide next' },
+    icon('check'), ' تَمَّ');
   done.addEventListener('click', async () => {
     if (locked) return;
     const correct = picked.size === model.drawn;
@@ -439,57 +468,57 @@ function giveView(round, hooks) {
 }
 
 // ————— شاشةُ «اجعلهما سواء» —————
+//
+// **بلا نصٍّ تشغيليٍّ واحد** (`docs/FIELD.md §٤` — أوّلُ امتحان طفلٍ حقيقيّ): سقطت
+// خمسةُ نصوصٍ من هذه الشاشة دفعةً — «أَضِفْ» و«أَزِلْ» تحت كلِّ لوح، وزرُّ «صَارَا
+// سَوَاء» أسفلَها — وبقي مكانَها **فعلٌ وحكمٌ**:
+//
+//   • **الفعلُ لمسٌ مباشر**: عنصرٌ يُلمَس فيذهب، وفراغُ اللوح يُلمَس فيأتي واحد.
+//   • **والحكمُ صنعٌ لا إعلان**: لا زرَّ تأكيدٍ أصلاً — بلوغُ التساوي **هو** إتمامُ
+//     المهمة، يُحكَم به بعد **وقفةٍ قصيرة يلغيها تعديلٌ خلالها** (فمن مرّ بالتساوي
+//     عابراً في طريقه لم يُحكَم له ولا عليه). والمقيسُ `equal|5|make` كما هو.
+//   • **والتساوي يُرى ويُسمَع**: ميزانٌ متوازن بين اللوحين مع «صَارَا سَوَاءْ» —
+//     ولا رمزَ «=»، فهو ليس من معجم هذا المستوى (أمرُ المالك، ١٣ أغسطس ٢٠٢٦).
+//
+// **ومعالجةُ الخطأ عدٌّ أمامه كسائر الشاشات** — وموضعُها هنا **الحركةُ المبعِدة**: من
+// زاد في الأكثر أو نقص من الأقلّ فقد باعد بينهما، وذلك هو الخطأُ في تمرينٍ لا خيارَ
+// فيه يُنقَر. فتُعَدُّ الكميتان أمامه ثم يواصل — لا شاشةَ خطأ ولا تراجعَ عن لمسته.
+
+/** وقفةُ الحكم: يتمّ التساوي إن دامت — وتعديلٌ خلالها يلغيها ويبدؤها من جديد. */
+const SETTLE_MS = 900;
 
 function equalView(round, hooks) {
   const state = { left: round.left.count, right: round.right.count };
-  const pair = h('div', { class: 'q-pair' });
+  const pair = h('div', { class: 'q-pair q-equal' });
   const figs = {};
   let locked = false;
+  let settle = 0;
+  let judged = false;
 
-  function side(key, spec) {
-    const holder = h('div', { class: 'q-side' });
-    const stage = h('div', { class: 'q-stage' });
-    const step = (delta) => {
-      if (locked) return;
-      const next = state[key] + delta;
-      if (next < round.lo || next > round.hi) return;   // لا يخرج عن جبهة محطته
-      state[key] = next;
-      draw();
-    };
-    holder.append(stage, h('div', { class: 'row q-tools' },
-      h('button', { class: 'btn', onclick: () => step(1) }, 'أَضِفْ'),
-      h('button', { class: 'btn', onclick: () => step(-1) }, 'أَزِلْ'),
-    ));
-    figs[key] = { holder, stage, spec };
-    return holder;
-  }
+  const gap = () => Math.abs(figs.left.fig.drawn - figs.right.fig.drawn);
+  /** الميزانُ المتوازن — معلمُ مرحلة المقارنة نفسُه (`ui.js`)، لا رسمٌ ثانٍ له. */
+  const sign = h('span', { class: 'q-balance', hidden: true }, landmark('scales'));
 
-  function draw() {
-    for (const key of ['left', 'right']) {
-      const { stage, spec } = figs[key];
-      const fig = figureBox({ ...spec, count: state[key] });
-      figs[key].fig = fig;
-      stage.replaceChildren(fig.box);
-    }
-  }
-
-  pair.append(side('left', round.left), side('right', round.right));
-  draw();
-
-  const done = h('button', { class: 'btn btn--primary btn--wide next' }, 'صَارَا سَوَاء');
-  done.addEventListener('click', async () => {
-    if (locked) return;
-    // **الحكمُ من المرسوم**: تساوي ما رسم المصيِّرُ في الجهتين
-    const correct = figs.left.fig.drawn === figs.right.fig.drawn;
-    hooks.attempt(round, correct);
-    if (correct) {
-      locked = true;
-      done.classList.add('good');
-      pop(done);
-      await praiseThen(hooks);
+  /**
+   * لمسةٌ تُغيِّر اللوح: **حكمُها من المرسوم قبلها وبعدها** (لا من العدد المطلوب).
+   * وما جاوز الجبهةَ لا يقع — امتناعٌ في البنية كما في «اصنع العدد» (المرحلة ٥).
+   */
+  async function tap(key, delta) {
+    if (locked || judged) return;
+    const next = state[key] + delta;
+    if (next < round.lo || next > round.hi) return;      // لا يخرج عن جبهة محطته
+    const before = gap();
+    clearTimeout(settle);
+    state[key] = next;
+    draw();
+    const after = gap();
+    if (after === 0) {                                    // بلغ التساوي: تُبدأ الوقفة
+      settle = setTimeout(() => { if (hooks.alive()) succeed(); }, SETTLE_MS);
       return;
     }
-    shake(done);
+    if (after <= before) return;                          // اقترب أو راوح: يواصل بلا كلام
+    // **باعد بينهما** — وهو الخطأ هنا: يُسجَّل مرّةً، ثم تُعَدّ الكميتان أمامه
+    hooks.attempt(round, false);
     locked = true;
     await say(SAY.together);
     if (!hooks.alive()) return;
@@ -500,15 +529,58 @@ function equalView(round, hooks) {
     clearCount(figs.left.fig);
     clearCount(figs.right.fig);
     locked = false;
-  });
+  }
+
+  /** تمَّ الصنع: يُرى الميزانُ ويُسمَع لفظُه، ثم كلمةُ الصواب والجولةُ التالية. */
+  async function succeed() {
+    if (judged) return;
+    judged = true;
+    hooks.attempt(round, true);
+    sign.hidden = false;
+    pop(sign);
+    await say(SAY.revealSame);
+    if (!hooks.alive()) return;
+    await praiseThen(hooks);
+  }
+
+  function side(key, spec) {
+    const holder = h('div', { class: 'q-side' });
+    const stage = h('div', { class: 'q-stage q-board' });
+    figs[key] = { holder, stage, spec };
+    holder.append(stage);
+    return holder;
+  }
+
+  function draw() {
+    for (const key of ['left', 'right']) {
+      const { stage, spec } = figs[key];
+      const fig = figureBox({ ...spec, count: state[key] });
+      figs[key].fig = fig;
+      /* **واللوحُ كلُّه زرٌّ يأتي بواحد**: يملأ صندوقَ الشكل **تحت** طبقة اللمس،
+         فنقرةٌ على فراغٍ بين العناصر تبلغه ونقرةٌ على عنصرٍ تبلغ زرَّه هو (طبقةُ
+         اللمس لا تعترض ما ليس فوق عنصر — `pointer-events` في اللوح). وهو **زرٌّ
+         حقيقيّ** لا مستمعٌ على صندوق: تصله لوحةُ المفاتيح كما يصله الإصبع، ولا
+         يتداخل مع أزرار العناصر لأنه أخوها لا أبوها. */
+      fig.box.append(h('button', {
+        class: 'q-add', 'aria-label': 'زِدْ وَاحِدًا', onclick: () => tap(key, +1),
+      }));
+      // **وزرٌّ فوق كلِّ عنصرٍ يُبعده** — بموضعه من المصيِّر (كطبقة العدّ)، فيبلغ
+      // هدفَ اللمس ويجرده حارسُ المتصفّح من تلقائه.
+      const { taps } = touchLayer(fig, () => tap(key, -1));
+      for (const btn of taps) btn.setAttribute('aria-label', 'أَبْعِدْ هَذَا');
+      stage.replaceChildren(fig.box);
+    }
+  }
+
+  pair.append(side('left', round.left), sign, side('right', round.right));
+  draw();
 
   say(round.ask);
 
   return h('div', {},
     h('h2', {}, round.ask),
-    h('p', { class: 'hint' }, 'أَضِفْ إِلَى الأَقَلّ، أَوْ أَزِلْ مِنَ الأَكْثَر'),
+    h('p', { class: 'hint' }, 'اِلْمَسْ وَاحِدًا لِيَذْهَب، وَالْمَسِ الفَرَاغَ لِيَأْتِيَ وَاحِد'),
     pair,
-    h('div', { class: 'row foot' }, done),
   );
 }
 

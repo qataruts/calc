@@ -155,6 +155,33 @@ function splitErrors(name, figure, want, split) {
   return errors;
 }
 
+// ————— ٢ج) سَعةُ اللوح: **ما بقي لا يزحزحه ما زاد** (الجلسة م٥) —————
+//
+// لوحٌ يعدّله الطفلُ بإصبعه (اجعلهما سواء — `FIELD.md §٤`) يُرسَم من جديدٍ بعد كل
+// لمسة. فلو حُسبت شبكتُه على عدده اليوم لَقفز الباقون أماكنَهم كلما تبدّل العدد،
+// فقُرئ الفعلُ «تبدّل كلُّ شيء» لا «ذهب واحدٌ من هنا» — وهو نقضُ اللمس المباشر نفسِه.
+//
+// **فالمقيسُ أنّ مواضعَ `n` هي أوائلُ مواضع `n+1` حرفاً** بالبذرة والسَّعة نفسِها:
+// اللوحُ ينمو وينقص **في مكانه**. ويُقاس معه أنّ السَّعةَ **لا تُبتلَع صامتة** حيث
+// لا معنى لها (نمطٌ مواضعُه ثابتةٌ أصلاً) ولا حيث تضيق عمّا رُسم فيها.
+
+function roomErrors(display, room, seed) {
+  const errors = [];
+  let before = null;
+  for (let n = 0; n <= room; n++) {
+    const marks = render.plan(display, n, { seed, room }).marks;
+    if (marks.length !== n) {
+      errors.push(`[${display} · سَعة ${room}] رسم ${marks.length} والمقصود ${n}`);
+    }
+    if (before && JSON.stringify(marks.slice(0, before.length)) !== JSON.stringify(before)) {
+      errors.push(`[${display} · سَعة ${room}] العنصرُ ${n} زحزح ما قبله — `
+        + '**واللوحُ ينمو في مكانه** فلا يقفز الباقون بلمسةٍ واحدة');
+    }
+    before = marks;
+  }
+  return errors;
+}
+
 // ————— ٣) النرد: التوزيعُ القياسيّ —————
 //
 // **جدولٌ مكتوبٌ هنا مستقلاً** عن جدول المصيِّر: مقابلةُ نسخةٍ بنسختها لا تُثبت شيئاً،
@@ -616,6 +643,29 @@ function sweep() {
     }
   }
 
+  /* **واللوحُ ذو السَّعة يُكنَس بكل سَعةٍ يبلغها لوحُ التسوية** (الجلسة م٥): من صفرٍ
+     إلى السَّعة، فيُثبَت أنّ كلَّ عددٍ أوائلُ ما فوقه — وهو أثرُ `room` المقيس. */
+  let rooms = 0;
+  for (const display of ['scatter', 'objects']) {
+    for (const room of [5, 7, 10]) {
+      for (const seed of SEEDS.slice(0, 3)) {
+        rooms++;
+        errors.push(...roomErrors(display, room, seed));
+      }
+    }
+  }
+  // **والسَّعةُ تُرمى حيث لا معنى لها أو حيث تضيق** — ولا تُبتلَع صامتة
+  for (const [call, why] of [
+    [() => render.plan('ten-frame', 3, { room: 10 }), 'نمطٌ مواضعُه ثابتة'],
+    [() => render.plan('dice', 3, { room: 6 }), 'وجهُ النرد صورةُ عدده'],
+    [() => render.plan('scatter', 7, { seed: 1, room: 5 }), 'سَعةٌ أضيقُ من عددها'],
+    [() => render.plan('scatter', 3, { seed: 1, room: 2.5 }), 'سَعةٌ ليست عدداً صحيحاً'],
+  ]) {
+    let threw = false;
+    try { call(); } catch { threw = true; }
+    if (!threw) errors.push(`[سَعة] مرّت بلا اعتراض: ${why}`);
+  }
+
   /* **ووجهُ الأشياء المختلفة يُكنَس بمشاهد المنهج نفسِها** (الجلسة ٨ب): كلُّ مشهدٍ
      في `SCENES` يُرسَم بكل ترتيبٍ يمكن أن تقرعه الشاشةُ (دوراتُه)، فيُقابَل المرسومُ
      بالمُعلَن رمزاً رمزاً — والحكمُ لا يقع في الحجم لأنّ المقاديرَ سواءٌ كلُّها. */
@@ -690,7 +740,7 @@ function sweep() {
       errors.push(`[${display}] قَبِل شقّاً وهو لا يُعَدّ عناصرَ — لا يُقسَم ما ليس كمّاً`);
     }
   }
-  return { errors, figures, splits, scenes, strips };
+  return { errors, figures, splits, scenes, strips, rooms };
 }
 
 const throws = (fn) => { try { fn(); return false; } catch { return true; } };
@@ -709,7 +759,7 @@ function check() {
   const dormant = (msg) => { asleep++; console.log('  ⏸', `${msg} — نائم، يستيقظ ذاتياً`); };
 
   const painted = render.displays();
-  const { errors, figures, splits, scenes, strips } = sweep();
+  const { errors, figures, splits, scenes, strips, rooms } = sweep();
   const covered = painted.map((d) => render.rangeOf(d));
 
   const byKind = (kind) => painted.filter((d) => render.kindOf(d) === kind);
@@ -725,7 +775,8 @@ function check() {
     + `و${byKind('pattern').length} شريطَ نمطٍ خاناتُه طولُه ومادّتُه ما أُعلن `
     + '(رمزاً كان أو رقماً مشرقياً)، '
     + `و${byKind('scene').length} مشهدَ قياسٍ مقاديرُه تتبع رتبَها على خطٍّ واحد، `
-    + '**وأشياءُ المشاهد الحقيقية سواءٌ في الحجم** فلا حكمَ فيه');
+    + '**وأشياءُ المشاهد الحقيقية سواءٌ في الحجم** فلا حكمَ فيه، '
+    + `و${rooms} لوحاً ذا سَعةٍ **ينمو وينقص في مكانه** فلا يزحزح ما زاد ما بقي`);
 
   const sceneGlyphs = Object.values(SCENES).flat().flatMap((s) => s.items);
   door('٢) صدق الصورة: عناصرُ عالم الطفل وأشياءُ المشاهد من Twemoji المحلية',
@@ -852,6 +903,30 @@ function selfTest() {
   ok(throws(() => render.plan('ten-frame', 7, { split: 8 }))
     && throws(() => render.plan('ten-frame', 7, { split: -1 })),
   'وجزءٌ يجاوز كلَّه يُرمى ولا يُقرَّب');
+
+  console.log('\n— ٢ج) السَّعة: يُمسَك لوحٌ يزحزح ما بقي —');
+  ok(!roomErrors('scatter', 5, 3).length && !roomErrors('objects', 7, 11).length,
+    'لوحٌ بسَعةٍ ينمو من صفرٍ إلى سَعته ولا يتحرّك عنصرٌ رُسم قبلُ');
+  ok(roomErrors('scatter', 5, 3).length === 0
+    && (() => {
+      // **والبابُ يُجرَّب سالباً بلوحٍ بلا سَعة**: شبكتُه من عدده، فيقفز كلُّ شيءٍ
+      // بلمسةٍ واحدة — وهو الحالُ الذي وُجد هذا الباب له.
+      let moved = 0;
+      let before = null;
+      for (let n = 0; n <= 5; n++) {
+        const marks = render.plan('scatter', n, { seed: 3 }).marks;
+        if (before && JSON.stringify(marks.slice(0, before.length)) !== JSON.stringify(before)) moved++;
+        before = marks;
+      }
+      return moved > 0;
+    })(),
+  '**ولوحٌ بلا سَعةٍ يزحزح ما بقي فعلاً** — فالبابُ يقيس فرقاً واقعاً لا يصدّق دعوى');
+  ok(throws(() => render.plan('ten-frame', 3, { room: 10 }))
+    && throws(() => render.plan('dice', 3, { room: 6 })),
+  'وسَعةٌ تُطلَب لنمطٍ مواضعُه ثابتةٌ تُرمى (لا تُبتلَع صامتة)');
+  ok(throws(() => render.plan('scatter', 7, { seed: 1, room: 5 }))
+    && throws(() => render.plan('scatter', 3, { seed: 1, room: 2.5 })),
+  'وسَعةٌ أضيقُ من عددها أو ليست عدداً صحيحاً تُرمى');
 
   console.log('\n— ٣) النرد: يُمسَك ما ليس بالتوزيع القياسيّ —');
   ok(found(diceErrors('ش', broke(die, (f) => { f.marks[0].x += 4; }), 5), 'خارج شبكة النرد'),

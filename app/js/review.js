@@ -21,7 +21,7 @@
 import * as progress from './progress.js';
 import * as audio from './audio.js';
 import {
-  h, icon, toast, go, arNum, arCount, starsRow, topbar, mascot, cheer, shuffle, DEV,
+  h, icon, toast, go, arNum, arCount, starsRow, topbar, mascot, cheer, shuffle, onScreen, DEV,
   PAUSE_ACCENT,
 } from './ui.js';
 
@@ -123,7 +123,9 @@ export function renderSession({
 
   const dots = h('ol', { class: 'dots' });
   const body = h('div', { class: 'station-body' });
+  /** جذرُ الشاشة — وبه تحيا تمارينُها وتموت (`onScreen` في `ui.js` · م٥). */
   let root = null;
+  const live = () => onScreen(root);
 
   function paintDots() {
     dots.replaceChildren(...items.map((item, i) => h('li', {
@@ -133,7 +135,13 @@ export function renderSession({
     }, i < state.index || state.done ? '✓' : arNum(i + 1))));
   }
 
+  /**
+   * الانتقالُ إلى التمرين التالي — **ولا ينتقل من غادر** (بلاغ الميدان ٥ · م٥):
+   * يُنادى بعد مهلةٍ (`right`) وبعد كلمةِ صواب، فلو وقع الانتقالُ وقد غادر الطفلُ
+   * إلى الخريطة لَرسم جولةً جديدة **ونطق سؤالَها فوقها**.
+   */
   function next() {
+    if (!live()) return;
     if (state.index < items.length - 1) {
       state.index++;
       paint();
@@ -153,7 +161,9 @@ export function renderSession({
     void el.offsetWidth;                  // إعادة تشغيل الحركة
     el.classList.add('shake', 'bad');
     setTimeout(() => el.classList.remove('bad'), 700);
-    if (replay) setTimeout(replay, 450);
+    // **وإعادةُ العرض لا تقع بعد المغادرة** (م٥): يُعاد العرضُ بصوته، فلو وقع بعدها
+    // تكلّم على الخريطة.
+    if (replay) setTimeout(() => { if (live()) replay(); }, 450);
   }
 
   /** صواب: أثرٌ بصريّ ثم التمرين التالي بعد فاصلٍ يُرى. */
@@ -182,7 +192,7 @@ export function renderSession({
     wrong,
     right,
     next,
-    alive: () => root?.isConnected !== false,
+    alive: live,
   };
 
   function paint() {
@@ -191,7 +201,12 @@ export function renderSession({
     paintDots();
     const item = items[state.index];
     const token = state.token;
-    body.replaceChildren(view(item, { ...api, fresh: () => token === state.token }));
+    // **وحياةُ التمرين شرطان** (م٥): أن يكون هو الجاري، **وأن تكون شاشتُه على
+    // الصفحة** — فحلقةُ عدٍّ في تمرينٍ غادره الطفل تموت بمغادرته لا بمهلتها.
+    body.replaceChildren(view(item, {
+      ...api,
+      fresh: () => live() && token === state.token,
+    }));
   }
 
   /** إعادة المحاولة: تمارين تُبنى من جديد (لا نمط يُحفظ فيُستظهَر) وحالةٌ نظيفة. */
@@ -218,7 +233,7 @@ export function renderSession({
       h('button', {
         class: 'btn',
         onclick: () => { if (state.done || state.index === 0 || confirm(leaveAsk)) go('#/'); },
-      }, '→ الخريطة'),
+      }, icon('map'), ' الخريطة'),
       h('span', { class: 'spacer' }),
       h('span', { class: 'pill' }, pill),
     ),
@@ -295,7 +310,8 @@ export function renderReview() {
           icon('flame'),
           ` ${arCount(streak, ['يوم', 'يومان متتاليان', 'أيام متتالية', 'يوماً متتالياً'])} من المراجعة`),
         h('div', { class: 'row foot' },
-          h('button', { class: 'btn btn--primary', onclick: () => go('#/') }, '→ الخريطة')),
+          h('button', { class: 'btn btn--primary', onclick: () => go('#/') },
+            icon('map'), ' الخريطة')),
       );
     },
   });

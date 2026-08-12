@@ -35,7 +35,7 @@ import { stations } from './curriculum.js';
 import { paint, spotStyle, spanStyle } from './render.js';
 import { setBuilders } from './review.js';
 import {
-  h, icon, go, topbar, starsRow, mascot, cheer, toast, shuffle, arNum, landmark, DEV,
+  h, icon, go, topbar, starsRow, mascot, cheer, toast, shuffle, arNum, landmark, onScreen, DEV,
 } from './ui.js';
 
 // ————— إيقاعُ الشاشة (بالمللي ثانية) — لا مؤقّتَ ضغطٍ في أيٍّ منها —————
@@ -121,6 +121,13 @@ export const SAY = {
   // **وكشفُ الزمن بلسانه** (الجلسة ٨ب): تسلسلُ البيضةِ والشروقِ ليس فيه أصغرُ
   // وأكبر — فالترتيبُ «من الأول إلى الآخر» بلفظ سؤال المحطة نفسِه.
   revealFirst: 'وَهَذَا تَرْتِيبُهَا مِنَ الْأَوَّلِ إِلَى الْآخِرْ',
+  /* **والتساوي يُقال حين يُرى** (أمرُ المالك، ١٣ أغسطس — الجلسة م٥): سقط زرّا
+     «هُمَا سَوَاء» و«صَارَا سَوَاء» عن كونهما وسيلةَ تشغيلٍ نصّية، فبقي معناهما
+     **يُرى بميزانٍ متوازن ويُسمَع بلفظه**. وهما من أسرة «الكشف» لا من التعليمات:
+     قولُ ما يُرى لا فعلٌ يُطلَب — «هُمَا سَوَاءْ» تُكشَف في نمذجة «أيُّهما أكثر؟»
+     أوّلَ لقاءٍ بالميزان، و«صَارَا سَوَاءْ» تُقال لحظةَ بلوغ الطفلِ التساويَ بيده. */
+  revealBoth: 'هُمَا سَوَاءْ',
+  revealSame: 'صَارَا سَوَاءْ',
   bravo: 'أَحْسَنْتْ',
   great: 'رَائِعْ',
 };
@@ -569,6 +576,11 @@ const PHASES = [
 export function stationScreen({ nodeId, title, accent, make, view, score, save }) {
   let plan = make();
   const state = { phase: 0, index: 0, errors: 0, done: false, token: 0 };
+  /* **جذرُ الشاشة — وبه تحيا حلقاتُها وتموت** (بلاغ الميدان ٥ · الجلسة م٥): يُسنَد في
+     آخر هذه الدالّة، ويقرؤه `live()` أدناه. وما قبل إسنادِه لحظةُ بناءٍ لم يغادرها
+     أحد، فتمرّ (`onScreen` في `ui.js`). */
+  let root = null;
+  const live = () => onScreen(root);
 
   const stepsBar = h('ol', { class: 'steps' });
   const beads = h('ol', { class: 'beads' });
@@ -603,16 +615,20 @@ export function stationScreen({ nodeId, title, accent, make, view, score, save }
   const hooks = () => {
     const token = state.token;
     const measured = phases[state.phase].key === 'solo';
+    /* **حياةُ الجولة شرطان لا شرط** (م٥): أن تكون هي الجارية في شاشتها (`token`)،
+       **وأن تكون شاشتُها على الصفحة** (`live`). وكان الأولُ وحدَه، فكانت الحلقةُ تعيش
+       بعد مغادرة الشاشة وتتكلّم فوق الخريطة — `docs/FIELD.md §٥`. */
+    const alive = () => live() && token === state.token;
     return {
       measured,
-      alive: () => token === state.token,
+      alive,
       /** محاولةٌ واحدة — **المقيسُ «وحدك» وحدَه** (`METHOD.md §٤`). */
       attempt: (round, correct) => {
         if (!measured) return;
         score(round, correct);
         if (!correct) state.errors++;
       },
-      done: () => { if (token === state.token) advance(); },
+      done: () => { if (alive()) advance(); },
     };
   };
 
@@ -697,7 +713,14 @@ export function stationScreen({ nodeId, title, accent, make, view, score, save }
          `METHOD.md §٣` المرحلة ٦) تمرّر عدَّها هي. فلا تُنمذَج بعدٍّ ليس درسَها. */
       if (!(await (model.count || countAloud)(figures, api.alive))) return;
       if (model.reveal) {
-        shown.replaceChildren(...model.reveal.figures.map((spec) => figureBox(spec).box));
+        /* **ومعلمٌ بين المكشوفَين إن أعلنته النمذجة** (`reveal.sign` — الجلسة م٥):
+           التساوي يُرى بميزانٍ متوازن لا بعلامة «=» (أمرُ المالك، ١٣ أغسطس — و«=»
+           ليست من معجم هذا المستوى)، **وهو معلمُ مرحلة المقارنة نفسُه** من `ui.js`
+           لا رسمٌ ثانٍ له. فيقع بين اللوحين حيث يقع في الشاشة التي تُنمذَج. */
+        const boxes = model.reveal.figures.map((spec) => figureBox(spec).box);
+        const mark = model.reveal.sign && landmark(model.reveal.sign);
+        shown.replaceChildren(...(mark && boxes.length === 2
+          ? [boxes[0], h('span', { class: 'q-balance' }, mark), boxes[1]] : boxes));
         shown.hidden = false;
         await say(model.reveal.say);
         if (!api.alive()) return;
@@ -706,7 +729,10 @@ export function stationScreen({ nodeId, title, accent, make, view, score, save }
       }
       foot.replaceChildren(
         h('button', { class: 'btn', onclick: run }, icon('repeat'), ' أَعِدْ'),
-        h('button', { class: 'btn btn--primary next', onclick: api.done }, 'تَابِعْ ←'),
+        // **وصورةُ «تَابِعْ» سهمُها لا محرفُ سهم** (جردُ الصنف — م٥): كان «←» نصّاً
+        // يرسمه خطُّ الصفحة، فصار أيقونةً كأختها «أَعِدْ» — والنصُّ زينةُ الوالد.
+        h('button', { class: 'btn btn--primary next', onclick: api.done },
+          icon('onward'), ' تَابِعْ'),
       );
     };
     run();
@@ -746,7 +772,8 @@ export function stationScreen({ nodeId, title, accent, make, view, score, save }
       h('p', { class: 'hint' }, line),
       before > stars && h('p', { class: 'hint' }, 'ونجومُك السابقة محفوظة.'),
       h('div', { class: 'row foot' },
-        h('button', { class: 'btn btn--primary', onclick: () => go('#/') }, '→ الخريطة'),
+        h('button', { class: 'btn btn--primary', onclick: () => go('#/') },
+          icon('map'), ' الخريطة'),
         h('button', {
           class: 'btn',
           onclick: () => {
@@ -761,7 +788,7 @@ export function stationScreen({ nodeId, title, accent, make, view, score, save }
 
   paint();
 
-  return h('div', { class: 'screen station-screen', css: { '--accent': accent } },
+  root = h('div', { class: 'screen station-screen', css: { '--accent': accent } },
     topbar(
       h('button', {
         class: 'btn',
@@ -769,7 +796,7 @@ export function stationScreen({ nodeId, title, accent, make, view, score, save }
           if (state.done || (state.phase === 0 && state.index === 0)
             || confirm('تريد الخروج قبل إتمام المحطة؟')) go('#/');
         },
-      }, '→ الخريطة'),
+      }, icon('map'), ' الخريطة'),
       h('span', { class: 'spacer' }),
       h('span', { class: 'pill' }, title),
     ),
@@ -787,6 +814,7 @@ export function stationScreen({ nodeId, title, accent, make, view, score, save }
         )),
     ),
   );
+  return root;
 }
 
 // ————— سِجلُّ التمارين وحقنُ المراجعة —————

@@ -66,6 +66,8 @@ const SAY_CATEGORY = {
   revealNext: 'modeling',    // «وَهَذَا مَا يَأْتِي بَعْدَهْ» — تمامُ النمط يُشاهَد
   revealOrder: 'modeling',   // «وَهَذَا تَرْتِيبُهَا…» — ترتيبُ المقادير يُشاهَد
   revealFirst: 'modeling',   // «…مِنَ الْأَوَّلِ إِلَى الْآخِرْ» — تسلسلُ الزمن يُشاهَد
+  revealBoth: 'modeling',    // «هُمَا سَوَاءْ» — الميزانُ المتوازن يُكشَف في النمذجة
+  revealSame: 'modeling',    // «صَارَا سَوَاءْ» — قولُ ما يُرى حين يستوي اللوحان
   bravo: 'celebration',
   great: 'celebration',
 };

@@ -17,7 +17,7 @@
 
 import * as progress from './progress.js';
 import { registerScreen } from './registry.js';
-import { h, icon, pick, shuffle, seeded, shake, pop, QUANTITY_ACCENT } from './ui.js';
+import { h, icon, landmark, pick, shuffle, seeded, shake, pop, QUANTITY_ACCENT } from './ui.js';
 import {
   BEAT, FLASH_MS, SAY, say, praiseThen, span, nearOptions, seeder, skillOf,
   stationById, stationForSkill, figureBox, quantityCard, countAloud, clearCount,
@@ -201,10 +201,18 @@ export function buildStation(stationId, seed) {
   const display = heroDisplay(f, rnd);
   const big = { display, count: f.max, seed: next() };
   const small = { display, count: Math.max(f.min, f.max - 2), seed: next() };
+  /* **وفي الختامية يُكشَف الميزانُ أوّلَ لقاء** (جردُ الصنف — الجلسة م٥): المحطةُ
+     الوحيدة التي فيها «هُمَا سَوَاء» تُري بعد العدّ **كمّيتين متساويتين وبينهما
+     الميزانُ المتوازن** وتسمّيه — فيعرف الطفلُ صورةَ الزرّ ومعناه قبل أن يحتاجه،
+     ولا يقف أمام كلمتين لا يقرؤهما (`docs/FIELD.md §٤`). */
+  const level = { display, count: f.max, seed: next() };
   return {
     model: {
       title: ASK.more, hint: 'نَعُدُّ هَذِهِ ثُمَّ هَذِهِ، فَنَرَى أَيُّهُمَا أَكْثَر',
       figures: [big, small],
+      reveal: closing
+        ? { sign: 'scales', say: SAY.revealBoth, figures: [big, level] }
+        : undefined,
     },
     guided: [
       moreRound(station, rnd),
@@ -400,8 +408,15 @@ function moreView(round, hooks) {
 
   for (const side of sides) side.btn.addEventListener('click', () => judge(side, side.btn));
 
+  /* **وزرُّ التساوي يُرى قبل أن يُقرأ** (جردُ الصنف — `FIELD.md §٤`): هنا وقف أوّلُ
+     طفلٍ حقيقيّ («توقّف عند «هما سواء» فلم يعلم ما يصنع حتى شرحتُ له») — كلمتان في
+     زرٍّ أمام جمهورٍ **قبل-قارئ**. فصار يحمل **الميزانَ المتوازن**، وهو معلمُ مرحلة
+     المقارنة نفسُه من `ui.js` لا رسمٌ ثانٍ له؛ **وأوّلُ لقاءٍ به في نمذجة محطته**
+     (`buildStation` أعلاه): يُكشَف اللوحان مستويين وبينهما الميزانُ مع «هُمَا سَوَاءْ»
+     — فيُرى ويُسمَع قبل أن يُطلَب. والكلمةُ تبقى **زينةً لوليّ الأمر**. */
   if (round.sameAllowed) {
-    const sameBtn = h('button', { class: 'btn btn--wide same-btn' }, 'هُمَا سَوَاء');
+    const sameBtn = h('button', { class: 'btn btn--wide same-btn' },
+      landmark('scales'), ' هُمَا سَوَاء');
     sameBtn.addEventListener('click', () => judge('same', sameBtn));
     foot.append(sameBtn);
   }
