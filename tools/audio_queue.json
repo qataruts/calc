@@ -756,55 +756,62 @@
     "category": "number_name",
     "requestedBy": "session-audio",
     "priority": 10,
-    "status": "pending",
-    "doneAt": null
+    "status": "done",
+    "doneAt": "2026-08-13",
+    "model": "gemini-3.1-flash-tts-preview"
   },
   {
     "text": "اثْنَا عَشَرْ",
     "category": "number_name",
     "requestedBy": "session-audio",
     "priority": 10,
-    "status": "pending",
-    "doneAt": null
+    "status": "done",
+    "doneAt": "2026-08-13",
+    "model": "gemini-3.1-flash-tts-preview"
   },
   {
     "text": "انْظُرْ وَعُدَّ مَعِي",
     "category": "modeling",
     "requestedBy": "session-audio",
     "priority": 30,
-    "status": "pending",
-    "doneAt": null
+    "status": "done",
+    "doneAt": "2026-08-13",
+    "model": "gemini-3.1-flash-tts-preview"
   },
   {
     "text": "اصْنَعْهُ بِجُزْأَيْنْ",
     "category": "instruction",
     "requestedBy": "session-audio",
     "priority": 20,
-    "status": "pending",
-    "doneAt": null
+    "status": "done",
+    "doneAt": "2026-08-13",
+    "model": "gemini-3.1-flash-tts-preview"
   },
   {
     "text": "الْمَسْ وَعُدَّ",
     "category": "instruction",
     "requestedBy": "session-audio",
     "priority": 20,
-    "status": "pending",
-    "doneAt": null
+    "status": "done",
+    "doneAt": "2026-08-13",
+    "model": "gemini-3.1-flash-tts-preview"
   },
   {
     "text": "اجْعَلْهُمَا سَوَاءْ",
     "category": "instruction",
     "requestedBy": "session-audio",
     "priority": 20,
-    "status": "pending",
-    "doneAt": null
+    "status": "done",
+    "doneAt": "2026-08-13",
+    "model": "gemini-3.1-flash-tts-preview"
   },
   {
     "text": "ابْنِ الْعَدَدْ",
     "category": "instruction",
     "requestedBy": "session-audio",
     "priority": 20,
-    "status": "pending",
-    "doneAt": null
+    "status": "done",
+    "doneAt": "2026-08-13",
+    "model": "gemini-3.1-flash-tts-preview"
   }
 ]
