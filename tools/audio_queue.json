@@ -625,23 +625,26 @@
     "category": "instruction",
     "requestedBy": "session-k",
     "priority": 20,
-    "status": "pending",
-    "doneAt": null
+    "status": "done",
+    "doneAt": "2026-08-13",
+    "model": "gemini-3.1-flash-tts-preview"
   },
   {
     "text": "هُمَا سَوَاءْ",
     "category": "modeling",
     "requestedBy": "session-m5",
     "priority": 30,
-    "status": "pending",
-    "doneAt": null
+    "status": "done",
+    "doneAt": "2026-08-13",
+    "model": "gemini-3.1-flash-tts-preview"
   },
   {
     "text": "صَارَا سَوَاءْ",
     "category": "modeling",
     "requestedBy": "session-m5",
     "priority": 30,
-    "status": "pending",
-    "doneAt": null
+    "status": "done",
+    "doneAt": "2026-08-13",
+    "model": "gemini-3.1-flash-tts-preview"
   }
 ]
