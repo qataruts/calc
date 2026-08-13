@@ -1,5 +1,7 @@
 // حارسُ الحرّاس — «فحصٌ لا يُشغَّل ليس حارساً» (أمر المالك، ١٢ أغسطس ٢٠٢٦):
 //   node tools/test_selftests.mjs
+// يحرس: tools/**
+//   (يجرد أدواتِ `tools/` وفحوصَها الذاتية — فكلُّ أداةٍ مادّتُه)
 //
 // **العلّة، وقد تكرّرت ثلاثاً**: الأداةُ تُكتب ومعها `--self-test` يفحص نفسَه، ثم
 // لا يُشغّله أحد — فيرثّ صامتاً كلما تحرّكت البيانات تحته، ولا يُفشِل شيئاً.
@@ -80,6 +82,30 @@ for (const tool of tools) {
 //
 // **وهذا هو موضعُ العهد**: بجرد `tools/` وتشغيلِ ما وُجد، تدخل الأداةُ الجديدة
 // السَّوقةَ **يومَ تُكتب** بلا سطرٍ يُضاف ولا انتباهٍ يُرجى — فالجردُ يجدها.
+// ————— ٣ب) **ولا حارسَ بلا سطر مادّة** (الجلسة ع١ — بلاغ `guard-scope-rule`) —————
+//
+// التقليمُ في `guards.mjs --touched` يشتقّ ما يلزم تشغيلُه من **مادّةٍ يعلنها كلُّ
+// حارسٍ في ترويسته**. وحارسٌ نسي سطرَه لا يحمرّ ولا يُشتكى منه — يُشغَّل دائماً (وذاك
+// الاحتياطُ الصحيح)، لكنّه **يُبطِل التقليمَ صامتاً**: تبقى العدّةُ ثقيلةً ولا يعرف
+// أحدٌ لِمَ. فيُسأل هنا كما سُئل الفحصُ الذاتيّ — والجردُ من `guards.mjs` نفسِه
+// (`--list --json`) لا بنسخةٍ ثانيةٍ من أنماطه، فمصدرُ الحقيقة واحد.
+console.log('\n— المادّة: كلُّ حارسٍ يعلن ما يحرس (يشتقّ منه `--touched`) —');
+const inventory = spawnSync(process.execPath,
+  [fileURLToPath(new URL('guards.mjs', TOOLS)), '--list', '--json'], { encoding: 'utf8' });
+if (inventory.status !== 0) {
+  ok(false, `تعذّر جردُ السَّوقة — ${(inventory.stderr || '').trim().slice(0, 200)}`);
+} else {
+  const { guards, browsers } = JSON.parse(inventory.stdout);
+  const mute = guards.filter((g) => !g.watches.length).map((g) => g.name);
+  ok(mute.length === 0,
+    `${guards.length} حارساً كلُّهم يعلنون مادّتَهم`
+    + (mute.length ? ` — **بلا سطر «يحرس»: ${mute.join('، ')}**` : ''));
+  const blind = browsers.filter((b) => !b.scopes.length).map((b) => b.name);
+  ok(blind.length === 0,
+    `وسَوقةُ المتصفّح تُعلن مادّةَ كلِّ نطاقٍ منها (${browsers.map((b) => `${b.name}: ${b.scopes.length}`).join('، ')})`
+    + (blind.length ? ` — **بلا نطاقاتٍ مُعلَنة: ${blind.join('، ')}**` : ''));
+}
+
 console.log('\n— الإلزام: تُشغَّل كلُّها، ويلزمها الأخضر —');
 for (const tool of tools) {
   const isPy = tool.endsWith('.py');

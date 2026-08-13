@@ -1,5 +1,7 @@
 // حارسُ الهوية — «إخوةٌ لا توائم» (`FAMILY.md §٩`):
 //   node tools/test_identity.mjs
+// يحرس: app/css/app.css app/fonts/** app/icons/** app/sw.js
+//   (اللوحُ والخطُّ والأيقونات، وقشرةُ `sw` تحمل الخطَّ في جردها)
 //
 // ————— العلّة —————
 //

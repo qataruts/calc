@@ -1,7 +1,8 @@
 #!/usr/bin/env python3
 """تشغيل اختبارات الواجهة في متصفّح حقيقي (Chrome بلا واجهة) بلا أي تبعيات.
 
-    python3 tools/browser_test.py             # يسوق التطبيق ويطبع التقرير
+    python3 tools/browser_test.py             # يسوق التطبيق كلَّه ويطبع التقرير
+    python3 tools/browser_test.py --scope audio     # نطاقٌ بعينه (والكاملةُ افتراضاً)
     python3 tools/browser_test.py --shots out.png   # لقطة للمراجعة البصرية
     python3 tools/browser_test.py --shots shots/render --render-shots
                                               # لقطةٌ مرجعية لكل نمطٍ من أنماط المصيِّر
@@ -16,7 +17,22 @@
 
 ملاحظة: `--dump-dom` و`--virtual-time-budget` غير موثوقين مع fetch والصوت، لذلك
 تُرسَل النتائج من الصفحة نفسها.
+
+————— النطاقات: «فحصٌ بقدر العمل» (الجلسة ع١ — بلاغ العائلة `guard-scope-rule`) —————
+البطاريةُ تمشي الرحلةَ كلَّها لمساً بأصواتها، فجلسةٌ لم تلمس إلا الصوتَ كانت تدفع
+ثمنَ الرحلة. فشُقّت ثلاثةَ نطاقات (`--scope`)، **والكاملةُ افتراضاً**، **وما لم يُقَس
+يُطبَع باسمه** — لا سقفَ صامت. وتُعلَن مادّةُ كل نطاقٍ في ترويسة هذا الملفّ
+(`يحرس نطاق …`) فيشتقّ `guards.mjs --touched` منها ما يلزم تشغيلُه.
 """
+
+# (ولا سطرَ `سَوقة:` هنا: هذا الملفّ سَوقةُ المتصفّح نفسُها لا حارسٌ يُشغَّل بوسيطٍ
+#  مُعلَن — وفحصُه الذاتيّ يجرده `test_selftests.mjs` ويشغّله.)
+# يحرس نطاق map: app/index.html app/css/** app/js/ui.js app/js/main.js app/js/parent.js app/js/progress.js app/js/curriculum.js app/fonts/** app/icons/**
+# يحرس نطاق screens: app/js/** app/css/** app/emoji/**
+# يحرس نطاق audio: app/audio/** app/js/audio.js app/js/station.js tools/audio_queue.json
+# وجولتاها الأخريان (مقاساتُ الجهاز والمرجعُ التعريفيّ) لهما مادّتاهما كذلك:
+# يحرس جولة device: app/css/** app/js/** app/index.html
+# يحرس جولة welcome: app/welcome/** app/js/curriculum.js app/js/main.js app/emoji/**
 
 import argparse
 import http.server
@@ -79,7 +95,12 @@ def pending_texts() -> list:
             if isinstance(e, dict) and e.get("text") and e.get("status", "pending") != "done"]
 
 
-def make_server(port: int, results: list):
+# النطاقاتُ الثلاثة — وتُقابَل بما تُعلنه الصفحةُ نفسُها في `--self-test`،
+# فلا يبقى اسمٌ هنا لا تعرفه هناك (ولا العكس) فيُطلَب نطاقٌ لا يُقلِّم شيئاً.
+SCOPES = ("map", "screens", "audio")
+
+
+def make_server(port: int, results: list, skipped: list | None = None):
     class Handler(http.server.SimpleHTTPRequestHandler):
         def __init__(self, *a, **kw):
             super().__init__(*a, directory=str(APP), **kw)
@@ -116,6 +137,8 @@ def make_server(port: int, results: list):
                 body = json.loads(raw.decode("utf-8"))
                 if isinstance(body, dict) and body.get("from") == REPORT_FROM:
                     results[:] = body.get("rows") or []
+                    if skipped is not None:
+                        skipped[:] = body.get("skipped") or []
             except json.JSONDecodeError:
                 pass
             self.send_response(204)
@@ -437,6 +460,28 @@ def self_test() -> int:
     checks.append((APP.exists() and (APP / "index.html").exists(),
                    "وجذرُ التطبيق الذي يُخدَم موجود (`app/index.html`)"))
 
+    # ————— النطاقات: اسمٌ هنا لا تعرفه الصفحةُ يقيس **لا شيء** وهو صامت (الجلسة ع١) —————
+    #
+    # العلّةُ صنفُ عيبٍ خاصّ بالتقليم: `--scope audio` باسمٍ لا تعرفه الصفحةُ يمرّ في
+    # الطرفية ثم تُسقِط الصفحةُ نطاقاتِها كلَّها أو تقيس الكاملةَ — وفي الحالين يُقرأ
+    # التقريرُ على غير ما وقع. فيُقابَل الاسمان هنا، **ولكلِّ نطاقٍ مادّتُه المُعلَنة**
+    # في ترويسة هذا الملفّ يشتقّ منها `guards.mjs --touched`.
+    test_page = (TOOLS / "browser_test.html").read_text(encoding="utf-8")
+    hit = re.search(r"const SCOPES = \[(.*?)\]", test_page, re.S)
+    page_scopes = tuple(re.findall(r"'([a-z]+)'", hit.group(1))) if hit else ()
+    checks.append((page_scopes == SCOPES,
+                   f"ونطاقاتُ الصفحة هي نطاقاتُ السائق ({'، '.join(SCOPES)})"
+                   + ("" if page_scopes == SCOPES else f" — الصفحةُ تقول: {page_scopes}")))
+    checks.append(("get('scope')" in test_page and "inScope(" in test_page,
+                   "وتقرأ الصفحةُ النطاقَ المطلوب من استعلامها وتُقلِّم به"))
+    checks.append(("skipped" in test_page and "skipped" in Path(__file__).read_text(encoding="utf-8"),
+                   "وتُرسِل ما لم تقسه فيُطبَع (لا سقفَ صامت)"))
+    head = Path(__file__).read_text(encoding="utf-8")[:4000]
+    declared_scopes = tuple(re.findall(r"يحرس نطاق ([a-z]+):", head))
+    checks.append((declared_scopes == SCOPES,
+                   "ولكلِّ نطاقٍ مادّتُه المُعلَنة في الترويسة (يشتقّ منها `guards.mjs --touched`)"
+                   + ("" if declared_scopes == SCOPES else f" — المُعلَن: {declared_scopes}")))
+
     bad = [m for good, m in checks if not good]
     for good, m in checks:
         print(("  ✓ " if good else "  ✗ ") + m)
@@ -461,6 +506,8 @@ def main() -> int:
                     help="مسارُ اللقطة داخل التطبيق، مثل '?preview=1#/count/ten'")
     ap.add_argument("--render-shots", action="store_true",
                     help="مع --shots DIR: لقطةٌ مرجعية لكل نمطٍ من أنماط المصيِّر")
+    ap.add_argument("--scope", default="", metavar="A,B",
+                    help=f"نطاقاتٌ مفصولةٌ بفاصلة ({'|'.join(SCOPES)}) — والكاملةُ افتراضاً")
     ap.add_argument("--device", action="store_true", help="مقاسات الآيباد الخمسة")
     ap.add_argument("--welcome", action="store_true",
                     help="المرجعُ التعريفيّ: لا طلبَ خارجيّ، ولا يبتلعه عاملُ الخدمة")
@@ -471,6 +518,12 @@ def main() -> int:
 
     if args.self_test:
         return self_test()
+
+    # **ونطاقٌ لا نعرفه يوقف قبل أن يُشغَّل متصفّح**: طلبٌ أخطأ حرفاً لا يجوز أن يقيس
+    # أقلَّ مما ظنّ طالبُه (والصفحةُ تردّه إلى الكاملة وتُحمِّره، وهذا يمنعه أصلاً).
+    bad_scopes = [s for s in args.scope.split(",") if s.strip() and s.strip() not in SCOPES]
+    if bad_scopes:
+        sys.exit(f"نطاقٌ لا نعرفه: {'، '.join(bad_scopes)} — المعروفة: {'، '.join(SCOPES)}")
 
     # **التنظيفُ عند الإقلاع لا عند الخروج وحده** (بلاغ العائلة): كلُّ مسارٍ يُطلق
     # كروم يكنس أولاً يتائمَنا من جولاتٍ ماتت — و`--self-test` فوقه بلا كروم أصلاً.
@@ -484,7 +537,8 @@ def main() -> int:
         return device_main(args)
 
     results: list = []
-    server = make_server(args.port, results)
+    unmeasured: list = []
+    server = make_server(args.port, results, unmeasured)
     threading.Thread(target=server.serve_forever, daemon=True).start()
     profile = Path(tempfile.mkdtemp(prefix="ihsib-browser-"))
 
@@ -507,6 +561,10 @@ def main() -> int:
             return 0 if out.exists() else 1
 
         page = "__welcome.html" if args.welcome else "__test.html"
+        # **والنطاقُ يُمرَّر ولا يُفرَض**: بلا `--scope` لا استعلامَ أصلاً، فالصفحةُ
+        # تقيس كلَّ نطاقاتها كما كانت قبل هذه الجلسة.
+        if args.scope and not args.welcome:
+            page += f"?scope={args.scope}"
         proc = run_chrome(f"http://127.0.0.1:{args.port}/{page}", profile,
                           [f"--window-size={args.size or '834,1194'}"], args.show)
         deadline = time.time() + args.timeout
@@ -526,7 +584,13 @@ def main() -> int:
         good = bool(row.get("ok"))
         fails += not good
         print(("  ✓ " if good else "  ✗ ") + row.get("msg", ""))
-    print(f"\n{fails} إخفاق" if fails else f"\nكل فحوص المتصفّح ناجحة ({len(results)} فحصاً).")
+    # **وما لم يُقَس يُقال باسمه** (لا سقفَ صامت): تقريرٌ أخضرُ لنطاقٍ واحد لا يجوز أن
+    # يُقرأ شهادةً على البطارية كلِّها — فيُطبَع المتخطَّى ويُذكَر في سطر الحصيلة.
+    for gone in unmeasured:
+        print(f"  ⏭ لم يُقَس: {gone}")
+    tail = f" — و{len(unmeasured)} نطاقاً لم يُقَس (بـ`--scope`)" if unmeasured else ""
+    print(f"\n{fails} إخفاق{tail}" if fails
+          else f"\nكل فحوص المتصفّح ناجحة ({len(results)} فحصاً){tail}.")
     return 1 if fails else 0
 
 

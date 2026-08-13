@@ -23,7 +23,10 @@
      أصلاً، فيُقرأ «لم تصل نتيجة» بطءَ جهازٍ أو قِصَرَ مهلة — وهو عينُ الالتباس الذي
      وُجد له `--self-test` في `browser_test.py`. فما مضى من الفحوص يُرسَل، ومعه العطبُ
      نفسُه فحصاً أحمر باسمه. */
-  const report = (rows) => fetch('/result', { method: 'POST', body: JSON.stringify({ from: 'ihsib', rows }) });
+  /* **وما لم يُقَس يُرسَل مع ما قِيس** (`skipped` — الجلسة ع١): تقريرٌ لا يقول ما تخطّاه
+     يُقرأ تغطيةً كاملة، وذاك سقفٌ صامت. */
+  const report = (rows, notSeen = []) => fetch('/result',
+    { method: 'POST', body: JSON.stringify({ from: 'ihsib', rows, skipped: notSeen }) });
 
   /* **والتعلّقُ يُبلَّغ كما يُبلَّغ العطب**: انتظارُ حدثٍ لا يجيء يوقف النصَّ بلا خطأ،
      فلا يصل شيء. فمهلةٌ حارسة ترسل ما تمّ ومعه سطرٌ أحمر يسمّي التعلّق — «لم تصل
@@ -34,7 +37,7 @@
      الصنف من عشر شاشاتٍ إلى ستَّ عشرة — وكلُّ فتحةٍ نمذجةٌ تُنتظَر. **وتبقى دون
      مهلة السائق** (`--timeout` في `browser_test.py`) فيصل البلاغُ قبل اليأس. */
   const watchdog = setTimeout(() => {
-    report([...out, { ok: false, msg: 'تعلّقت صفحةُ الفحص قبل تمامها (انتظارٌ لم ينتهِ)' }]);
+    report([...out, { ok: false, msg: 'تعلّقت صفحةُ الفحص قبل تمامها (انتظارٌ لم ينتهِ)' }], skipped);
   }, 900000);
 
   /* ————— «لا نطقَ آليّ»: يُقاس في مسار الطفل نفسِه (الجلسة ص) —————
@@ -49,6 +52,12 @@
      يقيّد كلَّ لجوءٍ إلى النطق الآليّ. والحكمُ في آخر الصفحة. */
   const played = [];      // مفاتيحُ ملفاتٍ شُغِّلت من البنك
   const spoken = [];      // ما لجأ إلى النطق الآليّ — يجب أن يبقى فارغاً
+  /* **وسجلُّ الأذن يجمع القناتين** (الجلسة ع١): ما يسمعه الطفلُ نصّاً، بترتيبه، من
+     البنك كان أو من الاحتياط. وعلّتُه مقيسة: نصٌّ يُبدَّل حرفُه (قرارُ همزة الوصل)
+     **يفقد ملفَّه حتى تصرّفه جلسةُ الصوتيات**، فيمضي في الاحتياط — فحارسٌ يقيس
+     «مفاتيحَ ما شُغِّل» يعمى عنه ويحمرّ على ما ليس عيباً، **والعيبُ الحقيقيّ**
+     (عدٌّ يستأنف من ثلاثة) يمرّ تحته. فيُقاس **المسموع** لا مصدرُه. */
+  const earLog = [];      // نصوصُ ما سُمع بترتيبه — من القناتين معاً
 
   /* ————— **حارسُ التعاقب** (بلاغُ الميدان ١ · الجلسة م١) —————
 
@@ -99,7 +108,7 @@
       }
       get src() { return this._src; }
       play() {
-        if (this.__key) played.push(this.__key);
+        if (this.__key) { played.push(this.__key); earLog.push(bank[this.__key] ?? this.__key); }
         this.__row = { key: this.__key, doc, t0: performance.now(), t1: Infinity };
         timeline.push(this.__row);
         this.__timer = setTimeout(() => {
@@ -118,6 +127,32 @@
       removeAttribute() { this.src = ''; }
     };
     w.SpeechSynthesisUtterance = class { constructor(text) { spoken.push(text); this.text = text; } };
+    /* **والنطقُ الآليّ يُقاس كما يُقاس الملفّ**: جملةٌ في الجوّ جملةٌ في الجوّ أياً كان
+       مصدرُها — فلها في الشريط الزمنيّ مدىً كأخيها، ويُنهيه الإسكاتُ كما يُنهيه.
+       (ولولا ذلك لَنجا الاحتياطُ من حارس التعاقب: صوتان معاً أحدُهما آليّ لا يُرَيان.) */
+    let ttsRow = null;
+    const endTts = () => {
+      if (ttsRow && ttsRow.t1 === Infinity) ttsRow.t1 = performance.now();
+      ttsRow = null;
+    };
+    Object.defineProperty(w, 'speechSynthesis', {
+      configurable: true,
+      value: {
+        cancel: endTts,
+        speak(u) {
+          endTts();
+          earLog.push(u.text);
+          ttsRow = { key: `آليّ:${u.text}`, doc, t0: performance.now(), t1: Infinity };
+          timeline.push(ttsRow);
+          const mine = ttsRow;
+          setTimeout(() => {
+            if (mine.t1 === Infinity) mine.t1 = performance.now();
+            if (mine === ttsRow) ttsRow = null;
+            u.onend?.();
+          }, audioMs);
+        },
+      },
+    });
   };
 
   // فهرسُ البنك ونصوصُ القائمة المنتظِرة — وغيابُهما لا يُسقِط الصفحة: بلا بنكٍ لا
@@ -128,6 +163,34 @@
   };
   const bank = await jsonOr('/audio/manifest.json', {});
   const pendingAudio = new Set(await jsonOr('/__queue.json', []));
+
+  /* ————— نطاقاتُ القياس: «فحصٌ بقدر العمل» (الجلسة ع١ — بلاغ `guard-scope-rule`) —————
+
+     أمرُ المالك: **الفحوصُ الكبرى عند الرفع والنشر**، وجلسةٌ تقيس بقدر عملها. وهذه
+     البطاريةُ تمشي الرحلةَ كلَّها لمساً بأصواتها، فجلسةُ صوتٍ صرّفت تسعةَ ملفّاتٍ كانت
+     تدفع ثمنَ ثلاثٍ وستّين عقدة. فشُقّت **ثلاثةَ نطاقات** يُطلَب المعنيُّ منها
+     (`--scope`)، **والكاملةُ هي الافتراض** — فلا يخفّ شيءٌ بلا طلب.
+
+     **ولا سقفَ صامت**: ما لم يُقَس يُرسَل باسمه في التقرير ويُطبَع في مخرج السائق —
+     فلا يُقرأ «كلُّها خضراء» وفي الظلّ نطاقٌ لم يُسأل (وهي قاعدةُ `guards.mjs` نفسُها
+     في سَوقة المتصفّح، تُطبَّق هنا داخلَ الصفحة).
+
+     **ومكانُها فوق `try`** لا داخلَه: المهلةُ الحارسة تُرسل ما تمّ عند التعلّق، فلو
+     كان الجردُ داخلَ الكتلة لَما بلغته — فيصل تقريرُ تعلّقٍ يدّعي تغطيةً كاملة. */
+  const SCOPES = ['map', 'screens', 'audio'];
+  const SCOPE_WHAT = {
+    map: 'قشرةُ التطبيق وهويتُه وخريطتُه ولوحةُ وليّ الأمر',
+    screens: 'مصيِّرُ الكميات وشاشاتُ المحطات وبواباتُها وميدالياتُها وجردُ الصنف',
+    audio: 'تعاقبُ الصوت وتسريبُه عبر التنقل و«لا نطقَ آليّ»',
+  };
+  const asked = (new URLSearchParams(location.search).get('scope') || '')
+    .split(',').map((s) => s.trim()).filter(Boolean);
+  const unknown = asked.filter((s) => !SCOPES.includes(s));
+  /* **ونطاقٌ لا نعرفه لا يُقلِّم**: يُردّ إلى الكاملة ويُحمَّر باسمه — فطلبٌ أخطأ حرفاً
+     لا يجوز أن يقيس أقلَّ مما ظنّ طالبُه، ولا أن يمرّ صامتاً. */
+  const want = new Set(asked.length && !unknown.length ? asked : SCOPES);
+  const inScope = (name) => want.has(name);
+  const skipped = SCOPES.filter((s) => !want.has(s)).map((s) => `${s} — ${SCOPE_WHAT[s]}`);
 
   try {
 
@@ -142,6 +205,85 @@
   const win = frame.contentWindow;
   const root = doc.documentElement;
   const app = doc.getElementById('app');
+
+  /* ————— أدواتُ السَّوقة المشتركة — **فوق النطاقات لا داخلَ أحدها** —————
+
+     سَوقُ الشاشات وقراءةُ المرسوم وجدولُ أسماء العدّ يستعملها أكثرُ من نطاق، فلو بقيت
+     داخل نطاقٍ منها لَسقط سائرُها بسقوطه. فمكانُها هنا، ونصُّها كما كان بعللها. */
+
+  const DIGITS = /[0-9٠-٩]/g;
+  // قاعدةُ يونيكود نفسُها التي في `ui.js` — رمزٌ مصوَّر بتمامه لا محرفٌ نصّيّ
+  // (تخرج بها «★» و«✓» و«←» و«▾»: يرسمها خطُّ النصّ ولا شأن لها بالمهمة).
+  const EMOJI_RE = /\p{Emoji_Presentation}|\p{Extended_Pictographic}️/u;
+  const arDigits = (s) => Number([...String(s)].map((c) => {
+    const i = '٠١٢٣٤٥٦٧٨٩'.indexOf(c);
+    return i < 0 ? c : String(i);
+  }).join('').replace(/[^0-9]/g, ''));
+
+  /* **وسمٌ يميّز كل سَوقة**: إسنادُ `src` يختلف عن سابقه بالمقطع (`#`) وحدَه **لا
+     يُطلِق `load`** — ينتقل المستندُ في مكانه فينتظر الفحصُ حدثاً لا يجيء، وتنتهي
+     المهلةُ صامتة. فيُزاد وسمٌ في الاستعلام: تحميلٌ كاملٌ في كل مرة. */
+  let visit = 0;
+  /** @param {string} extra استعلامٌ زائد (`&dev=1` لأدوات التجربة) — بلا تكرار مسار. */
+  const open = async (hash, extra = '') => {
+    closeOpen();           // مستندٌ يُغادَر: ما كان يعمل فيه انتهى بمغادرته
+    frame.src = `/?preview=1${extra}&v=${++visit}${hash}`;
+    await new Promise((r) => frame.addEventListener('load', r, { once: true }));
+    hookAudio(frame.contentWindow);
+    await new Promise((r) => setTimeout(r, 900));
+    return frame.contentDocument;
+  };
+  const until = async (doc, test, ms = 9000) => {
+    for (let waited = 0; waited < ms; waited += 120) {
+      const found = test(doc);
+      if (found) return found;
+      await new Promise((r) => setTimeout(r, 120));
+    }
+    return null;
+  };
+  /* **مِرقَبٌ يمسك العابر** (الدفعة ص٥) — علّتُه مقيسة: حالاتُ التصحيح (`.bad` على
+     البطاقة، و`.is-counted` على الشكل) تُوضَع عند الخطأ وتُرفَع **بتمام الكلام**، فمدّتُها
+     مدّةُ ما يُقال. وكانت نصوصُ المرحلة ٩ بلا ملفّاتٍ فتمضي في احتياط النطق الآليّ،
+     ومهلتُه في `audio.js` **مؤقّتٌ حقيقيّ** (`estimateMs/0.75 + 1500` ≈ ٢٫٤ث للاسم
+     الواحد) يعمل في الفحص كما يعمل في الجهاز — فكان أخذُ عيّنةٍ بعد ٧٠٠ مللي يقع
+     داخل النافذة فيراها. فلمّا تمّ البنكُ صار النصُّ ملفّاً، **والملفُّ في الفحص وهميٌّ
+     ينتهي في ٦٠ مللي**، فانكمشت النافذةُ تحت العيّنة — لا لأنّ الشاشة تبدّلت، بل لأنّ
+     ما تُقاس به تبدّل. (وعلى جهاز الطفل العكسُ: مسموعٌ حقيقيّ ١٫٣٧–٢٫٦٢ث مكانَ نطقٍ
+     آليّ أقصر.) **فالمقياسُ يصير شهادةً على ما وقع لا عيّنةً على ما بقي**: يُنصَب
+     المِرقَبُ قبل الفعل فيشهد بظهور الحالة متى ظهرت — وهو **أشدُّ** من العيّنة لا أضعف:
+     شاشةٌ لا تُعلِّم الخطأَ أصلاً تسقط في الاثنين، ومُضِيُّ الجولة يمسكه عدُّ الخرزة. */
+  const seenOnce = (doc, sel) => {
+    const state = { seen: !!doc.querySelector(sel) };
+    const obs = new MutationObserver(() => { if (doc.querySelector(sel)) state.seen = true; });
+    obs.observe(doc.documentElement,
+      { subtree: true, childList: true, attributes: true, attributeFilter: ['class'] });
+    state.stop = () => obs.disconnect();
+    return state;
+  };
+  const shownIn = (el) => (el ? el.innerText || '' : '');
+
+  /* **مسطرةُ اللمس**: هي المعلَنة في `METHOD.md §١١` بلا تحويط، واستثناؤها الوحيد
+     استثناءُ المتن نفسِه (أزرارُ عناصر لوح «اجعلهما سواء» ٤٤ — م٦). ومكانُها فوق
+     النطاقات: تقيس بها الخريطةُ أزرارَها، ويقيس بها جردُ الصنف نوبةَ الطفل. */
+  const TOUCH_MIN = 64;
+  const BOARD_MIN = 44;
+  const needOf = (el) => (el.classList.contains('fig-tap') && el.closest('.q-equal')
+    ? BOARD_MIN : TOUCH_MIN);
+  const drawnOf = (el) => Number(el.querySelector('.figure')?.dataset.drawn);
+  const beadNow = (doc) => [...doc.querySelectorAll('.bead')].findIndex((b) => b.classList.contains('bead--now'));
+
+  /* **واسمُ العدد مكتوبٌ هنا بيدٍ عمداً**: لو قُرئ من `NUMBER_NAME` لصدّق الحارسُ ما
+     يفحصه — فتُبدَّل تسميةٌ في التطبيق ويبقى أخضر. وهو **جدولُ حقيقةٍ** كجدول رتب
+     المشاهد (الجلسة ٨ب) وجدولِ النرد في `check_render`. (ومكانُه فوق النطاقات لأنّ
+     نطاقَي الشاشات والصوت كليهما يقرآنه.) */
+  const NAME_HEARD = ['صِفْرْ', 'وَاحِدْ', 'اِثْنَانْ', 'ثَلَاثَةْ', 'أَرْبَعَةْ', 'خَمْسَةْ',
+    'سِتَّةْ', 'سَبْعَةْ', 'ثَمَانِيَةْ', 'تِسْعَةْ', 'عَشَرَةْ'];
+
+  ok(!unknown.length, unknown.length
+    ? `نطاقٌ مطلوبٌ لا نعرفه: ${unknown.join('، ')} — المعروفة: ${SCOPES.join('، ')}`
+    : `النطاقاتُ المقيسة: ${[...want].join('، ')} من ${SCOPES.length}`);
+
+  if (inScope('map')) {
 
   // ————— ١) التطبيق يفتح فعلاً —————
   ok(app && !app.querySelector('.boot'), 'التطبيق يفتح ويحلّ محلَّ سطر التحميل');
@@ -182,9 +324,7 @@
     `لا رقمَ لاتينيّ في النصّ المعروض${latin.length ? ` — وُجد: ${latin.join('، ')}` : ''}`);
 
   // ————— ٤) «أيقونات لا إيموجي»: لا محرفَ يُسلَّم لخطّ النظام —————
-  // قاعدةُ يونيكود نفسُها التي في `ui.js` — رمزٌ مصوَّر بتمامه لا محرفٌ نصّيّ
-  // (تخرج بها «★» و«✓» و«←» و«▾»: يرسمها خطُّ النصّ ولا شأن لها بالمهمة).
-  const EMOJI_RE = /\p{Emoji_Presentation}|\p{Extended_Pictographic}️/u;
+  // (قاعدةُ يونيكود `EMOJI_RE` فوق النطاقات — يقرؤها لوحُ المصيِّر كذلك.)
   const glyphs = [...shown].filter((ch) => EMOJI_RE.test(ch));
   ok(glyphs.length === 0,
     `ولا محرفَ إيموجي يُسلَّم لخطّ النظام${glyphs.length ? ` — وُجد: ${glyphs.join(' ')}` : ''}`);
@@ -200,11 +340,8 @@
      **وكانت العتبةُ هنا ٤٤/٤٠ لا ٦٤** (معايرةُ الجلسة ١٠): حارسٌ يقيس بمسطرةٍ أرخى
      من العهد يمرّ أخضرَ على ما ينقضه — وقد مرّ: `--tap` كانت ٦٠ لا ٦٤، و`btn` ٤٨.
      فصارت المسطرةُ **هي المعلَنة** بلا تحويط، والاستثناءُ الوحيد استثناءُ `METHOD.md`
-     نفسِه (أزرارُ عناصر اللوح ٤٤ — م٦). */
-  const TOUCH_MIN = 64;
-  const BOARD_MIN = 44;
-  const needOf = (el) => (el.classList.contains('fig-tap') && el.closest('.q-equal')
-    ? BOARD_MIN : TOUCH_MIN);
+     نفسِه (أزرارُ عناصر اللوح ٤٤ — م٦).
+     (والمسطرةُ نفسُها فوق النطاقات: يقيس بها جردُ الصنف نوبةَ الطفل في `screens`.) */
   const small = [...doc.querySelectorAll('button, a.btn, label.btn')]
     .filter((el) => el.offsetParent !== null)
     .map((el) => ({ el, r: el.getBoundingClientRect() }))
@@ -231,11 +368,8 @@
 
   /* **وسطرُ الأصوات المخزونة خلفها** (الجلسة ص): تُحَلّ البوابةُ بقراءة ضربها من
      الشاشة نفسِها — فيَظهر ما وراءها. وعلّةُ الفحص أنّ اللوحة صارت تقرأ من مخزن
-     عامل الخدمة، وشيفرةٌ تُقرأ ولا تُشغَّل قد تسقط عند أول عرض. */
-  const arDigits = (s) => Number([...String(s)].map((c) => {
-    const i = '٠١٢٣٤٥٦٧٨٩'.indexOf(c);
-    return i < 0 ? c : String(i);
-  }).join('').replace(/[^0-9]/g, ''));
+     عامل الخدمة، وشيفرةٌ تُقرأ ولا تُشغَّل قد تسقط عند أول عرض.
+     (و`arDigits` فوق النطاقات — يقرأ بها لوحُ المصيِّر رمزَه كذلك.) */
   const [ga, gb] = (doc.querySelector('.gate .giant')?.textContent || '').split('×');
   const gateInput = doc.querySelector('.gate input');
   if (gateInput) {
@@ -248,6 +382,10 @@
   const dl = doc.querySelector('.dl');
   ok(!!dl, 'وفيها سطرُ خزن الأصوات بشريطه وزرِّه (فلا يفاجئ وليَّ الأمر صمتٌ لا يعرف سببه)');
   ok(!dl || !!dl.querySelector('.dl-bar .dl-fill'), 'والشريطُ مبنيٌّ بمِلئه');
+
+  }   // ————— ختامُ نطاق `map` —————
+
+  if (inScope('screens')) {
 
   /* ————— ٩) مصيِّر الكميات **على الشاشة نفسِها** (METHOD §١٠.٢ — الجلسة ٢) —————
 
@@ -398,52 +536,8 @@
      ثلاثةُ عهودٍ لا يُثبتها إلا متصفّح: **صفرُ رمزٍ عدديّ** على شاشة المرحلة ١،
      و**التناظرُ الفرديّ مفروضٌ بنيوياً** (لمستان على عنصرٍ واحد لا تُحتسبان مرّتين)،
      و**الخطأُ يُعَدّ أمامه ولا ينقل**. وتُساق الشاشاتُ بـ`?preview=1` — يفتح القفلَ
-     ولا يكتب تقدّماً، فلا يبقى في الجهاز أثرُ اختبار. */
-
-  const DIGITS = /[0-9٠-٩]/g;
-  /* **وسمٌ يميّز كل سَوقة**: إسنادُ `src` يختلف عن سابقه بالمقطع (`#`) وحدَه **لا
-     يُطلِق `load`** — ينتقل المستندُ في مكانه فينتظر الفحصُ حدثاً لا يجيء، وتنتهي
-     المهلةُ صامتة. فيُزاد وسمٌ في الاستعلام: تحميلٌ كاملٌ في كل مرة. */
-  let visit = 0;
-  /** @param {string} extra استعلامٌ زائد (`&dev=1` لأدوات التجربة) — بلا تكرار مسار. */
-  const open = async (hash, extra = '') => {
-    closeOpen();           // مستندٌ يُغادَر: ما كان يعمل فيه انتهى بمغادرته
-    frame.src = `/?preview=1${extra}&v=${++visit}${hash}`;
-    await new Promise((r) => frame.addEventListener('load', r, { once: true }));
-    hookAudio(frame.contentWindow);
-    await new Promise((r) => setTimeout(r, 900));
-    return frame.contentDocument;
-  };
-  const until = async (doc, test, ms = 9000) => {
-    for (let waited = 0; waited < ms; waited += 120) {
-      const found = test(doc);
-      if (found) return found;
-      await new Promise((r) => setTimeout(r, 120));
-    }
-    return null;
-  };
-  /* **مِرقَبٌ يمسك العابر** (الدفعة ص٥) — علّتُه مقيسة: حالاتُ التصحيح (`.bad` على
-     البطاقة، و`.is-counted` على الشكل) تُوضَع عند الخطأ وتُرفَع **بتمام الكلام**، فمدّتُها
-     مدّةُ ما يُقال. وكانت نصوصُ المرحلة ٩ بلا ملفّاتٍ فتمضي في احتياط النطق الآليّ،
-     ومهلتُه في `audio.js` **مؤقّتٌ حقيقيّ** (`estimateMs/0.75 + 1500` ≈ ٢٫٤ث للاسم
-     الواحد) يعمل في الفحص كما يعمل في الجهاز — فكان أخذُ عيّنةٍ بعد ٧٠٠ مللي يقع
-     داخل النافذة فيراها. فلمّا تمّ البنكُ صار النصُّ ملفّاً، **والملفُّ في الفحص وهميٌّ
-     ينتهي في ٦٠ مللي**، فانكمشت النافذةُ تحت العيّنة — لا لأنّ الشاشة تبدّلت، بل لأنّ
-     ما تُقاس به تبدّل. (وعلى جهاز الطفل العكسُ: مسموعٌ حقيقيّ ١٫٣٧–٢٫٦٢ث مكانَ نطقٍ
-     آليّ أقصر.) **فالمقياسُ يصير شهادةً على ما وقع لا عيّنةً على ما بقي**: يُنصَب
-     المِرقَبُ قبل الفعل فيشهد بظهور الحالة متى ظهرت — وهو **أشدُّ** من العيّنة لا أضعف:
-     شاشةٌ لا تُعلِّم الخطأَ أصلاً تسقط في الاثنين، ومُضِيُّ الجولة يمسكه عدُّ الخرزة. */
-  const seenOnce = (doc, sel) => {
-    const state = { seen: !!doc.querySelector(sel) };
-    const obs = new MutationObserver(() => { if (doc.querySelector(sel)) state.seen = true; });
-    obs.observe(doc.documentElement,
-      { subtree: true, childList: true, attributes: true, attributeFilter: ['class'] });
-    state.stop = () => obs.disconnect();
-    return state;
-  };
-  const shownIn = (el) => (el ? el.innerText || '' : '');
-  const drawnOf = (el) => Number(el.querySelector('.figure')?.dataset.drawn);
-  const beadNow = (doc) => [...doc.querySelectorAll('.bead')].findIndex((b) => b.classList.contains('bead--now'));
+     ولا يكتب تقدّماً، فلا يبقى في الجهاز أثرُ اختبار.
+     (وأدواتُ السَّوقة — `open` و`until` و`seenOnce` وقارئا المرسوم — فوق النطاقات.) */
 
   // ————— أ) «كم ترى؟» ١–٢ — أوّلُ محطةٍ في الرحلة —————
   let sdoc = await open('#/subitize/two');
@@ -591,12 +685,7 @@
      فالمحروسُ هنا ثلاثة: أن **يُسمَع اسمُ المطلوب** (وشرطُه تحقّق: أسماءُ الأعداد
      مصروفةٌ مُقَرّة)، وأن **يُغطّى النموذجُ فعلاً على الشاشة** (لا برمجياً وحدَه —
      درسُ `hidden`)، وأن تكون **الإعادةُ بلا حدٍّ ولا احتساب** (عهدُ الخطف القائم).
-
-     **واسمُ العدد مكتوبٌ هنا بيدٍ عمداً**: لو قُرئ من `NUMBER_NAME` لصدّق الحارسُ ما
-     يفحصه — فتُبدَّل تسميةٌ في التطبيق ويبقى أخضر. وهو **جدولُ حقيقةٍ** كجدول رتب
-     المشاهد (الجلسة ٨ب) وجدولِ النرد في `check_render`. */
-  const NAME_HEARD = ['صِفْرْ', 'وَاحِدْ', 'اِثْنَانْ', 'ثَلَاثَةْ', 'أَرْبَعَةْ', 'خَمْسَةْ',
-    'سِتَّةْ', 'سَبْعَةْ', 'ثَمَانِيَةْ', 'تِسْعَةْ', 'عَشَرَةْ'];
+     (وجدولُ `NAME_HEARD` المكتوبُ بيدٍ عمداً فوق النطاقات — بعلّته هناك.) */
 
   sdoc = await open('#/count/ten');
   const giveFrom = played.length;
@@ -1097,7 +1186,7 @@
   const barred = cardsOf(wdoc).filter((c) => firstWay
     .includes(Number(c.querySelector('.figure').dataset.drawn)));
   ok(!!again && barred.length > 0 && barred.every((c) => c.disabled),
-    `و«اِصْنَعْهُ بِطَرِيقَةٍ أُخْرَى» بعد الأولى (${firstWay.join(' و')})، `
+    `و«اصْنَعْهُ بِطَرِيقَةٍ أُخْرَى» بعد الأولى (${firstWay.join(' و')})، `
     + `**وقيمتاها معطَّلتان** فلا تُعاد الطريقةُ نفسُها (${barred.length} بطاقة)`);
 
   // ————— «أَصْدِقَاءُ العَشَرَة»: الخاناتُ الفارغة هي السؤال —————
@@ -2142,6 +2231,10 @@
     `**وكبسةٌ عند التساوي تحتفل**: الجولةُ تمضي بإعلان الطفل لا بوقوعه `
     + `(${eqMoved} من ٢)`);
 
+  }   // ————— ختامُ نطاق `screens` (صدرُه: المصيِّر والشاشاتُ والبوابات) —————
+
+  if (inScope('audio')) {
+
   /* ————— ١١ك) **تسريبُ العدّ عبر التنقل** (بلاغ الميدان ٥ · الجلسة م٥) —————
 
      **بلفظ المالك** (ثلاثُ تأكيدات، آخرُها من الحيّ): «قطعته عند اثنان ثم رجعت
@@ -2159,12 +2252,14 @@
      خلفه ثمانيَ جملٍ — فيتجاوز التسريبُ نافذةَ الصمت **ويبلغ العودةَ نفسَها**،
      فيُقاس العَرَضان معاً: «يواصل فوق الخريطة» و«عدّادان معاً» بعد الرجوع. */
   const leakDoc = await open('#/count/ten');
-  const leakFrom = played.length;
+  // **ويُقاس المسموعُ لا مصدرُه** (`earLog`): نصٌّ بُدِّل حرفُه يمضي في الاحتياط حتى
+  // تصرّفه جلسةُ الصوتيات، وعدٌّ يستأنف من ثلاثة عيبٌ سواءٌ أَمِن ملفٍّ سُمع أم من نطق.
+  const leakFrom = earLog.length;
   // يُنتظَر أن يبلغ عدُّ النمذجة «اثنين» — بالحال لا بمهلةٍ ثابتة
   const reached = await until(leakDoc, () =>
-    (played.slice(leakFrom).map((k) => bank[k]).includes(NAME_HEARD[2]) ? true : null), 20000);
+    (earLog.slice(leakFrom).includes(NAME_HEARD[2]) ? true : null), 20000);
   const leaveBtn = leakDoc.querySelector('.station-screen .topbar .btn');
-  const heardBefore = played.slice(leakFrom).map((k) => bank[k]);
+  const heardBefore = earLog.slice(leakFrom);
   leaveBtn?.click();
   const onMap = await until(leakDoc, (d) => d.querySelector('main.map'), 5000);
   /* **وتُقاس اللحظةُ من استقرار الخريطة**: بين النقرة ووصول الخريطة أجزاءٌ من ثانية
@@ -2182,17 +2277,20 @@
     + (afterLeave.length ? ` — **واصل العدُّ فوقها: ${afterLeave
       .map((r) => bank[r.key] || r.key).join('، ')}**` : ''));
 
-  const backFrom = played.length;
+  const backFrom = earLog.length;
   leakDoc.defaultView.location.hash = '#/count/ten';
   await until(leakDoc, (d) => d.querySelector('.station-body .next'), 20000);
   await new Promise((r) => setTimeout(r, 900));
-  const namesBack = played.slice(backFrom).map((k) => bank[k])
-    .filter((t) => NAME_HEARD.includes(t));
+  const namesBack = earLog.slice(backFrom).filter((t) => NAME_HEARD.includes(t));
   const drawnBack = Number(leakDoc.querySelector('.q-stage .figure')?.dataset.drawn);
   const cleanRun = NAME_HEARD.slice(1, drawnBack + 1);
   ok(namesBack.length === cleanRun.length && namesBack.every((t, i) => t === cleanRun[i]),
     `**والعودةُ تبدأ من صفر**: عدٌّ واحدٌ من «${NAME_HEARD[1]}» إلى ما رُسِم `
     + `(المرسومُ ${drawnBack}، وسُمع: ${namesBack.join('، ') || 'لا شيء'})`);
+
+  }   // ————— ختامُ نطاق `audio` (صدرُه: التسريب) —————
+
+  if (inScope('screens')) {
 
   /* ————— ١١ل) **إشعارُ التحديث الهادئ** (الجلسة ١٠·أ — تتمةُ أمر المالك) —————
 
@@ -2274,6 +2372,10 @@
   await until(upDoc, (d) => d.querySelector('main.map'), 12000);
   await settle(300);
   ok(!!noteIn(upDoc), 'ويعود بالخروج إلى الخريطة (خبرٌ لا يضيع بدخولٍ وخروج)');
+
+  }   // ————— ختامُ نطاق `screens` (ذيلُه: إشعارُ التحديث) —————
+
+  if (inScope('audio')) {
 
   /* ————— ١٢) **تعاقبُ الصوت**: صوتٌ واحدٌ في الجوّ، والانتقالُ بعد تمامه —————
 
@@ -2358,8 +2460,10 @@
      صارخ — وهذا يقيس ما سمعته الأذن.) */
   closeOpen();
   const clashes = overlaps(0);
+  // (والعبارةُ تتبع ما سِيق فعلاً: نطاقٌ واحد لا يدّعي «الرحلةَ كلَّها» — لا سقفَ صامت.)
   ok(clashes.length === 0,
-    `ولا لحظةَ في الرحلة كلِّها يعمل فيها صوتان معاً (${timeline.length} تشغيلاً مقيساً)`
+    `ولا لحظةَ ${want.size === SCOPES.length ? 'في الرحلة كلِّها' : 'فيما سِيق'} `
+    + `يعمل فيها صوتان معاً (${timeline.length} تشغيلاً مقيساً)`
     + (clashes.length ? ` — **تراكب: ${[...new Set(clashes)].slice(0, 5).join('، ')}**` : ''));
 
   const stray = spoken.filter((t) => !pendingAudio.has(t));
@@ -2368,12 +2472,14 @@
     + `${pendingAudio.size}، ولجوءٌ وقع: ${spoken.length}`
     + `${stray.length ? `، خارجَ القائمة: ${stray.join('، ')}` : ''})`);
 
+  }   // ————— ختامُ نطاق `audio` (ذيلُه: التعاقبُ والبنك) —————
+
   } catch (err) {
     ok(false, `عطبٌ في صفحة الفحص: ${(err && (err.stack || err.message)) || err}`);
   }
 
   clearTimeout(watchdog);
-  await report(out);
+  await report(out, skipped);
 </script>
 </body>
 </html>

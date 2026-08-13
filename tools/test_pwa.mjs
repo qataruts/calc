@@ -1,5 +1,7 @@
 // اختبار العمل دون إنترنت (PWA):
 //   node tools/test_pwa.mjs
+// يحرس: app/sw.js app/index.html app/audio/manifest.json app/welcome/** app/manifest.webmanifest
+//   (قشرةُ العمل دون إنترنت: جردُها وما تستثنيه وما تخزّنه)
 //
 // ————— بذرةُ المنصة (منسوخٌ من «اِقْرَأْ» ومكيَّف) —————
 // المحروس هنا ثلاثة:

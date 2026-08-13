@@ -1,4 +1,7 @@
 #!/usr/bin/env python3
+# يحرس: app/CNAME app/index.html app/welcome/** .github/workflows/pages.yml
+#   (المنشورُ وقائمةُ صفحاته المشتقّة وسيرُ نشره)
+
 """فحصُ الموقع الحيّ — هل ما في الشجرة هو ما يُخدَم فعلاً على `calc.mishkat.qa`؟
 
     python3 tools/check_live.py              # يجلب الصفحات والأصول ويطبع الحصيلة

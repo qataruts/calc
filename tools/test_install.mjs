@@ -1,5 +1,7 @@
 // حارسُ بابِ التثبيت (`app/js/install.js`):
 //   node tools/test_install.mjs
+// يحرس: app/js/install.js app/js/main.js app/css/app.css app/sw.js app/welcome/**
+//   (بابُ التثبيت ونصوصُه، وإعفاءُ المعاينة، وموضعُه من القشرة والتعريفيّ)
 //
 // **منقولٌ من اقرأ بجدوله** (`read@260bf48:tools/test_install.mjs`) ومكيَّفٌ لـ«اِحْسِبْ»:
 // جدولُ الحالات هو هو (منطقُ المنصّات لا يتبدّل باسم التطبيق)، وزيدت عليه أبوابُ
