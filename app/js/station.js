@@ -35,7 +35,7 @@ import { stations } from './curriculum.js';
 import { paint, spotStyle, spanStyle } from './render.js';
 import { setBuilders } from './review.js';
 import {
-  h, icon, go, topbar, starsRow, mascot, cheer, toast, shuffle, arNum, landmark, onScreen, DEV,
+  h, icon, go, topbar, starsRow, mascot, cheer, toast, shuffle, arNum, landmark, pop, onScreen, DEV,
 } from './ui.js';
 
 // ————— إيقاعُ الشاشة (بالمللي ثانية) — لا مؤقّتَ ضغطٍ في أيٍّ منها —————
@@ -47,6 +47,8 @@ export const BEAT = 620;
 export const FLASH_MS = 1200;
 /** فاصلُ الانتقال بعد الصواب — أثرٌ يُرى قبل الجولة التالية. */
 export const AFTER_RIGHT_MS = 780;
+/** مكثُ الكبسة المنمذَجة تحت «الإصبع» — قدرُ ما تراه العينُ كبسةً لا وميضاً (م٦). */
+const PRESS_MS = 320;
 
 const wait = (ms) => new Promise((r) => setTimeout(r, ms));
 
@@ -378,6 +380,23 @@ export const numeralCard = (value, seed, opts) =>
   cardOf({ display: 'numeral', count: value, seed }, { ...opts, className: 'qcard--numeral' });
 
 /**
+ * **زرُّ حكمٍ معلمُه صورتُه ولا نصَّ فيه** (الجلسة م٦ — حسمُ بند المراقبة في
+ * `FIELD.md §٦`): الفعلُ الذي يُعلن به الطفلُ جوابَه **يُرى ولا يُقرأ** (قاعدةُ
+ * اللاقراءة — `DESIGN.md §٦`)، ومعلمُه **معلمُ مرحلته من `ui.js`** لا رسمٌ ثانٍ له.
+ *
+ * **وصانعُه واحدٌ للشاشة ولنمذجتها**: ما يكبسه الطفلُ في «وحدك» عينُ ما يراه يُكبَس
+ * في «شاهِدْ» (`watchStep` أدناه) — فلا يتعلّم صورةً ثم يلقى غيرَها. والاسمُ المقروء
+ * (`aria-label`) لقارئ الشاشة وحدَه: لا حرفَ يُعرَض على زرٍّ تتوقف عليه اللعبة.
+ */
+export function markButton(kind, { onclick, label = '', disabled = false } = {}) {
+  const mark = landmark(kind);
+  if (!mark) return null;
+  return h('button', {
+    class: 'btn btn--mark', 'aria-label': label, disabled, onclick,
+  }, mark);
+}
+
+/**
  * **طبقةُ اللمس**: زرٌّ شفّافٌ فوق كل عنصرٍ مرسوم، موضعُه من `spotStyle` في المصيِّر
  * نفسِه — فلا يُحسَب موضعُ العنصر مرّتين ولا يلمس الطفلُ فراغاً.
  *
@@ -694,6 +713,9 @@ export function stationScreen({ nodeId, title, accent, make, view, score, save }
     });
     const shown = h('div', { class: 'q-reveal', hidden: true });
     const foot = h('div', { class: 'row foot' });
+    /* **وموضعُ ما تكبسه النمذجةُ بنفسها** (`reveal.press` — الجلسة م٦): يبقى عنصراً
+       فارغاً بلا صنفٍ حيث لا كبسَ، فلا يزيد في شاشةٍ أخرى فراغاً ولا سطراً. */
+    const act = h('div');
     const figures = model.figures.map((spec) => {
       const fig = figureBox(spec);
       stage.append(fig.box);
@@ -704,6 +726,8 @@ export function stationScreen({ nodeId, title, accent, make, view, score, save }
       foot.replaceChildren();
       shown.replaceChildren();
       shown.hidden = true;
+      act.replaceChildren();
+      act.className = '';
       // **الدعوةُ تُسمَع تامّةً قبل أن يبدأ العدّ** — أوّلُ ما يسمعه الطفلُ عند الفتح
       await say(SAY.watch);
       if (!api.alive()) return;
@@ -719,9 +743,32 @@ export function stationScreen({ nodeId, title, accent, make, view, score, save }
            لا رسمٌ ثانٍ له. فيقع بين اللوحين حيث يقع في الشاشة التي تُنمذَج. */
         const boxes = model.reveal.figures.map((spec) => figureBox(spec).box);
         const mark = model.reveal.sign && landmark(model.reveal.sign);
-        shown.replaceChildren(...(mark && boxes.length === 2
-          ? [boxes[0], h('span', { class: 'q-balance' }, mark), boxes[1]] : boxes));
+        /* **وإن أعلنت النمذجةُ كبسةً فالمعلمُ ثمرتُها لا سابقتُها** (`reveal.press` —
+           الجلسة م٦): يُخفى الميزانُ حتى تُكبَس صورتُه، فيرى الطفلُ **الترتيب** الذي
+           سيصنعه بيده: استوى اللوحان ← كُبِس الميزان ← «صَارَا سَوَاءْ». */
+        const balance = mark && h('span', { class: 'q-balance', hidden: Boolean(model.reveal.press) }, mark);
+        shown.replaceChildren(...(balance && boxes.length === 2
+          ? [boxes[0], balance, boxes[1]] : boxes));
         shown.hidden = false;
+        if (model.reveal.press) {
+          /* **والكبسةُ تُرى ولا تُشرَح** (قاعدةُ اللاقراءة — `DESIGN.md §٦`): زرُّ الشاشة
+             نفسُه (`markButton`) **معطَّلاً** — نمذجةٌ بلا مطالبة (`METHOD.md §٤`) —
+             ينخفض كما ينخفض تحت الإصبع ثم يرتدّ، فيظهر الميزانُ بين اللوحين. ولا نصَّ
+             تعليماتٍ جديد: الصورةُ هي الدرس. */
+          const shownBtn = markButton(model.reveal.press, { disabled: true });
+          if (shownBtn) {
+            act.className = 'row foot';
+            act.replaceChildren(shownBtn);
+            await wait(BEAT);
+            if (!api.alive()) return;
+            shownBtn.classList.add('is-pressed');
+            await wait(PRESS_MS);
+            if (!api.alive()) return;
+            shownBtn.classList.remove('is-pressed');
+            pop(shownBtn);
+          }
+          if (balance) { balance.hidden = false; pop(balance); }
+        }
         await say(model.reveal.say);
         if (!api.alive()) return;
         await wait(BEAT);
@@ -740,7 +787,7 @@ export function stationScreen({ nodeId, title, accent, make, view, score, save }
     // **والرمزُ يظهر فوقها** (`METHOD.md §٣` حرفاً): الرمزُ لافتةٌ فوق الكمّية لا سطرٌ
     // بعدها — فيقع بصرُ الطفل عليهما معاً، والأعلى تسميةٌ للأسفل.
     return h('div', {}, mascot('mascot mascot--hello'),
-      h('h2', {}, model.title), h('p', { class: 'hint' }, model.hint), shown, stage, foot);
+      h('h2', {}, model.title), h('p', { class: 'hint' }, model.hint), shown, act, stage, foot);
   }
 
   function finish() {

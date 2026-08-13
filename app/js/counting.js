@@ -25,7 +25,7 @@ import { registerScreen } from './registry.js';
 import { h, icon, landmark, pick, shuffle, seeded, shake, pop, QUANTITY_ACCENT } from './ui.js';
 import {
   AFTER_RIGHT_MS, BEAT, FLASH_MS, NUMBER_NAME, SAY, say, praiseThen, span, nearOptions, seeder, skillOf,
-  stationById, stationForSkill, figureBox, quantityCard, touchLayer, countAloud,
+  stationById, stationForSkill, figureBox, quantityCard, markButton, touchLayer, countAloud,
   clearCount, usedOf, registerExercise, stationScreen,
 } from './station.js';
 
@@ -154,6 +154,12 @@ function giveRound(station, rnd, flash = false) {
  * **واللوحُ يسعُ ما قد يبلغه** (`room` في `render.js`): تُحسَب مواضعُه على الجبهة كلِّها
  * لا على عدده اليوم — فلا يقفز الباقون أماكنَهم كلما تبدّل العدد، ويُقرأ الفعلُ
  * «ذهب واحدٌ من هنا» لا «تبدّل كلُّ شيء».
+ *
+ * **واللوحان جنباً إلى جنب** (أمرُ المالك — م٦): رُصّا صفّاً تحت صفّ في م٥ لحقّ
+ * الإصبع، فلمّا عاد زرُّ الحكم أسفلَهما هبط تحت طيّة الشاشة بعشرة بكسل (أمسكه
+ * الحارسُ: أسفلُه ١٢٠٤ من ١١٩٤). فصارا متجاورين ويُرى الثلاثةُ في نظرةٍ واحدة،
+ * وحقُّ الإصبع محفوظٌ في `app.css`: الرسمُ يأخذ أكبرَ ما يسعه العرض، ولهدف اللمس
+ * أرضيّةٌ لا ينزل عنها.
  */
 function equalRound(station, rnd) {
   const f = station.frontier;
@@ -191,7 +197,11 @@ export function buildStation(stationId, seed) {
     /* **والنمذجةُ تُري الغايةَ وتسمّيها**: تُعَدُّ الكميتان المختلفتان، ثم يُكشَف
        اللوحان **مستويين** وبينهما الميزانُ المتوازن مع «صَارَا سَوَاءْ» — فيعرف
        الطفلُ ما المطلوبُ منه ومتى يتمّ، بلا سطرٍ يُقرأ (أمرُ المالك، الجلسة م٥).
-       واللوحُ الأصغرُ يُكشَف بقدر الأكبر **ببذرته هو**: هو نفسُه وقد نما في مكانه. */
+       واللوحُ الأصغرُ يُكشَف بقدر الأكبر **ببذرته هو**: هو نفسُه وقد نما في مكانه.
+
+       **وتكبس النمذجةُ الميزانَ بنفسها** (`press` — الجلسة م٦): استوى اللوحان ←
+       كُبِس الزرُّ ← ظهر الميزانُ ونُطق «صَارَا سَوَاءْ». فيتعلّم الطفلُ **الفعلَ
+       الذي يُعلن به جوابه** مشاهدةً لا قراءةً، ولا نصَّ تعليماتٍ جديد. */
     return {
       model: {
         title: ASK.equal, hint: 'نَعُدُّ هَذِهِ وَهَذِهِ، ثُمَّ نُسَوِّي بَيْنَهُمَا',
@@ -201,6 +211,7 @@ export function buildStation(stationId, seed) {
         ],
         reveal: {
           sign: 'scales',
+          press: 'scales',
           say: SAY.revealSame,
           figures: [
             { display, count: f.max, seed: big, room: f.max },
@@ -474,25 +485,27 @@ function giveView(round, hooks) {
 // سَوَاء» أسفلَها — وبقي مكانَها **فعلٌ وحكمٌ**:
 //
 //   • **الفعلُ لمسٌ مباشر**: عنصرٌ يُلمَس فيذهب، وفراغُ اللوح يُلمَس فيأتي واحد.
-//   • **والحكمُ صنعٌ لا إعلان**: لا زرَّ تأكيدٍ أصلاً — بلوغُ التساوي **هو** إتمامُ
-//     المهمة، يُحكَم به بعد **وقفةٍ قصيرة يلغيها تعديلٌ خلالها** (فمن مرّ بالتساوي
-//     عابراً في طريقه لم يُحكَم له ولا عليه). والمقيسُ `equal|5|make` كما هو.
-//   • **والتساوي يُرى ويُسمَع**: ميزانٌ متوازن بين اللوحين مع «صَارَا سَوَاءْ» —
-//     ولا رمزَ «=»، فهو ليس من معجم هذا المستوى (أمرُ المالك، ١٣ أغسطس ٢٠٢٦).
+//   • **والحكمُ كبسةٌ يُعلنها الطفل** — **ميزانٌ يُرى ولا يُقرأ** (حسمُ بند المراقبة،
+//     `FIELD.md §٦`؛ والجلسةُ م٥ كانت قد أسقطت الزرَّ أصلاً فصار الحكمُ تلقائياً عند
+//     بلوغ التساوي بعد وقفة). **وشهادةُ الميدان نقضت التلقائيّ بلفظ المالك**: «لا
+//     يوجد submit لصارا سواء فالطفل يبقى يزيد حتى يكونوا سواء أوتوماتيكياً» — أي
+//     أنّ النقر المتكرّر يبلغ التساوي **فيُحتفَل بنجاحٍ لم يقصده الطفل**. فعاد
+//     الزرُّ **صورةً بلا حرف**: يجتمع فيه التزامُ إعلان الجواب وقاعدةُ اللاقراءة.
+//   • **والتساوي يُرى ويُسمَع** بعد الكبسة: ميزانٌ متوازن بين اللوحين مع «صَارَا
+//     سَوَاءْ» — ولا رمزَ «=»، فهو ليس من معجم هذا المستوى (أمرُ المالك، ١٣ أغسطس).
 //
-// **ومعالجةُ الخطأ عدٌّ أمامه كسائر الشاشات** — وموضعُها هنا **الحركةُ المبعِدة**: من
-// زاد في الأكثر أو نقص من الأقلّ فقد باعد بينهما، وذلك هو الخطأُ في تمرينٍ لا خيارَ
-// فيه يُنقَر. فتُعَدُّ الكميتان أمامه ثم يواصل — لا شاشةَ خطأ ولا تراجعَ عن لمسته.
-
-/** وقفةُ الحكم: يتمّ التساوي إن دامت — وتعديلٌ خلالها يلغيها ويبدؤها من جديد. */
-const SETTLE_MS = 900;
+// **ومعالجةُ الخطأ عدٌّ أمامه كسائر الشاشات**، وموضعُها **الكبسة** لا الحركة: من
+// أعلن التساوي واللوحان مختلفان عُدَّت الكميتان أمامه ثم يواصل بلا حدّ. وكانت م٥
+// تجعل الخطأَ **الحركةَ المبعِدة** — وعلّتُها المكتوبة يومَها «في تمرينٍ لا خيارَ فيه
+// يُنقَر»؛ فلمّا عاد الخيارُ يُنقَر عاد الخطأُ إلى موضعه: **الجوابُ المُعلَن**. فالحركةُ
+// بحثٌ حرٌّ لا يُحاسَب عليه (زيادةٌ ونقصٌ حتى يرضى)، والكبسةُ وحدَها قولٌ يُحكَم له
+// أو عليه — ولا يُقاس على طفلٍ إلا ما قصد. والمقيسُ `equal|5|make` كما هو.
 
 function equalView(round, hooks) {
   const state = { left: round.left.count, right: round.right.count };
   const pair = h('div', { class: 'q-pair q-equal' });
   const figs = {};
   let locked = false;
-  let settle = 0;
   let judged = false;
 
   const gap = () => Math.abs(figs.left.fig.drawn - figs.right.fig.drawn);
@@ -500,25 +513,37 @@ function equalView(round, hooks) {
   const sign = h('span', { class: 'q-balance', hidden: true }, landmark('scales'));
 
   /**
-   * لمسةٌ تُغيِّر اللوح: **حكمُها من المرسوم قبلها وبعدها** (لا من العدد المطلوب).
-   * وما جاوز الجبهةَ لا يقع — امتناعٌ في البنية كما في «اصنع العدد» (المرحلة ٥).
+   * لمسةٌ تُغيِّر اللوح: **من المرسوم لا من العدد المطلوب**، وما جاوز الجبهةَ لا يقع
+   * — امتناعٌ في البنية كما في «اصنع العدد» (المرحلة ٥). **ولا حكمَ فيها**: تقريباً
+   * كانت أو مباعدة، فهي بحثُ الطفل عن جوابه لا جوابُه.
    */
-  async function tap(key, delta) {
+  function tap(key, delta) {
     if (locked || judged) return;
     const next = state[key] + delta;
     if (next < round.lo || next > round.hi) return;      // لا يخرج عن جبهة محطته
-    const before = gap();
-    clearTimeout(settle);
     state[key] = next;
     draw();
-    const after = gap();
-    if (after === 0) {                                    // بلغ التساوي: تُبدأ الوقفة
-      settle = setTimeout(() => { if (hooks.alive()) succeed(); }, SETTLE_MS);
+  }
+
+  /**
+   * **الكبسة: الجوابُ يُعلَن** — والحكمُ **من المرسوم** (`drawn` لا `state`).
+   * سواءٌ ⇒ ميزانٌ ولفظُه واحتفال؛ ومختلفان ⇒ تُعَدّ الكميتان أمامه ثم يعود يعدّل
+   * ويُعلن ثانيةً **بلا حدٍّ** — لا شاشةَ خطأ ولا تراجعَ عن لمسته.
+   */
+  async function judge() {
+    if (locked || judged) return;
+    const correct = gap() === 0;
+    hooks.attempt(round, correct);
+    if (correct) {
+      judged = true;
+      sign.hidden = false;
+      pop(sign);
+      await say(SAY.revealSame);
+      if (!hooks.alive()) return;
+      await praiseThen(hooks);
       return;
     }
-    if (after <= before) return;                          // اقترب أو راوح: يواصل بلا كلام
-    // **باعد بينهما** — وهو الخطأ هنا: يُسجَّل مرّةً، ثم تُعَدّ الكميتان أمامه
-    hooks.attempt(round, false);
+    shake(scaleBtn);
     locked = true;
     await say(SAY.together);
     if (!hooks.alive()) return;
@@ -531,17 +556,10 @@ function equalView(round, hooks) {
     locked = false;
   }
 
-  /** تمَّ الصنع: يُرى الميزانُ ويُسمَع لفظُه، ثم كلمةُ الصواب والجولةُ التالية. */
-  async function succeed() {
-    if (judged) return;
-    judged = true;
-    hooks.attempt(round, true);
-    sign.hidden = false;
-    pop(sign);
-    await say(SAY.revealSame);
-    if (!hooks.alive()) return;
-    await praiseThen(hooks);
-  }
+  /* **وزرُّ الحكم ميزانٌ بلا حرف** (م٦): صورتُه صورةُ الميزان الذي يظهر بين اللوحين
+     عند التساوي وصورةُ زرّ «هما سواء» في محطة المقارنة — معلمٌ واحدٌ يُتعلَّم مرّةً.
+     **وأوّلُ لقاءٍ به في نمذجة محطته**: تكبسه النمذجةُ بنفسها فيتعلّمه مشاهدةً. */
+  const scaleBtn = markButton('scales', { onclick: judge, label: SAY.revealBoth });
 
   function side(key, spec) {
     const holder = h('div', { class: 'q-side' });
@@ -581,6 +599,7 @@ function equalView(round, hooks) {
     h('h2', {}, round.ask),
     h('p', { class: 'hint' }, 'اِلْمَسْ وَاحِدًا لِيَذْهَب، وَالْمَسِ الفَرَاغَ لِيَأْتِيَ وَاحِد'),
     pair,
+    h('div', { class: 'row foot q-judge' }, scaleBtn),
   );
 }
 

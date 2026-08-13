@@ -1765,10 +1765,9 @@
 
   /* ————— ١١ي‌ب) «اجعلهما سواء» تُجتاز **لمساً مباشراً** (الجلسة م٥) —————
 
-     حكمُ `FIELD.md §٤` الأول بحرفه: نقرُ عنصرٍ يُزيله، ونقرُ فراغِ اللوح يضيف،
-     **وزرُّ التأكيد يسقط أصلاً** — بلوغُ التساوي هو إتمامُ المهمة. فيُقاس هنا الفعلُ
-     كلُّه على الشاشة الحيّة: أنّ **لا زرَّ نصيٍّ واحداً** عليها، وأنّ اللمسَ يُنقص
-     ويزيد **في المرسوم لا في النيّة**، وأنّ الميزانَ يظهر عند التساوي فتمضي الجولة. */
+     حكمُ `FIELD.md §٤` الأول بحرفه: نقرُ عنصرٍ يُزيله، ونقرُ فراغِ اللوح يضيف —
+     **ولا كلمةَ تشغيلٍ واحدة**. فيُقاس هنا الفعلُ كلُّه على الشاشة الحيّة: أنّ لا
+     زرَّ **نصيٍّ** واحداً عليها، وأنّ اللمسَ يُنقص ويزيد **في المرسوم لا في النيّة**. */
 
   const eqDoc = await open('#/equal/five');
   await until(eqDoc, (d) => d.querySelector('.station-body .next'), 22000);
@@ -1779,26 +1778,81 @@
   ok(eqSides().length === 2 && Number.isFinite(eqDrawn(0)) && eqDrawn(0) !== eqDrawn(1),
     `«اِجْعَلْهُمَا سَوَاء» تفتح بلوحين مختلفين (${eqDrawn(0)} و${eqDrawn(1)} مرسومين)`);
 
-  // **ولا زرَّ نصيٍّ واحدٍ عليها** — سقطت خمستُها، وبقي اللمسُ على اللوح وعناصره
+  /* **ولا زرَّ نصيٍّ واحدٍ عليها**: سقطت خمستُها في م٥، وعاد منها واحدٌ في م٦ **صورةً
+     لا حرفاً** — فيُقاس النصُّ في الأزرار لا عددُها (زرٌّ بلا حرفٍ ليس حاجزَ قراءة). */
   const eqCard = eqDoc.querySelector('main.screen-card');
-  const eqWords = [...eqDoc.querySelectorAll('.station-body .btn')];
+  const eqWords = [...eqDoc.querySelectorAll('.station-body .btn')]
+    .filter((b) => (b.textContent || '').trim().length > 0);
   const eqDigits = [...new Set(shownIn(eqCard).match(DIGITS) || [])];
   ok(eqWords.length === 0 && eqDigits.length === 0,
     'ولا زرَّ نصيٍّ واحدٍ عليها ولا رمزَ عدديّ (المرحلة ٢)'
     + (eqWords.length ? ` — أزرارٌ نصيّة: ${eqWords.map((b) => b.textContent.trim()).join('، ')}` : '')
     + (eqDigits.length ? ` — أرقام: ${eqDigits.join('، ')}` : ''));
 
-  /* **ولكلِّ جولةٍ وسيلتُها وحدَها**: الأولى تُسوَّى بالإبعاد (يُلمَس عنصرٌ من الأكثر
-     حتى يبلغ الأقلّ) والثانية بالإتيان (يُلمَس فراغُ الأقلّ حتى يبلغ الأكثر). وكلا
-     المسارين **تقريبٌ لا مباعدة** في كل خطوة، فلا يقع فيهما عدُّ الخطأ — ويُقاسان
-     **في المرسوم** لمسةً لمسة. (ولولا الفصلُ بين الجولتين لَتعلّق القياسُ بقرعة
-     الفارق: فارقُ واحدٍ يُسوّى بلمسةٍ واحدة، فلا تُجرَّب الوسيلةُ الأخرى أصلاً.) */
+  /* ————— ١١ي‌ج) **الجوابُ يُعلَن كبساً ولا يقع صدفة** (م٦ — حسمُ بند المراقبة) —————
+
+     **بلفظ المالك من الميدان**: «لا يوجد submit لصارا سواء فالطفل يبقى يزيد حتى
+     يكونوا سواء أوتوماتيكياً» — أي أنّ الحكمَ التلقائي (م٥) يكافئ وصولاً بلا قصد.
+     فعاد زرُّ الحكم **ميزاناً بلا نصّ**، والمشهدُ هنا يمشي أحكامَه الثلاثة على
+     الشاشة الحيّة:
+
+       • **كبسةٌ واللوحان مختلفان**: تُعالَج معالجةَ الخطأ نفسَها (تُعَدّ الكميتان
+         أمامه) **ولا تُحتسب نجاحاً** — لا ميزانَ ولا انتقالَ ولا احتفال.
+       • **واستواءٌ بلا كبسة لا يُحكَم له**: تُترَك الشاشةُ مستويةً برهةً فلا يقع شيء
+         — وهو البابُ الذي يُحمِره ردُّ الحكم التلقائي.
+       • **وكبسةٌ عندها تحتفل**: ميزانٌ يُرى ثم تمضي الجولة.
+
+     **ولكلِّ جولةٍ وسيلةُ تسويةٍ وحدَها**: الأولى بالإبعاد (يُلمَس عنصرٌ من الأكثر)
+     والثانية بالإتيان (يُلمَس فراغُ الأقلّ) — ويُقاسان **في المرسوم** لمسةً لمسة.
+     (ولولا الفصلُ بينهما لَتعلّق القياسُ بقرعة الفارق: فارقُ واحدٍ يُسوّى بلمسةٍ
+     واحدة، فلا تُجرَّب الوسيلةُ الأخرى أصلاً.) */
+  const eqJudge = () => eqDoc.querySelector('.q-judge .btn--mark');
+  const eqBalance = (d) => {
+    const b = d.querySelector('.q-equal .q-balance');
+    return b && !b.hidden && d.defaultView.getComputedStyle(b).display !== 'none' ? b : null;
+  };
+  const eqCounted = () => eqDoc.querySelectorAll('.q-equal .is-counted').length;
+
   const eqSteps = { remove: 0, add: 0 };
   let balanceSeen = 0;
   let eqMoved = 0;
   let eqLevels = [];
+  let judgeSized = 0;
+  let judgeReach = [];
+  // الكبسةُ المبكّرة: ما رآه الطفلُ بعدها — عدٌّ أمامه، وميزانٌ؟ وانتقالٌ؟
+  let earlyCounted = 0;
+  let earlyPair = [0, 0];
+  let earlyBalance = true;
+  let earlyMoved = true;
+  let idleHeld = 0;
   for (const mode of ['remove', 'add']) {
     await until(eqDoc, (d) => d.querySelector('.q-equal'), 22000);
+    /* **والزرُّ يُقاس مقاساً وموضعاً**: زرٌّ تحت الطيّة زرٌّ لا يُكبَس — والطفلُ لا
+       يعرف أنّ الصفحة تُمرَّر. فيُجرَد أسفلُه من ارتفاع الشاشة **بلا تمرير**. */
+    const btn = await until(eqDoc, () => eqJudge(), 6000);
+    const rect = btn ? btn.getBoundingClientRect() : { width: 0, height: 0, bottom: Infinity };
+    if (rect.height >= 64 && rect.width >= 64) judgeSized++;
+    judgeReach.push(Math.round(rect.bottom));
+
+    /* **الكبسةُ المبكّرة تُجرَّب في الجولة الأولى وحدَها**: اللوحان مختلفان بحكم
+       الجولة (البابُ الأول أعلاه)، فتُقاس المعالجةُ ونفيُ النجاح معاً. */
+    if (mode === 'remove' && btn) {
+      const beadEarly = beadNow(eqDoc);
+      earlyPair = [eqDrawn(0), eqDrawn(1)];
+      btn.click();
+      // يُنتظَر أثرُ العدّ على الشاشة (عنصرٌ يُعلَّم) — لا مهلةٌ تُخمَّن
+      earlyCounted = (await until(eqDoc, () => (eqCounted() > 0 ? eqCounted() : null), 12000)) || 0;
+      earlyBalance = !!eqBalance(eqDoc);
+      earlyMoved = beadNow(eqDoc) !== beadEarly || !!eqDoc.querySelector('.celebrate');
+      /* ثم يُنتظَر تمامُ العدّ (يُمحى أثرُه) فتعود الشاشةُ إلى يد الطفل — **ويُقيَّد
+         أكثرُ ما عُلِّم**: العدُّ يمشي على الكميتين بلا محوٍ بينهما، فذروتُه مجموعُهما.
+         فلا يُقال «عُدَّ» لأنّ عنصراً أضيء، بل يُقابَل المعدودُ بالمرسوم. */
+      await until(eqDoc, () => {
+        earlyCounted = Math.max(earlyCounted, eqCounted());
+        return eqCounted() === 0 ? true : null;
+      }, 22000);
+    }
+
     for (let step = 0; step < 8 && eqDrawn(0) !== eqDrawn(1); step++) {
       const big = eqDrawn(0) > eqDrawn(1) ? 0 : 1;
       const at = mode === 'remove' ? big : 1 - big;
@@ -1810,25 +1864,44 @@
       eqSteps[mode]++;
     }
     eqLevels.push(eqDrawn(0) === eqDrawn(1) ? eqDrawn(0) : NaN);
+
+    /* **واستوى اللوحان — فلا شيء يقع حتى يُكبَس**: مهلةٌ أطولُ من وقفة الحكم
+       التلقائي التي كانت (٩٠٠ مللي) بمرّتين ونصف، فلا يمرّ العطبُ من قِصَرِ قياس. */
+    const idleBead = beadNow(eqDoc);
+    await new Promise((r) => setTimeout(r, 2300));
+    if (beadNow(eqDoc) === idleBead && !eqDoc.querySelector('.celebrate')
+      && !eqBalance(eqDoc)) idleHeld++;
+
     const eqBead = beadNow(eqDoc);
-    const balance = await until(eqDoc, (d) => {
-      const b = d.querySelector('.q-balance');
-      return b && !b.hidden && d.defaultView.getComputedStyle(b).display !== 'none' ? b : null;
-    }, 6000);
+    eqJudge()?.click();
+    const balance = await until(eqDoc, (d) => eqBalance(d), 6000);
     if (balance && balance.querySelector('svg')) balanceSeen++;
-    // وبلوغُ التساوي وحدَه ينقل — بلا زرِّ تأكيد
     if (await until(eqDoc, (d) => (beadNow(d) !== eqBead
-      || d.querySelector('.celebrate') ? true : null), 9000)) eqMoved++;
+      || d.querySelector('.celebrate') ? true : null), 12000)) eqMoved++;
   }
   ok(eqSteps.remove > 0 && eqSteps.add > 0 && eqLevels.every(Number.isFinite),
     `ونقرُ عنصرٍ يُبعد واحداً ونقرُ فراغِ اللوح يأتي بواحد — **مقيسَين في المرسوم** `
     + `(${eqSteps.remove} إبعاداً و${eqSteps.add} إتياناً، واللوحان استويا على `
     + `${eqLevels.join(' ثم ')})`);
+  ok(judgeSized === 2 && judgeReach.every((b) => b <= eqDoc.defaultView.innerHeight),
+    `**وزرُّ الحكم ميزانٌ بلا نصّ** يبلغ هدفَ اللمس فأكثر **وتبلغه العينُ بلا تمرير** `
+    + `(${judgeSized} من ٢ جولة، وأسفلُه على ${judgeReach.join(' و')} من `
+    + `${eqDoc.defaultView.innerHeight}بك)`);
+  ok(earlyCounted === earlyPair[0] + earlyPair[1] && earlyCounted > 0
+    && !earlyBalance && !earlyMoved,
+    `**وكبسةٌ قبل التساوي تُعالَج ولا تُحتسب نجاحاً**: عُدَّت الكميتان أمامه `
+    + `(${earlyCounted} عنصراً مُعلَّماً لِـ${earlyPair.join(' و')} مرسومين) ولا ميزانَ ولا انتقال`
+    + (earlyBalance ? ' — **ظهر الميزانُ وهما مختلفان**' : '')
+    + (earlyMoved ? ' — **ومضت الجولةُ على خطأ**' : ''));
+  ok(idleHeld === 2,
+    `**ولا حكمَ يقع من تلقائه**: استوى اللوحان فمكثا ٢٫٣ ثانيةً بلا كبسة فلا ميزانَ `
+    + `ولا انتقال (${idleHeld} من ٢ جولة)`
+    + (idleHeld < 2 ? ' — **وقع الحكمُ صدفةً بلا كبسة**' : ''));
   ok(balanceSeen === 2,
-    `**والميزانُ المتوازن يظهر بينهما** لحظةَ التساوي رسماً على الشاشة `
+    `**والميزانُ المتوازن يظهر بينهما** بعد الكبسة رسماً على الشاشة `
     + `(${balanceSeen} من ٢ جولة)`);
   ok(eqMoved === 2,
-    `**وبلوغُ التساوي هو إتمامُ المهمة**: الجولةُ تمضي بعد وقفتها بلا زرِّ تأكيد `
+    `**وكبسةٌ عند التساوي تحتفل**: الجولةُ تمضي بإعلان الطفل لا بوقوعه `
     + `(${eqMoved} من ٢)`);
 
   /* ————— ١١ك) **تسريبُ العدّ عبر التنقل** (بلاغ الميدان ٥ · الجلسة م٥) —————
