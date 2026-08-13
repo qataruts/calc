@@ -764,10 +764,12 @@
     "text": "اثْنَا عَشَرْ",
     "category": "number_name",
     "requestedBy": "session-audio",
-    "priority": 10,
+    "priority": 1,
     "status": "done",
-    "doneAt": "2026-08-13",
-    "model": "gemini-3.1-flash-tts-preview"
+    "model": "gemini-3.1-flash-tts-preview",
+    "style_hint": "انطق اسم هذا العدد وحدَه بوضوحٍ تامّ، كلمتين متصلتين بإيقاعٍ معتدل — لا متمهّلاً ولا مسروعاً — كما يعدّ معلّمٌ لطفلٍ في الخامسة، مرة واحدة: ",
+    "requeueWhy": "حكمُ أذن المالك (١٣ أغسطس ٢٠٢٦)",
+    "doneAt": "2026-08-13"
   },
   {
     "text": "انْظُرْ وَعُدَّ مَعِي",
@@ -820,9 +822,11 @@
     "text": "الْمِسْ وَعُدَّ",
     "category": "instruction",
     "requestedBy": "session-audio",
-    "priority": 20,
+    "priority": 5,
     "status": "done",
-    "doneAt": "2026-08-13",
-    "model": "gemini-3.1-flash-tts-preview"
+    "model": "gemini-3.1-flash-tts-preview",
+    "style_hint": "اقرأ هذه التعليمة بتأنٍّ ووضوحٍ وودّ لطفلٍ في الخامسة، وابدأ أولَ كلمةٍ بكسرةٍ مسموعة، مرة واحدة: ",
+    "requeueWhy": "حكمُ أذن المالك (١٣ أغسطس ٢٠٢٦)",
+    "doneAt": "2026-08-13"
   }
 ]
