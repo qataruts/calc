@@ -6,11 +6,14 @@
 
    ————— بذرةُ المنصة (منسوخةٌ من «اِقْرَأْ») —————
    **البنيةُ منه واللوحُ لنا**: مفرداتُ التنسيق (topbar · btn · station · node ·
-   track · dots · celebrate · vchip · note …) بنيةُ اقرأ نفسُها بمقاييسها ودروسها،
+   track · dots · celebrate · note …) بنيةُ اقرأ نفسُها بمقاييسها ودروسها،
    و**لوحُ الألوان خاصٌّ بهذا التطبيق** (`SESSIONS.md` §٠.٣: «لا نسخ لوح اقرأ
    بألوانه») — هويةٌ مستقلة يعرفها الطفل من الوهلة الأولى أنّها تطبيقٌ آخر.
    وسقطت مفرداتُ مادّة اقرأ (أشكالُ الحرف · لوحُ التتبّع · صفحةُ القصة · وقارُ
-   المصحف · بطاقاتُ التسجيل). الجرد بأسبابه في `docs/SEED.md`. */
+   المصحف · بطاقاتُ التسجيل). الجرد بأسبابه في `docs/SEED.md`.
+   **وسقطت `vchip` في الجلسة ١٠** (كنسُ بقايا العمل): بطاقةُ اختيارٍ من البذرة لم
+   تستعملها شاشةٌ واحدة عندنا — بطاقاتُنا `qcard` — فكانت ٤٢ سطراً تُنزَّل إلى جهاز
+   كل طفلٍ في القشرة ولا تُرسم شيئاً. */
 
 /* ————— الخطوط — مضمّنة محلياً (PWA، لا شبكة) ————— */
 /* ملفا Noto وBaloo متغيّرا الوزن: ملف واحد يغطي 400–700. */
@@ -110,10 +113,16 @@
   --radius: 22px;               /* البطاقات 20–24 */
   --radius-btn: 16px;           /* الأزرار 16 — مدوّر صديق لا كبسولات */
 
-  /* **هدفُ اللمس ≥ ٦٤ بكسل** (`METHOD.md §١١`): العقدةُ ٦ ريم ≈ ١١٤ بكسل،
-     والزرُّ ٣٫٧٥ ريم ≈ ٦٤ — وهو الحدّ الأدنى لا المعتاد. */
+  /* **هدفُ اللمس ≥ ٦٤ بكسل** (`METHOD.md §١١`): العقدةُ ٦ ريم = ٩٦ بكسلاً، والزرُّ
+     **٤ ريم = ٦٤** — وهو الحدّ الأدنى لا المعتاد.
+
+     **وكان ٣٫٧٥ ريم فقِيس فإذا هو ٦٠** (معايرةُ الجلسة ١٠): `rem` تتبع جذرَ الصفحة
+     (١٦بك) لا نصَّ الجسم، فالقيمةُ التي كُتب بجانبها «≈ ٦٤» كانت **٦٠** — أربعةٌ
+     ناقصةٌ في كل بطاقة جوابٍ يلمسها طفلُ الرابعة، وعهدٌ يُقرأ في وثيقةٍ ولا يقع على
+     زجاج. فرُدَّت إلى ٤ ريم، **والعدّةُ هي التي قالت** (`--device` تجرد كل زرٍّ ظاهرٍ
+     على شاشات الرحلة كلِّها في المقاسات الخمسة طولاً وعرضاً). */
   --node-size: 6rem;
-  --tap: 3.75rem;
+  --tap: 4rem;
 
   --shadow: 0 2px 8px rgba(51, 59, 68, .09);
 
@@ -231,6 +240,9 @@ button {
 
 .topbar h1 { margin: 0; font-size: 1.5rem; letter-spacing: .5px; }
 .topbar .spacer { flex: 1; }
+/* **وزرُّ الترويسة عرضُه كارتفاعه** (معايرةُ الجلسة ١٠): بابُ وليّ الأمر أيقونةٌ بلا
+   نصّ، فارتفاعُه بلغ العتبةَ وعرضُه ٦١ — وهدفُ اللمس **أصغرُ ضلعيه** لا أطولُهما. */
+.topbar .btn { min-width: var(--tap); }
 
 .pill {
   display: inline-flex;
@@ -247,12 +259,17 @@ button {
 
 .pill--stars { color: var(--star-text); font-weight: 700; }
 
+/* **والزرُّ على عتبة اللمس نفسِها** (معايرةُ الجلسة ١٠): كان ٣ ريم = ٤٨بك — وهو
+   حدُّ الكبار (وأصلُه بذرةُ اقرأ وجمهورُها من السادسة). وأزرارُ `btn` ليست زينةً في
+   شاشات الطفل: بابُ الخروج إلى الخريطة في ترويسة كل محطة، و«أَعِدْ» في النمذجة،
+   وزرّا الميدالية، وأزرارُ البوابة — كلُّها يلمسها طفلُ الرابعة. فصارت `--tap`.
+   (وأشرطةُ الكبار تخفضها عندها بأسبابها: المعاينةُ والتثبيت.) */
 .btn {
   display: inline-flex;
   align-items: center;
   justify-content: center;
   gap: .5rem;
-  min-height: 3rem;
+  min-height: var(--tap);
   padding: .5rem 1.25rem;
   border-radius: var(--radius-btn);
   background: var(--card);
@@ -383,9 +400,11 @@ button {
 .station--folded { padding-bottom: 1rem; }
 .station--folded .station-head { margin-bottom: 0; }
 
+/* **ورأسُ المحطة المطويّ زرُّ طفلٍ لا عنوان** (معايرةُ الجلسة ١٠): به يفرد الطفلُ
+   محطةً بعيدةً عن جبهته، فهو من أكثر ما يُلمَس على الخريطة — وكان ٣٫٢٥ ريم = ٥٢بك. */
 .station-head--fold {
   width: 100%;
-  min-height: 3.25rem;
+  min-height: var(--tap);
   padding: 0;
   text-align: start;
 }
@@ -686,48 +705,6 @@ button {
   border-color: var(--ok);
   background: color-mix(in srgb, var(--ok) 14%, var(--mix));
 }
-
-/* ————— بطاقات الاختيار ————— */
-
-.vchip {
-  display: flex;
-  flex: 0 0 auto;                  /* لا تضيق البلاطة فينكسر نصّها حرفاً حرفاً */
-  flex-direction: column;
-  align-items: center;
-  gap: .1rem;
-  min-width: var(--tap);
-  min-height: var(--tap);
-  padding: .8rem .75rem;
-  white-space: nowrap;
-  border-radius: 20px;
-  background: var(--card);
-  border: 3px solid color-mix(in srgb, var(--accent) 25%, var(--mix));
-  box-shadow: var(--shadow);
-  color: var(--ink-soft);
-  font-size: .85rem;
-  transition: transform .15s ease, border-color .2s ease, background .2s ease;
-}
-
-.vchip:active { transform: scale(.95); }
-
-.vchip-face {
-  font-family: var(--font-num);
-  font-size: 3rem;
-  line-height: 1.5;
-  color: color-mix(in srgb, var(--accent) 78%, var(--ink));
-}
-
-.vchip--big { min-width: 6.5rem; }
-.vchip--big .vchip-face { font-size: 3.6rem; }
-.vchip--tag { min-width: 0; padding: .5rem .85rem; border-color: color-mix(in srgb, var(--chip, var(--accent)) 45%, var(--mix)); }
-
-.vchip.good {
-  background: color-mix(in srgb, var(--ok) 14%, var(--mix));
-  border-color: var(--ok);
-}
-
-.vchip.good .vchip-face { color: var(--ok-text); }
-.vchip.bad { background: color-mix(in srgb, var(--err) 12%, var(--mix)); border-color: var(--err); }
 
 .chip {
   min-height: 3rem;
@@ -1168,6 +1145,24 @@ button {
 
 .install-bar .install-go { min-height: 3rem; padding: .35rem 1.15rem; font-size: 1rem; }
 
+/* **سطرُ التحديث الهادئ** (الجلسة ١٠·أ): خبرٌ لوليّ الأمر لا مقاطعةٌ لدرس — **في
+   مجرى الصفحة** فوق الترويسة (لا طبقةٌ عائمة تغطّي زرّاً)، **وبلا زرٍّ ولا فعل**،
+   ولا يُرسَم أصلاً على شاشة تمرين (`paintUpdateNote` في `main.js`). وهيئتُه هيئةُ
+   شريط التثبيت نفسِها: سطرُ كبارٍ هادئ فوق الورق. */
+.update-note {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: .45rem;
+  margin: 0;
+  padding: .55rem 1rem;
+  background: var(--paper-deep);
+  border-bottom: 1px solid var(--line);
+  color: var(--ink-soft);
+  font-size: .95rem;
+  line-height: 1.6;
+}
+
 .install-x {
   min-width: 2.75rem;
   min-height: 2.75rem;
@@ -1308,7 +1303,10 @@ button {
 }
 
 .q-side { padding: .35rem; }
-.same-btn { max-width: 22rem; margin: 0 auto; min-height: 3.5rem; }
+/* **وزرُّ «هُمَا سَوَاء» على العتبة** (معايرةُ الجلسة ١٠): كان ٣٫٥ ريم = ٥٦بك — وهو
+   **الزرُّ الذي وقف عنده الطفلُ** في أول امتحان ميدانيّ (`FIELD.md §٤`)، فأولى ما
+   يبلغ عتبتَه. (م٦ رفعت أخاه في «اجعلهما سواء» وبقي هذا.) */
+.same-btn { max-width: 22rem; margin: 0 auto; min-height: var(--tap); }
 .same-btn .station-mark { position: static; width: 2.4rem; flex: none; color: inherit; opacity: 1; }
 
 /* ————— «اجعلهما سواء»: لوحان يُعدَّلان باللمس (م٥ · `FIELD.md §٤`) —————

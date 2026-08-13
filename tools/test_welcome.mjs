@@ -57,7 +57,14 @@ const emojiIndex = JSON.parse(read('emoji/index.json', APP));
 // فدفعةٌ جديدة تُسقِط الفحصَ يومَ تُصرَّف — وذاك الحارسُ يعمل لا عيبٌ فيه.
 const audioVersions = JSON.parse(read('audio/versions.json', APP));
 
-const SITE = 'https://calc.mishkat.qa/';          // الاستثناءُ المعلَن الوحيد
+/* **استثناءان معلَنان لا أكثر** (أمرُ المالك عبر العائلة، ١٣ أغسطس ٢٠٢٦ —
+   `2026-08-13-email-and-family-link.md`): كان الحارسُ يقول «إلا عنوانَ موقعنا» فحسب،
+   فلمّا أُمر بسطر بوابة العائلة **صُحّح بقراره المعلَن ولم يُحوَّط حوله** (كذا فعلت
+   اقرأ). والفرقُ بين الاثنين وبين رابطٍ خارجيّ ثالث: هذان **بيتُنا**، ولا يُجلَب
+   منهما بايتٌ عند الفتح — يُفتحان إن نُقرا. */
+const SITE = 'https://calc.mishkat.qa/';            // عنوانُنا في ترويسة المطبوع
+const FAMILY = 'https://learn.mishkat.qa/';         // بوابةُ العائلة في الفوتر
+const ALLOWED = [SITE, FAMILY];
 
 // ————— ١. خارج التطبيق وخارج قشرة عامل الخدمة —————
 
@@ -95,8 +102,22 @@ for (const [name, text] of Object.entries(PAGES)) {
     `${name}: صفرُ مَوردٍ خارجيّ يُجلَب${fetched.length ? ' — ' + fetched.join('، ') : ''}`);
 
   const outward = [...text.matchAll(/<a[^>]*href="(https?:[^"]+)"/g)].map((m) => m[1]);
-  ok(outward.every((v) => v === SITE) && outward.length <= 1,
-    `${name}: ولا رابطَ خارجيّ إلا عنوانَ موقعنا في ترويسة المطبوع`);
+  const stray = outward.filter((v) => !ALLOWED.includes(v));
+  ok(stray.length === 0 && outward.length <= 2,
+    `${name}: ولا رابطَ خارجيّ إلا عنوانَنا وبوابةَ العائلة (${outward.length})`
+    + (stray.length ? ` — دخل: ${stray.join('، ')}` : ''));
+
+  // **وسطرُ بوابة العائلة في الفوتر لا في متن الصفحة**: أمرُ المالك «في كل صفحة
+  // تعريفية»، فيُقاس في الأربع كلِّها — ونصُّه يسمّي التطبيق واسمَ العائلة معاً.
+  const foot = text.slice(text.indexOf('<footer'));
+  ok(foot.includes(FAMILY) && foot.includes('عائلة التعليم') && foot.includes('«اِحْسِبْ»'),
+    `${name}: وفي فوترها سطرُ بوابة العائلة («اِحْسِبْ» واحدٌ من عائلة التعليم الأولي)`);
+
+  // **والبريدُ المرجع واحدٌ للعائلة كلِّها** (`info@mishkat.qa`) — ولا بريدَ سواه:
+  // بريدٌ قديم في صفحةٍ منشورة يوجّه الناسَ إلى صندوقٍ لا يُقرأ.
+  const mails = [...new Set([...text.matchAll(/mailto:([^"?]+)/g)].map((m) => m[1]))];
+  ok(mails.length === 1 && mails[0] === 'info@mishkat.qa',
+    `${name}: وبريدُها المرجع info@mishkat.qa وحدَه (${mails.join('، ') || 'لا بريد'})`);
 
   // و`mailto:` ليس ملفّاً يُطلَب: فعلُ مراسلةٍ يفتحه المتصفّح إن نُقر
   const links = [...text.matchAll(/(?:href|src)="([^"#][^"]*)"/g)].map((m) => m[1])

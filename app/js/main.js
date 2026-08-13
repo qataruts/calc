@@ -373,6 +373,7 @@ async function render() {
 
   if (token !== renderToken) return;   // سبقتنا وجهة أحدث
   app.replaceChildren(screen);
+  paintUpdateNote();                   // يظهر في الهدوء ويغيب عن الدرس (لا يقاطع)
   if (!name) revealNext();
   else window.scrollTo(0, 0);
 }
@@ -419,6 +420,57 @@ function registerServiceWorker() {
     .catch((e) => console.warn('[sw] لم يُسجَّل عامل الخدمة:', e));
 }
 
+/* ————— إشعارُ التحديث الهادئ (قيدُ الجلسة ١٠·أ — تتمةُ أمر المالك) —————
+ *
+ * نسخةُ القشرة تُرى في لوحة وليّ الأمر (بلاغُ العائلة `version-visibility`)،
+ * **وهذا شقُّها الثاني: أن لا يُسأل السؤال أصلاً**. فقشرةٌ جديدة تتفعّل والصفحةُ
+ * مفتوحة تترك الجهازَ على حالٍ ملتبس — شيفرةٌ قديمة تعمل في الذاكرة وجديدةٌ في
+ * المخزون تنتظر فتحةً — وثمنُه دُفع مرّتين: م١ («لا يشهد ميدانٌ على شيفرة ميّتة»)
+ * وم٦ («هل لم يصل التحديث؟»).
+ *
+ * **وثلاثةُ قيودٍ لكلٍّ علّتُه:**
+ *  ١) **لا يقطع تمريناً**: لا صوتَ ولا حوارَ ولا إعادةَ تحميلٍ تلقائية — والإشعارُ
+ *     **لا يُعرَض على شاشة تمرينٍ أصلاً**: يُنتظَر به حتى يعود إلى الخريطة أو
+ *     يفتح وليُّ الأمر لوحَه، فهو خبرُ كبارٍ لا مقاطعةُ درس.
+ *  ٢) **لا يحجب شيئاً**: سطرٌ **في مجرى الصفحة** فوق الترويسة كشريط المعاينة، لا
+ *     طبقةٌ عائمة تغطّي زرّاً تحتها.
+ *  ٣) **ولا فعلَ فيه**: لا زرَّ ولا وسيطَ يلزم أحداً — فلا يقع تحت حارس الصنف
+ *     (قاعدةُ اللاقراءة تحرس ما **يلزم الطفلَ** فعلُه)، ويُقرأ ويُترك.
+ *
+ * **وأولُ تولٍّ ليس تحديثاً**: القشرةُ تتولّى الصفحةَ التي سجّلتها أوّلَ مرّة
+ * (`clients.claim`) فيقع `controllerchange` بلا تحديثٍ البتّة — فتُبتلَع الأولى
+ * ويُشعَر بما بعدها. **والحالُ تُمسَك ولا تُقرأ من لحظة الإقلاع وحدَها**: صفحةٌ
+ * فُتحت بلا مُتولٍّ ثم تولّاها الأولُ ثم حلّ محلّه ثانٍ — تحديثٌ حقّ، ولو قِيس
+ * بالمُتولّي عند الإقلاع لسقط صامتاً. */
+
+const UPDATE_TEXT = 'وَصَلَ تَحْدِيثٌ — أَغْلِقْ وَافْتَحْ';
+let updateReady = false;
+
+/** المواضعُ الهادئة: الخريطةُ ولوحُ وليّ الأمر — وما سواهما درسٌ لا يُقاطَع. */
+const CALM = new Set(['', 'parent']);
+
+function paintUpdateNote() {
+  const shown = document.querySelector('.update-note');
+  const here = location.hash.replace(/^#\/?/, '').split('/')[0];
+  if (!updateReady || !CALM.has(here)) {
+    shown?.remove();
+    return;
+  }
+  if (shown) return;
+  document.body.prepend(h('p', { class: 'update-note' }, icon('repeat'), UPDATE_TEXT));
+}
+
+function watchShellUpdate() {
+  const sw = navigator.serviceWorker;
+  if (!sw?.addEventListener) return;
+  let controlled = Boolean(sw.controller);
+  sw.addEventListener('controllerchange', () => {
+    if (!controlled) { controlled = true; return; }   // أولُ تولٍّ: تثبيتٌ لا تحديث
+    updateReady = true;
+    paintUpdateNote();
+  });
+}
+
 /* **شريطُ المعاينة ظاهرٌ لا خفيّ** (بذرةُ اقرأ): مَن يفتح التطبيق بـ`?preview=1` يرى
    الرحلةَ كلَّها مفتوحة — فلو لم يُعلَن ذلك لظنّ أنّ هذا ما يراه الطفل، **والقفلُ
    التسلسليّ جوهرُ المنهج**. فالشريطُ يقول ما يجري ويقول إنّ شيئاً لا يُحفَظ، ومنه
@@ -460,3 +512,4 @@ audio.ready();
 startClock();
 render();
 registerServiceWorker();
+watchShellUpdate();

@@ -220,6 +220,30 @@ ok(main.includes("location.protocol.startsWith('http')"),
 ok(/\.catch\(/.test(main.slice(main.indexOf('registerServiceWorker'))),
   'ورفضُ التسجيل لا يُسقِط التطبيق');
 
+// **وقشرةٌ جديدة تتفعّل والصفحةُ مفتوحة تُعلِن نفسَها** (الجلسة ١٠·أ — تتمةُ أمر
+// المالك في بلاغ `version-visibility`): وهذا الطرفُ الثالث بعد «القشرةُ تجيب»
+// و«اللوحةُ تعرض». **وحدودُه محروسةٌ كنصّه**: لا إعادةَ تحميلٍ تلقائية تخطف تمريناً
+// من يد طفل، ولا إشعارَ على شاشة درس (المواضعُ الهادئة معلَنة)، وأولُ تولٍّ يُبتلَع
+// فلا يُقال «وصل تحديث» لمن فتح التطبيق أوّلَ مرّة.
+{
+  const watch = main.slice(main.indexOf('function watchShellUpdate'));
+  ok(main.includes("'controllerchange'") && main.includes('watchShellUpdate()'),
+    'وتفعُّلُ قشرةٍ جديدة يُلتقَط (`controllerchange`) والحارسُ موصولٌ عند الإقلاع');
+  ok(/if \(!controlled\) \{ controlled = true; return; \}/.test(watch),
+    'وأولُ تولٍّ يُبتلَع (تثبيتٌ لا تحديث) — فلا يُشعَر به من فتح التطبيق أوّلَ مرّة');
+  ok(main.includes('UPDATE_TEXT') && main.includes('وَصَلَ تَحْدِيثٌ'),
+    'وإشعارُه سطرٌ يُقرأ («وَصَلَ تَحْدِيثٌ — أَغْلِقْ وَافْتَحْ»)');
+  ok(!/location\.reload|window\.location\.reload/.test(main),
+    '**ولا إعادةَ تحميلٍ تلقائية** — تخطف تمريناً من يد الطفل (الإشعارُ يخبر ولا يفعل)');
+  const paint = main.slice(main.indexOf('function paintUpdateNote'), main.indexOf('function watchShellUpdate'));
+  ok(/CALM\.has\(here\)/.test(paint) && /const CALM = new Set\(\['', 'parent'\]\)/.test(main),
+    'ولا يُرسَم إلا في موضعٍ هادئ (الخريطة أو لوحة وليّ الأمر) — لا على شاشة تمرين');
+  ok(/paintUpdateNote\(\);\s*\/\//.test(main.slice(main.indexOf('app.replaceChildren'))),
+    'ويُراجَع عند كل توجيهٍ — فيغيب بالدخول إلى الدرس ويعود بالخروج منه');
+  ok(!/class: 'update-note'[^)]*onclick/.test(main) && /\.update-note\s*{/.test(read('css/app.css')),
+    'وهو سطرٌ في مجرى الصفحة بلا زرٍّ ولا فعل (لا يحجب ولا يُنقَر)');
+}
+
 // ————— ٦. المقياس: قرصةُ الطفل حرة، والعودةُ من الخلفية بمقياس ١ —————
 //
 // **وهذا الحارسُ كان يحرس القفلَ فقُلب** (الجلسة م٣، `read@7f18bf0`): بلاغان ميدانيان

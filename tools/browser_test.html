@@ -190,11 +190,20 @@
   const over = doc.documentElement.scrollWidth - win.innerWidth;
   ok(over <= 0, `لا فائضَ أفقيّ في الخريطة (${over}px)`);
 
-  // ————— ٦) هدفُ اللمس ≥ ٦٤ بكسل (METHOD §١١ — جمهورُنا من الرابعة) —————
+  /* ————— ٦) هدفُ اللمس ≥ ٦٤ بكسل (METHOD §١١ — جمهورُنا من الرابعة) —————
+
+     **وكانت العتبةُ هنا ٤٤/٤٠ لا ٦٤** (معايرةُ الجلسة ١٠): حارسٌ يقيس بمسطرةٍ أرخى
+     من العهد يمرّ أخضرَ على ما ينقضه — وقد مرّ: `--tap` كانت ٦٠ لا ٦٤، و`btn` ٤٨.
+     فصارت المسطرةُ **هي المعلَنة** بلا تحويط، والاستثناءُ الوحيد استثناءُ `METHOD.md`
+     نفسِه (أزرارُ عناصر اللوح ٤٤ — م٦). */
+  const TOUCH_MIN = 64;
+  const BOARD_MIN = 44;
+  const needOf = (el) => (el.classList.contains('fig-tap') && el.closest('.q-equal')
+    ? BOARD_MIN : TOUCH_MIN);
   const small = [...doc.querySelectorAll('button, a.btn, label.btn')]
     .filter((el) => el.offsetParent !== null)
     .map((el) => ({ el, r: el.getBoundingClientRect() }))
-    .filter(({ r }) => r.width > 0 && (r.height < 44 || Math.min(r.width, r.height) < 40));
+    .filter(({ el, r }) => r.width > 0 && Math.min(r.width, r.height) < needOf(el) - 0.5);
   ok(small.length === 0,
     `وكلُّ زرٍّ ظاهرٍ يبلغ هدفَ اللمس${small.length
       ? ` — أصغرُها: ${small.map(({ el, r }) => `${el.className.split(' ')[0]} ${Math.round(r.width)}×${Math.round(r.height)}`).slice(0, 3).join('، ')}` : ''}`);
@@ -1714,6 +1723,24 @@
   const bareNames = (rows) => rows
     .map((el) => `«${(el.textContent || '').trim().slice(0, 24)}»`).join('، ');
 
+  /* **وعلى المشي نفسِه يُقاس هدفُ اللمس** (معايرةُ الجلسة ١٠ — `METHOD.md §١١`):
+     `--device` يجرد الشاشات كلَّها في المقاسات العشرة، لكنّه يراها **على خطوة
+     «شاهِدْ»** — والنمذجةُ لا أزرارَ طفلٍ فيها إلا زرّاها. وهذا المشيُ يبلغ **نوبةَ
+     الطفل** (بطاقاتُ الجواب · لمساتُ اللوح · ميداليةُ الختام)، فيُقاس فيه ما لا
+     يبلغه ذاك. وأزرارُ الكبار تُستثنى **بأسبابها المكتوبة** (وهي أعيانُ إعفاءات
+     جرد الصنف: أدواتُ التجربة · المعاينة · التثبيت · بوابةُ لوحة وليّ الأمر). */
+  const ADULT = ['.dev', '.preview-bar', '.install-bar', '.gate'];
+  const undersized = (d) => [...d.querySelectorAll('button, a.btn, label.btn')]
+    .filter((el) => el.offsetParent !== null)
+    .filter((el) => !ADULT.some((sel) => el.closest(sel)))
+    .map((el) => ({ el, r: el.getBoundingClientRect(), need: needOf(el) }))
+    .filter(({ r, need }) => r.width > 0 && r.height > 0
+      && Math.min(r.width, r.height) < need - 0.5);
+  const tightNames = (rows) => rows.map(({ el, r, need }) =>
+    `${(el.className || 'button').split(' ')[0]} ${Math.round(r.width)}×${Math.round(r.height)}`
+    + ` (عتبتُه ${need})`).join('، ');
+  const undersizedRows = [];
+
   /* والمشهد: خريطةٌ ثم نمذجةٌ بزرَّيها، ثم الشاشتان اللتان وقف عندهما الطفلُ نفسُه
      («أيُّهما أكثر» بزرّ التساوي، و«اجعلهما سواء» التي كانت خمسةَ نصوص)، ثم ميدالية. */
   const textOnly = [];
@@ -1729,6 +1756,7 @@
       || d.querySelector('main.map'), 22000);
     seenScreens++;
     textOnly.push(...bareButtons(cdoc).map((el) => `${what} (نمذجة): ${bareNames([el])}`));
+    for (const row of undersized(cdoc)) undersizedRows.push(`${what} (نمذجة): ${tightNames([row])}`);
     if (!hash) continue;
     // ثم شاشةُ التمرين نفسِها — حيث الأزرارُ التي يلمسها الطفلُ ليجيب
     cdoc.querySelector('.station-body .next')?.click();
@@ -1736,13 +1764,19 @@
       || d.querySelector('.same-btn') || d.querySelector('.q-equal'), 22000);
     seenScreens++;
     textOnly.push(...bareButtons(cdoc).map((el) => `${what} (تمرين): ${bareNames([el])}`));
+    for (const row of undersized(cdoc)) undersizedRows.push(`${what} (تمرين): ${tightNames([row])}`);
     // ثم ميداليةُ الختام — زرّا «الخريطة» و«أَعِدْ»
     [...cdoc.querySelectorAll('.dev button')]
       .find((b) => b.textContent.includes('إنهاء المحطة'))?.click();
     await until(cdoc, (d) => d.querySelector('.celebrate'), 12000);
     seenScreens++;
     textOnly.push(...bareButtons(cdoc).map((el) => `${what} (ميدالية): ${bareNames([el])}`));
+    for (const row of undersized(cdoc)) undersizedRows.push(`${what} (ميدالية): ${tightNames([row])}`);
   }
+  ok(undersizedRows.length === 0,
+    `وكلُّ زرِّ طفلٍ على ${seenScreens} شاشةٍ يبلغ عتبةَ اللمس المعلَنة `
+    + `(${TOUCH_MIN}بك، وعناصرُ اللوح ${BOARD_MIN} — استثناءُ \`METHOD.md §١١\`)`
+    + (undersizedRows.length ? ` — **دون عتبته: ${undersizedRows.join(' | ')}**` : ''));
   ok(textOnly.length === 0 && seenScreens === 10,
     `وكلُّ زرٍّ على ${seenScreens} شاشةِ طفلٍ فيه ما يُرى لا حروفٌ وحدَها `
     + `(${EXEMPT.length} معفىً بسببه: ${EXEMPT.map(([sel, why]) => `${sel} — ${why}`).join(' · ')})`
@@ -1963,6 +1997,87 @@
   ok(namesBack.length === cleanRun.length && namesBack.every((t, i) => t === cleanRun[i]),
     `**والعودةُ تبدأ من صفر**: عدٌّ واحدٌ من «${NAME_HEARD[1]}» إلى ما رُسِم `
     + `(المرسومُ ${drawnBack}، وسُمع: ${namesBack.join('، ') || 'لا شيء'})`);
+
+  /* ————— ١١ل) **إشعارُ التحديث الهادئ** (الجلسة ١٠·أ — تتمةُ أمر المالك) —————
+
+     رؤيةُ النسخة في لوحة وليّ الأمر تجيب مَن سأل، **والإشعارُ يغني عن السؤال**: قشرةٌ
+     جديدة تتفعّل والصفحةُ مفتوحة تترك الجهازَ على شيفرةٍ قديمة تعمل وجديدةٍ تنتظر
+     فتحة — وهو ما أفسد شهادةَ الميدان مرّتين (م١ وم٦).
+
+     **وحدودُه تُقاس كنصّه**: أولُ تولٍّ يُبتلَع (تثبيتٌ لا تحديث) · ولا يُرسَم على
+     شاشة تمرين · ولا يُسمِع صوتاً ولا يعيد تحميلاً · ولا زرَّ فيه · وهو **في مجرى
+     الصفحة** لا طبقةٌ تحجب زرّاً تحتها.
+
+     **والحدثُ يُصطنَع لا يُنتظَر**: `controllerchange` حدثٌ من المتصفّح، فيُبعَث على
+     `navigator.serviceWorker` في نافذة التطبيق نفسِها — فيُقاس ما يفعله التطبيق حين
+     يقع، بلا تعليقِ الحارس على تفعيلِ قشرةٍ حقيقيّ (وذاك مصدرُ حُمرةٍ كاذبة تحت
+     الحمل — بلاغُ العائلة `busy-machine-false-reds`). */
+
+  const UPDATE_TEXT = 'وَصَلَ تَحْدِيثٌ — أَغْلِقْ وَافْتَحْ';
+  const upDoc = await open('#/');
+  const upWin = upDoc.defaultView;
+  const noteIn = (d) => d.querySelector('.update-note');
+  const claim = () => upWin.navigator.serviceWorker
+    .dispatchEvent(new upWin.Event('controllerchange'));
+  const settle = (ms = 500) => new Promise((r) => setTimeout(r, ms));
+
+  ok(!noteIn(upDoc), 'لا إشعارَ تحديثٍ على خريطةٍ لم يقع فيها تحديث');
+
+  /* **والفرعُ يُقرأ من الحال لا يُفترَض**: إن كانت الصفحةُ متولَّاةً أصلاً فقد ابتلع
+     التطبيقُ تولّيها الحقيقيَّ، فأوّلُ حدثٍ نبعثه **هو التحديث**؛ وإن لم تكن، فأولُ
+     ما نبعثه هو التولّي الأول ويجب أن يُبتلَع. وأيّاً كان الفرعُ يُسمّى في التقرير. */
+  const wasControlled = Boolean(upWin.navigator.serviceWorker.controller);
+  const playsBefore = played.length;
+  claim();
+  await settle();
+  if (!wasControlled) {
+    ok(!noteIn(upDoc), '**وأولُ تولٍّ ليس تحديثاً**: يُبتلَع فلا إشعارَ لمن فتح التطبيق أوّلَ مرّة');
+    claim();
+    await settle();
+  } else {
+    /* **ولا يُدّعى قياسٌ لم يقع**: الصفحةُ هنا متولَّاةٌ سلفاً (عاملُ الخدمة يعمل على
+       خادم الفحص)، فالتولّي الأولُ ابتُلع قبل أن نصل — وهذا نفسُه يُقاس، ويُقال أين
+       يقع بابُه المُجرَّب سالباً بدل ادّعاء ما لا يُرى هنا. */
+    ok(wasControlled,
+      'والصفحةُ متولَّاةٌ سلفاً فأوّلُ حدثٍ مبعوثٍ تحديثٌ لا تولٍّ '
+      + '— وبابُ ابتلاع أوّلِ تولٍّ مُجرَّبٌ سالباً في `test_pwa.mjs`');
+  }
+
+  const note = noteIn(upDoc);
+  ok(note && note.textContent.includes(UPDATE_TEXT),
+    `وتفعُّلُ قشرةٍ جديدة يُعلَن سطراً هادئاً: «${UPDATE_TEXT}»`
+    + (note ? '' : ' — **لم يظهر شيء**'));
+  ok(played.length === playsBefore,
+    `**ولا يقطع شيئاً**: صفرُ صوتٍ شُغِّل بسببه (${played.length - playsBefore})`);
+  ok(note && !note.querySelector('button, a'),
+    'ولا زرَّ فيه ولا رابط — خبرٌ يُقرأ ويُترَك (فلا يقع تحت حارس الصنف)');
+
+  /* **ولا يحجب**: سطرٌ في المجرى (`position: static`) يزحزح ما تحته ولا يعلوه —
+     فيُقابَل صندوقُه بصناديق الأزرار الظاهرة كلِّها: تقاطعٌ واحد يكفي حجباً. */
+  const noteBox = note?.getBoundingClientRect();
+  const covered = !note ? [] : [...upDoc.querySelectorAll('button')]
+    .filter((el) => el.offsetParent !== null)
+    .map((el) => ({ el, r: el.getBoundingClientRect() }))
+    .filter(({ r }) => r.width > 0 && r.height > 0
+      && r.left < noteBox.right && r.right > noteBox.left
+      && r.top < noteBox.bottom && r.bottom > noteBox.top);
+  ok(note && upWin.getComputedStyle(note).position === 'static' && covered.length === 0,
+    `وهو في مجرى الصفحة لا يحجب زرّاً${covered.length
+      ? ` — **يغطّي: ${covered.map(({ el }) => el.className.split(' ')[0]).join('، ')}**` : ''}`);
+  const upOver = upDoc.documentElement.scrollWidth - upWin.innerWidth;
+  ok(upOver <= 0, `ولا فائضَ أفقيّ بظهوره (${upOver}px)`);
+
+  /* **ولا يقتحم درساً**: الدخولُ إلى محطةٍ يُسقطه، والعودةُ تردّه — فالخبرُ ينتظر
+     في الهدوء ولا يزاحم شاشةً يعمل عليها طفل. */
+  upWin.location.hash = '#/count/three';
+  await until(upDoc, (d) => d.querySelector('.station-screen'), 12000);
+  await settle(300);
+  ok(upDoc.querySelector('.station-screen') && !noteIn(upDoc),
+    '**ولا يُعرَض على شاشة تمرين**: يغيب بالدخول إلى المحطة (لا يقاطع درساً)');
+  upWin.location.hash = '#/';
+  await until(upDoc, (d) => d.querySelector('main.map'), 12000);
+  await settle(300);
+  ok(!!noteIn(upDoc), 'ويعود بالخروج إلى الخريطة (خبرٌ لا يضيع بدخولٍ وخروج)');
 
   /* ————— ١٢) **تعاقبُ الصوت**: صوتٌ واحدٌ في الجوّ، والانتقالُ بعد تمامه —————
 

@@ -117,6 +117,16 @@ def self_test() -> int:
                    'وترسل أرقامَها نصّاً (لا لقطةً قد تخرج بيضاء)'))
     checks.append(('<script' in text and 'welcome' in str(PAGE),
                    'وهي في `welcome/` — خارج اعتراض عامل الخدمة'))
+    # **وتقيس صفحاتِ التعريف الأربعَ كما تقيس التطبيق** (الجلسة ١٠): صارت تحمل ١٧
+    # لقطة، وثِقَلُها يقع على شبكة معلّمٍ لا نملكها — فيُقاس ولا يُقدَّر. والقائمةُ
+    # تُقابَل بما على القرص فلا تُنسى صفحةٌ تُكتب غداً.
+    pages = sorted(p.name for p in PAGE.parent.glob('*.html') if p.name != PAGE.name)
+    missing = [name for name in pages if f"./{name}" not in text]
+    checks.append((not missing,
+                   f'وتقيس صفحاتِ التعريف كلَّها ({len(pages)} صفحات)'
+                   + (f' — غابت: {"، ".join(missing)}' if missing else '')))
+    checks.append(('encodedBodySize' in text,
+                   'وثِقَلُ كلٍّ منها محسوبٌ من بايتاتها لا مقدَّراً'))
     bad = [msg for good, msg in checks if not good]
     for good, msg in checks:
         print(('  ✓ ' if good else '  ✗ ') + msg)

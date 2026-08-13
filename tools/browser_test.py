@@ -273,15 +273,27 @@ def render_shots(args) -> int:
     return 1 if missing else 0
 
 
+def orientations(size: str) -> list:
+    """المقاسُ **طولاً وعرضاً** (الجلسة ١٠): شاشةٌ سليمةٌ قائمةً قد تضيق مضطجعة —
+    والطفلُ يمسك اللوحَ كيف شاء، فلا يُقاس أحدُ وضعيه ويُترك الآخر."""
+    wide, tall = size.split(",")
+    return [("طولاً", f"{wide},{tall}"), ("عرضاً", f"{tall},{wide}")]
+
+
 def device_main(args) -> int:
-    """مقاسات الآيباد: **لا فائض أفقيّ** على أيٍّ منها."""
+    """مقاسات الآيباد **طولاً وعرضاً**: لا فائض أفقيّ، وأهدافُ اللمس على عتبتها.
+
+    والعتبةُ `METHOD.md §١١` (٦٤ بكسلاً) **باستثنائها المعتمد** (٤٤ لأزرار عناصر
+    لوح «اجعلهما سواء» — م٦)، والحكمُ يقع في الصفحة حيث تُقاس الصناديق، وهنا يُقرأ.
+    """
     results: list = []
     server = make_server(args.port, results)
     threading.Thread(target=server.serve_forever, daemon=True).start()
     fails = 0
     profiles = []
+    runs = [(f"{name} {way}", dims) for name, size in IPADS for way, dims in orientations(size)]
     try:
-        for name, size in IPADS:
+        for name, size in runs:
             results.clear()
             # **مِلفٌّ جديد لكل مقاس**: المقتولُ يترك قفلَ ملفّه خلفه لحظاتٍ، فتنضمّ
             # اللقطةُ التالية إلى نسخةٍ ميتة بمقاسٍ ليس مقاسَها فلا تصل نتيجةٌ أبداً
@@ -301,17 +313,40 @@ def device_main(args) -> int:
             row = results[0]
             over = row.get("overflow", -1)
             vw, _vh = (int(x) for x in size.split(","))
-            good = over <= 0 and row.get("width") == vw
+            small = row.get("small") or []
+            missed = row.get("missed") or []
+            tight = row.get("tight") or {}
+            good = over <= 0 and row.get("width") == vw and not small and not missed
             fails += not good
+            # أضيقُ ما قِيس في كلِّ صنفٍ يُطبَع **وإن كان أخضر**: رقمٌ يُرى يقول كم
+            # بقي من الهامش قبل العتبة، فلا يُفاجئ يومَ ينزل عنها.
+            def tightest(slot, label):
+                got = tight.get(slot)
+                return (f" · أضيقُ {label} {got['side']}بك ({got['cls']}، عتبتُه {got['need']})"
+                        if got else f" · لا {label}")
             print(("  ✓ " if good else "  ✗ ")
                   + f"{name} ({size}): منظورٌ {row.get('width')}×{row.get('height')}"
-                  + f" · فائضٌ أفقيّ {over}px"
+                  + f" · {row.get('screens', 0)} شاشةً · فائضٌ أفقيّ {over}px"
+                  + tightest("deciding", "زرّ")
+                  + tightest("board", "لمسةِ لوح")
                   + ("" if row.get("width") == vw else " — عايِر VIEWPORT_PAD"))
+            if small:
+                shown = len(small)
+                print(f"      — دون العتبة: {row.get('smallKinds', shown)} صنفاً"
+                      f" ({row.get('smallTotal', shown)} زرّاً مقيساً)"
+                      + (f"، يُطبَع منها {shown}" if row.get("smallKinds", shown) > shown else ""))
+            for bad in small:
+                print(f"      ✗ دون عتبته: {bad['cls']} {bad['side']}بك < {bad['need']}"
+                      f" — أوّلُ موضعٍ {bad['at']} (×{bad.get('times', 1)})")
+            for gone in missed:
+                print(f"      ✗ لم تُرسَم شاشةٌ في مهلتها: {gone}")
     finally:
         server.shutdown()
         for p in profiles:
             shutil.rmtree(p, ignore_errors=True)
-    print(f"\n{fails} إخفاق" if fails else "\nلا فائضَ أفقيّ على أيّ مقاس آيباد.")
+    print(f"\n{fails} إخفاق" if fails
+          else f"\nلا فائضَ أفقيّ ولا هدفَ لمسٍ دون عتبته — {len(runs)} جولةً"
+               f" ({len(IPADS)} مقاساتٍ طولاً وعرضاً).")
     return 1 if fails else 0
 
 
@@ -384,6 +419,21 @@ def self_test() -> int:
     # **مقاسات الآيباد الخمسة** (`METHOD.md §١٠.٧`) — لا أربعة ولا واحد
     checks.append((len(IPADS) == 5, f"ومقاساتُ الآيباد خمسةٌ ({len(IPADS)})"))
     checks.append((all("," in size for _n, size in IPADS), "ولكلٍّ عرضُه وارتفاعُه"))
+    # **وكلٌّ يُمشى طولاً وعرضاً** (الجلسة ١٠): عشرُ جولاتٍ لا خمس — والانقلابُ محسوبٌ
+    # لا مكتوب، فلا مقاسَ يُنسى وجهُه الثاني.
+    flipped = orientations(IPADS[0][1])
+    checks.append((len(flipped) == 2 and flipped[0][1].split(",")[::-1] == flipped[1][1].split(","),
+                   f"وكلُّ مقاسٍ يُمشى طولاً وعرضاً ({len(IPADS) * 2} جولةً)"))
+    # **وشاشاتُ المسح تُحسب من المنهج**: لو كُتبت قائمةً هنا لَبقي نوعٌ جديد خارجَها
+    # صامتاً — وهو عينُ ما تحرسه أنماطُ `guards.mjs`.
+    device_page = (TOOLS / "browser_device.html").read_text(encoding="utf-8")
+    checks.append(("import { sections } from '/js/curriculum.js'" in device_page
+                   and "firstOfEachType" in device_page,
+                   "وشاشاتُ المسح محسوبةٌ من المنهج (نوعٌ جديد يدخلها يومَ يُكتب)"))
+    # **وعتبةُ اللمس هي المعلَنة في `METHOD.md §١١` باستثنائها المعتمد** — لا رقمٌ
+    # يُخفَّض في الحارس ليمرّ ما لا يمرّ.
+    checks.append(("const TOUCH_MIN = 64" in device_page and "const BOARD_MIN = 44" in device_page,
+                   "وعتبةُ اللمس ٦٤ (وأزرارُ عناصر اللوح ٤٤ — استثناءُ `METHOD.md §١١`)"))
     checks.append((APP.exists() and (APP / "index.html").exists(),
                    "وجذرُ التطبيق الذي يُخدَم موجود (`app/index.html`)"))
 

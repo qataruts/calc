@@ -10,58 +10,133 @@
 <script type="module">
   /* صفحةُ الجهاز: التطبيقُ يملأ المنظور بمقاس الآيباد الذي فُتحت به النافذة،
      فيُقاس **الفائضُ الأفقيّ** حيث يقع فعلاً — لا في إطارٍ ذي مقاسٍ آخر.
-     و«بلا فائض أفقي» عهدٌ مطلق (`METHOD.md §١٠.٧`): طفلُ الرابعة لا يسحب ليجد زرّاً. */
+     و«بلا فائض أفقي» عهدٌ مطلق (`METHOD.md §١٠.٧`): طفلُ الرابعة لا يسحب ليجد زرّاً.
+
+     **ومعه هدفُ اللمس** (الجلسة ١٠ — معايرةُ اللمس والأحجام لسنّ الرابعة): العهدُ
+     `METHOD.md §١١` أزرارٌ ≥ ٦٤ بكسلاً **باستثنائه المعتمد** (م٦): أزرارُ عناصر اللوح
+     الملموسة أرضيتُها ٤٤. وهو يُقاس **حيث يقع**: زرٌّ يبلغ عتبتَه على آيباد ١٢٫٩ قد
+     ينكمش تحتها على mini، وشاشةٌ سليمةٌ طولاً قد تضيق عرضاً — فيُمشى على المقاسات
+     الخمسة **طولاً وعرضاً** (تسوقها `browser_test.py --device`).
+
+     **والشاشاتُ تُحسَب من المنهج لا تُكتَب هنا**: نوعُ عقدةٍ جديد يدخل الرحلةَ غداً
+     يدخل هذا المسحَ يومَ يُكتب، بلا سطرٍ يُضاف في هذا الملفّ ولا انتباهٍ يُرجى —
+     وهي القاعدةُ نفسُها التي بها يجرد `guards.mjs` حرّاسَه. */
+
+  import { sections } from '/js/curriculum.js';
+
   const frame = document.getElementById('app');
 
-  /* **وتُقاس شاشاتُ التمارين لا الخريطةُ وحدَها** (الجلسة ٣): الكمياتُ المرسومة أوسعُ
-     ما في التطبيق (لوحُ العدّ يفرد الشكلَ ليبلغ العنصرُ هدفَ اللمس)، فهي أولى ما
-     يفيض على آيباد mini. ويُبلَّغ **أسوأُ** ما قِيس لا آخرُه. */
-  const SCREENS = [
-    '/',                                  // الخريطة
-    '/?preview=1&v=2#/count/ten',         // لوحُ العدّ — أوسعُ كمّيةٍ في الرحلة
-    '/?preview=1&v=3#/more/five',         // كميّتان متجاورتان
-    '/?preview=1&v=4#/equal/five',        // لوحا التسوية مرصوصان (م٥: لمسٌ لا أزرار)
-    // **والجلسةُ ٤ تزيد أوسعَ ما رُسم بعدُ**: خطُّ الأعداد يفرد إحدى عشرةَ خانةً
-    // على عرض البطاقة، وصفُّ الترتيب أربعَ بطاقاتِ رمز.
-    '/?preview=1&v=5#/line/ten',          // خطُّ الأعداد — أوسعُ شكلٍ في الرحلة
-    '/?preview=1&v=6#/order/ten',         // بطاقاتُ الترتيب وصفُّها
-    '/?preview=1&v=7#/numeral/ten',       // بطاقةُ الرمز وبطاقاتُ الكمّ
-    // **والجلسةُ ٥ تزيد لوحَ الجسر**: كلٌّ فوق وخانتان تحته وخمسُ بطاقاتِ أجزاءٍ
-    // أسفلَهما — أطولُ ما رُسم في الرحلة، وأولى ما يفيض على أضيق آيباد.
-    '/?preview=1&v=8#/bond/seven',        // لوحُ الجسر ببطاقاته
-    '/?preview=1&v=9#/bond/ten',          // إطارُ «أصدقاء العشرة» وبطاقاتُه
-    // **والجلسةُ ٦ تزيد لوحَ العملية**: جملةٌ رمزيةٌ في سطرٍ واحد وتحتها كمّيتُها
-    // وتحتهما بطاقاتُ الجواب — وأعرضُها صفُّ الفرق (إطارا عشرةٍ أحدهما تحت الآخر).
-    '/?preview=1&v=10#/add/machine',      // المجموعتان تلتقيان
-    '/?preview=1&v=11#/add/ten',          // الجملةُ وإطارُ العشرة تحتها
-    '/?preview=1&v=12#/diff/ten',         // صفّا الفرق المتحاذيان
-    /* **والجلسةُ ٧ تزيد أوسعَ ما رُسم في الرحلة كلِّها**: الإطاران (عشرون خانةً في
-       سطرٍ واحد) في البناء وفي العبور، وشريطُ النمط (تسعُ خاناتٍ) ومشهدُ القياس
-       (أشياءُ بمقاديرَ على خطٍّ واحد) — وصفوفُ محطة التعارف عشرةٌ في شبكة. */
-    '/?preview=1&v=13#/teen/twenty',      // الإطاران — أعرضُ كمّيةٍ في الرحلة
-    '/?preview=1&v=14#/bridge/twenty',    // إطارٌ ومُضافُه، ثم الإطاران حصيلةً
-    '/?preview=1&v=15#/pattern/abc',      // شريطُ النمط — سبعُ خاناتٍ وبطاقاتُه
-    '/?preview=1&v=16#/measure/time',     // مشهدُ القياس — ثلاثةُ مقادير
-    '/?preview=1&v=17#/intro/latin',      // صفوفُ التعارف العشرة
-  ];
+  const TOUCH_MIN = 64;   // `METHOD.md §١١` — جمهورُنا من الرابعة فالحدُّ أعلى
+  const BOARD_MIN = 44;   // الاستثناءُ المعتمد (م٦): أزرارُ عناصر لوح «اجعلهما سواء»
 
-  let worst = { overflow: -1e9 };
+  /** عتبةُ هذا الزرّ — والاستثناءُ **بموضعه المعلَن** لا بصنفه أينما وقع. */
+  const needOf = (el) => (el.classList.contains('fig-tap') && el.closest('.q-equal')
+    ? BOARD_MIN : TOUCH_MIN);
+
+  /** **نوعٌ واحدٌ ← شاشةٌ واحدة**: أوّلُ عقدةٍ من كل نوعٍ في الرحلة (والبوابةُ منها). */
+  const firstOfEachType = () => {
+    const seen = new Map();
+    for (const section of sections()) {
+      for (const node of section.nodes || []) if (!seen.has(node.type)) seen.set(node.type, node);
+    }
+    return [...seen.values()];
+  };
+
+  // الخريطةُ أوّلاً (وهي شاشةُ الطفل الأولى)، ثم شاشةُ كل نوعٍ في الرحلة.
+  // و`preview=1` يفتح المقفلَ للقياس وحدَه (لا يُحفظ منه تقدّم).
+  const SCREENS = ['#/', ...firstOfEachType().map((n) => `#/${n.type}/${n.part}`)];
+
+  /* **والتنقّلُ بالمقطع لا بإعادة تحميل**: التطبيق صفحةٌ واحدة بمسارات `hash`، فبدل
+     خمسٍ وعشرين إقلاعةً في كل مقاسٍ (وعشرِ مقاساتٍ بعدها) يُفتَح مرّةً ويُساق كما
+     يسوقه الطفلُ — أسرعُ وأصدقُ معاً. **والانتقالُ يُنتظَر بالحال**: الموجِّه يستبدل
+     شجرةَ الشاشة (`app.replaceChildren`)، فتبدُّلُ أولِ ابنٍ فيها هو الحدث. */
+  const wait = (ms) => new Promise((r) => setTimeout(r, ms));
+  const rootOf = (doc) => doc.getElementById('app')?.firstElementChild || null;
+  const swapped = async (doc, before, ms = 15000) => {
+    for (let waited = 0; waited < ms; waited += 100) {
+      const now = rootOf(doc);
+      if (now && now !== before && doc.querySelector('main.map, .station-screen, .gate')) return true;
+      await wait(100);
+    }
+    return false;
+  };
+
+  const worst = { overflow: -1e9, at: '' };       // أسوأُ فائضٍ أفقيّ
+  const tight = { deciding: null, board: null };  // أضيقُ هدفِ لمسٍ في كل صنف
+  const small = [];                               // ما نزل عن عتبته — بأسمائه
+  const missed = [];                              // شاشةٌ لم تُرسَم في مهلتها
+
+  frame.src = '/?preview=1';
+  await new Promise((r) => frame.addEventListener('load', r, { once: true }));
+  const doc = frame.contentDocument;
+  const win = frame.contentWindow;
+  await doc.fonts.ready;                          // خطٌّ يصل بعد القياس يزحزح كلَّ شيء
+
   for (const src of SCREENS) {
-    frame.src = src;
-    await new Promise((r) => frame.addEventListener('load', r, { once: true }));
-    await new Promise((r) => setTimeout(r, 1200));
-    const doc = frame.contentDocument;
-    const win = frame.contentWindow;
-    const row = {
-      overflow: doc.documentElement.scrollWidth - win.innerWidth,
-      width: win.innerWidth,
-      height: win.innerHeight,
-      at: src,
-    };
-    if (row.overflow > worst.overflow) worst = row;
+    const before = rootOf(doc);
+    win.location.hash = src;
+    if (!await swapped(doc, before)) { missed.push(src); continue; }
+    await wait(400);                              // استقرارُ الحركات القصيرة
+
+    const over = doc.documentElement.scrollWidth - win.innerWidth;
+    if (over > worst.overflow) {
+      worst.overflow = over;
+      worst.width = win.innerWidth;
+      worst.height = win.innerHeight;
+      worst.at = src;
+    }
+
+    /* **والمعطَّلُ يُقاس ولا يُستثنى**: الشاشةُ تُفتَح على خطوة «شاهِدْ» فتُعطَّل
+       أزرارُ الطفل حتى تجيء نوبتُه — وهي **الأزرارُ نفسُها بمقاسها نفسِه**، فلو
+       أُسقطت من القياس لسقط معها كلُّ هدفِ لمسٍ في التمارين ومرّ المسحُ أخضرَ على
+       شاشاتٍ لم يُقَس فيها زرُّ طفلٍ واحد. */
+    for (const el of doc.querySelectorAll('button, a.btn, label.btn')) {
+      if (el.offsetParent === null) continue;
+      /* **وشريطُ المعاينة أثرُ العدّة لا حالُ الطفل**: لا يظهر إلا بمفتاح المقيّم
+         (`?preview=1`) — وهو المفتاحُ الذي يفتح لنا المحطاتِ المقفلة لنقيسها. فقياسُ
+         زرِّه قياسُ المسطرة نفسِها، وأزرارُه أزرارُ كبارٍ في كل حال. */
+      if (el.closest('.preview-bar')) continue;
+      const r = el.getBoundingClientRect();
+      if (r.width <= 0 || r.height <= 0) continue;
+      const need = needOf(el);
+      const side = Math.min(r.width, r.height);
+      // **ويُسمّى الزرُّ بما يعرّفه**: صنفُه كلُّه ووصفُه — فمن قرأ التقرير عرف أيَّ
+      // زرٍّ يعاير، ولا يبحث عنه بالتخمين في خمسٍ وعشرين شاشة.
+      const cls = (el.className || el.tagName.toLowerCase())
+        + (el.getAttribute('aria-label') ? ` «${el.getAttribute('aria-label')}»` : '');
+      const row = { cls, side: Math.round(side), w: Math.round(r.width), h: Math.round(r.height), need, at: src };
+      const slot = need === BOARD_MIN ? 'board' : 'deciding';
+      if (!tight[slot] || side < tight[slot].side) tight[slot] = row;
+      if (side < need - 0.5) small.push(row);
+    }
   }
 
-  await fetch('/result', { method: 'POST', body: JSON.stringify({ from: 'ihsib', rows: [worst] }) });
+  /* **والمخالفاتُ تُجمَع بصنفها ولا تُقتطَع صامتة**: زرٌّ واحدٌ ضيّقٌ يتكرّر في عشرين
+     شاشةً ليس عشرين عيباً — فيُسمّى مرّةً بأضيق ما بلغه وبأوّل موضعٍ رآه، ويُعلَن
+     العددُ كلُّه مع المطبوع منه. */
+  const byClass = new Map();
+  for (const row of small) {
+    const seen = byClass.get(row.cls);
+    if (!seen || row.side < seen.side) byClass.set(row.cls, { ...row, times: (seen?.times || 0) + 1 });
+    else seen.times += 1;
+  }
+  const worstFirst = [...byClass.values()].sort((a, b) => a.side - b.side);
+
+  await fetch('/result', {
+    method: 'POST',
+    body: JSON.stringify({
+      from: 'ihsib',
+      rows: [{
+        ...worst,
+        screens: SCREENS.length,
+        tight,
+        small: worstFirst.slice(0, 20),
+        smallKinds: worstFirst.length,
+        smallTotal: small.length,
+        missed,
+      }],
+    }),
+  });
 </script>
 </body>
 </html>

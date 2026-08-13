@@ -252,6 +252,33 @@
         restore(keep);
         frame.remove();
 
+        /* ٧) **صفحاتُ التعريف نفسُها** (الجلسة ١٠): صارت تحمل سبعَ عشرةَ لقطةً بعد
+           الجلسة و — فمن يفتحها على شبكةِ معلّمٍ بطيئة يدفع ثمنَها، ولا نعرف كم هو
+           إلا بقياس. **والمقيسُ ما يُدفَع عند الفتح**: الصورُ تحت الطيّة مؤجَّلةٌ
+           (`loading="lazy"`) فلا تدخل الحساب — وذاك عينُ ما يراه الزائر أوّلَ لحظة. */
+        var PAGES = [
+          ['الرئيسة', './index.html'], ['المنهج', './curriculum.html'],
+          ['الأسس', './method.html'], ['الدليل', './guide.html'],
+        ];
+        for (var p = 0; p < PAGES.length; p++) {
+          var sheet = document.createElement('iframe');
+          document.body.append(sheet);
+          var tp = performance.now();
+          sheet.src = PAGES[p][1];
+          /* eslint-disable no-loop-func */
+          await new Promise(function (r) { sheet.addEventListener('load', r, { once: true }); });
+          var openMs = performance.now() - tp;
+          var sw2 = sheet.contentWindow;
+          var res = sw2.performance.getEntriesByType('resource');
+          var navEntry = sw2.performance.getEntriesByType('navigation')[0] || {};
+          var bytes = (navEntry.encodedBodySize || 0);
+          for (var r2 = 0; r2 < res.length; r2++) bytes += (res[r2].encodedBodySize || 0);
+          var kb = Math.round(bytes / 1024);
+          row('صفحةُ تعريف: ' + PAGES[p][0], ms(openMs), grade(openMs, 1200, 3000),
+            kb + ' ك.ب عند الفتح · ' + sw2.document.images.length + ' صورة في الصفحة');
+          sheet.remove();
+        }
+
         var nav = performance.getEntriesByType('navigation')[0] || {};
         $('#env').hidden = false;
         $('#env').textContent =
