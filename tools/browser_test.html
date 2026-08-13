@@ -422,6 +422,25 @@
     }
     return null;
   };
+  /* **مِرقَبٌ يمسك العابر** (الدفعة ص٥) — علّتُه مقيسة: حالاتُ التصحيح (`.bad` على
+     البطاقة، و`.is-counted` على الشكل) تُوضَع عند الخطأ وتُرفَع **بتمام الكلام**، فمدّتُها
+     مدّةُ ما يُقال. وكانت نصوصُ المرحلة ٩ بلا ملفّاتٍ فتمضي في احتياط النطق الآليّ،
+     ومهلتُه في `audio.js` **مؤقّتٌ حقيقيّ** (`estimateMs/0.75 + 1500` ≈ ٢٫٤ث للاسم
+     الواحد) يعمل في الفحص كما يعمل في الجهاز — فكان أخذُ عيّنةٍ بعد ٧٠٠ مللي يقع
+     داخل النافذة فيراها. فلمّا تمّ البنكُ صار النصُّ ملفّاً، **والملفُّ في الفحص وهميٌّ
+     ينتهي في ٦٠ مللي**، فانكمشت النافذةُ تحت العيّنة — لا لأنّ الشاشة تبدّلت، بل لأنّ
+     ما تُقاس به تبدّل. (وعلى جهاز الطفل العكسُ: مسموعٌ حقيقيّ ١٫٣٧–٢٫٦٢ث مكانَ نطقٍ
+     آليّ أقصر.) **فالمقياسُ يصير شهادةً على ما وقع لا عيّنةً على ما بقي**: يُنصَب
+     المِرقَبُ قبل الفعل فيشهد بظهور الحالة متى ظهرت — وهو **أشدُّ** من العيّنة لا أضعف:
+     شاشةٌ لا تُعلِّم الخطأَ أصلاً تسقط في الاثنين، ومُضِيُّ الجولة يمسكه عدُّ الخرزة. */
+  const seenOnce = (doc, sel) => {
+    const state = { seen: !!doc.querySelector(sel) };
+    const obs = new MutationObserver(() => { if (doc.querySelector(sel)) state.seen = true; });
+    obs.observe(doc.documentElement,
+      { subtree: true, childList: true, attributes: true, attributeFilter: ['class'] });
+    state.stop = () => obs.disconnect();
+    return state;
+  };
   const shownIn = (el) => (el ? el.innerText || '' : '');
   const drawnOf = (el) => Number(el.querySelector('.figure')?.dataset.drawn);
   const beadNow = (doc) => [...doc.querySelectorAll('.bead')].findIndex((b) => b.classList.contains('bead--now'));
@@ -1822,12 +1841,17 @@
   `و«${askOf(shdoc2)}» بطاقاتُها **أشكالٌ مرسومة** لا كلمات (${nameCards.length} بطاقات، `
     + `والمطلوبُ «${wantShape}» فيها)`);
   const beadName = beadNow(shdoc2);
+  const sawBad = seenOnce(shdoc2, '.qcard.bad');
+  const sawLit = seenOnce(shdoc2, `.qcard [data-shape="${wantShape}"].is-counted`);
   nameCards.find((c) => c !== goodCard)?.click();
   await new Promise((r) => setTimeout(r, 700));
-  ok(!!shdoc2.querySelector('.qcard.bad') && beadNow(shdoc2) === beadName,
+  ok(sawBad.seen && beadNow(shdoc2) === beadName,
     'وبطاقةٌ خاطئة لا تنقل — والجولةُ تبقى حتى يصيب');
-  const litShape = await until(shdoc2,
+  /* والمِرقَبُ يشهد بالإضاءة متى وقعت، ويبقى `until` لجهازٍ بطيءٍ لم يبلغها بعد. */
+  const litShape = sawLit.seen || await until(shdoc2,
     (d) => d.querySelector(`.qcard [data-shape="${wantShape}"].is-counted`), 14000);
+  sawBad.stop();
+  sawLit.stop();
   ok(!!litShape, '**ويُضاء الشكلُ المطلوب ويُسمّى** — فيربط الاسمَ برسمه بعد محاولته');
 
   // ————— ج) «الأَشْكَالُ حَوْلَنَا» — الشكلُ في شيءٍ مبنيٍّ من أشكالنا —————
@@ -1846,10 +1870,12 @@
     + `(${thingParts.map((p) => p.dataset.shape).join('، ')})، وفيه المطلوبُ «${askedShape}» `
     + '— ولكلِّ جزءٍ زرُّ لمسه');
   const beadWorld = beadNow(shdoc3);
+  const sawSpotBad = seenOnce(shdoc3, '.q-pickspot.bad');
   thingSpots.find((s) => s.dataset.shape !== askedShape)?.click();
   await new Promise((r) => setTimeout(r, 700));
-  ok(!!shdoc3.querySelector('.q-pickspot.bad') && beadNow(shdoc3) === beadWorld,
+  ok(sawSpotBad.seen && beadNow(shdoc3) === beadWorld,
     'وجزءٌ خاطئ لا ينقل — ويُضاء المطلوبُ وتُعَدّ أضلاعُه');
+  sawSpotBad.stop();
 
   /* ————— ١١ي) **جردُ الصنف**: لا زرَّ إلزاميٍّ وسيلتُه الوحيدة نصّ (الجلسة م٥) —————
 
