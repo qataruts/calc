@@ -73,6 +73,8 @@ const screen = params.get('screen') || 'map';
 
 const SCENES = {
   numeral: 'model', compare: 'model', teen: 'model', skip: 'model',
+  // الأشكال: تكتمل النمذجةُ فتُرى الأضلاعُ معدودةً ورمزُ عددها فوقها
+  shape: 'model',
   // لوحُ الآلة (مجموعتان فوق وحصيلتُهما تحتهما) لوحُ **جولتها** — نمذجتُها كمٌّ واحد
   machine: 'guided',
   add: 'guided', sub: 'guided', diff: 'guided',
@@ -103,12 +105,46 @@ Date.now = () => 1786525200000;   // ٢٠٢٦-٠٨-١٢ — يومُ اعتما�
 let lcg = 42 >>> 0;
 Math.random = () => ((lcg = (lcg * 1664525 + 1013904223) >>> 0) / 2 ** 32);
 
+// ————— المسارُ الذي يُفتَح لكل لقطة —————
+//
+// **بالمسار لا بنداءِ مُصيِّرٍ بعينه**: فتُلتقط الشاشةُ من الموجِّه كما تُفتَح للطفل
+// (بقفلها وشريطها وحلقتها)، ولا يعرف هذا الملفُّ اسمَ دالّةٍ في وحدةِ تمارين.
+const ROUTES = {
+  map: '#/',
+  subitize: '#/subitize/five',
+  count: '#/count/ten',
+  numeral: '#/numeral/six-seven',
+  compare: '#/compare/ten',
+  bond: '#/bond/ten',
+  machine: '#/add/machine',
+  add: '#/add/ten',
+  sub: '#/sub/ten',
+  diff: '#/diff/ten',
+  teen: '#/teen/fifteen',
+  skip: '#/skip/twenty',
+  pattern: '#/pattern/abab',
+  measure: '#/measure/size',
+  shape: '#/shape/sides',
+  gate: '#/gate/quantity',
+  parent: '#/parent',
+  // ميداليةُ الختام: محطةُ أصدقاء العشرة تُنهى (بأداة التجربة) فتُرى ميداليةُ معلمِ
+  // مرحلتها — والمولّد يفتح هذه اللقطةَ بـ`dev=1` ليكون زرُّ الإنهاء في الشجرة.
+  medal: '#/bond/ten',
+};
+
 // ————— تقدُّمُ طفلٍ في أواخر الرحلة —————
 //
 // **والحدُّ مشتقٌّ لا مكتوب**: يقف عند أوّل محطة قياسٍ — فما قبلها كلُّه مفتوح،
 // ويبقى للخريطة «تابع من هنا» فلا تُرى رحلةً منتهية.
+//
+// **ولقطةٌ لشاشةٍ أبعدَ تفتح إليها الطريقَ وحدَها** (الجلسة ش): المرحلة ٩ في ذيل
+// الرحلة، فلو وقف التقدّمُ عند أوّل محطة قياسٍ لَردّها الموجِّهُ إلى الخريطة (القفلُ
+// يُحرس في التوجيه) فالتُقطت خريطةٌ باسم شاشة. فيُدفَع الحدُّ إلى موضع الشاشة
+// المطلوبة **إن كانت أبعد** — ولقطاتُ ما قبلها لا يتبدّل فيها شيء.
 const all = progress.allNodes();
-const front = all.findIndex((n) => n.type === 'measure');
+const route = (ROUTES[screen] || '').replace(/^#\//, '').split('/');
+const target = all.findIndex((n) => n.type === route[0] && n.part === route[1]);
+const front = Math.max(all.findIndex((n) => n.type === 'measure'), target);
 for (const node of all.slice(0, front)) progress.setStars(node.id, node.type === 'gate' ? 2 : 3);
 
 // سجلُّ ليتنر: متقَنٌ ومتعثّرٌ وما بينهما — **من مفاتيح المنهج نفسِها** لا من مفاتيحَ
@@ -141,31 +177,6 @@ for (const [back, minutes] of [[6, 4], [5, 7], [4, 0], [3, 6], [2, 9], [1, 5], [
   if (minutes) progress.addSeconds(minutes * 60, progress.dayKey(d));
 }
 
-// ————— المسارُ الذي يُفتَح لكل لقطة —————
-//
-// **بالمسار لا بنداءِ مُصيِّرٍ بعينه**: فتُلتقط الشاشةُ من الموجِّه كما تُفتَح للطفل
-// (بقفلها وشريطها وحلقتها)، ولا يعرف هذا الملفُّ اسمَ دالّةٍ في وحدةِ تمارين.
-const ROUTES = {
-  map: '#/',
-  subitize: '#/subitize/five',
-  count: '#/count/ten',
-  numeral: '#/numeral/six-seven',
-  compare: '#/compare/ten',
-  bond: '#/bond/ten',
-  machine: '#/add/machine',
-  add: '#/add/ten',
-  sub: '#/sub/ten',
-  diff: '#/diff/ten',
-  teen: '#/teen/fifteen',
-  skip: '#/skip/twenty',
-  pattern: '#/pattern/abab',
-  measure: '#/measure/size',
-  gate: '#/gate/quantity',
-  parent: '#/parent',
-  // ميداليةُ الختام: محطةُ أصدقاء العشرة تُنهى (بأداة التجربة) فتُرى ميداليةُ معلمِ
-  // مرحلتها — والمولّد يفتح هذه اللقطةَ بـ`dev=1` ليكون زرُّ الإنهاء في الشجرة.
-  medal: '#/bond/ten',
-};
 
 location.hash = ROUTES[screen] || ROUTES.map;
 await import('./js/main.js');

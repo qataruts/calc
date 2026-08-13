@@ -87,7 +87,7 @@
 // و`app.css` (هدفُ اللمس ٦٠←٦٤ حيث كان دون العهد، وكنسُ `vchip` الميتة). **والرفعةُ
 // هنا شرطُ عمل الإشعار نفسِه**: جهازٌ يحمل `v19` لا يعرف الإشعار، فأوّلُ ما يُعلَنه
 // **هو وصولُ هذه القشرة** — ولا يقع ذلك إلا برفعةٍ يراها الجهاز.
-const VERSION = 'v20';
+const VERSION = 'v21';
 const SHELL_CACHE = `ihsib-shell-${VERSION}`;
 const AUDIO_CACHE = 'ihsib-audio';        // ثابتٌ عمداً — لا يحمل VERSION
 const KEEP = [SHELL_CACHE, AUDIO_CACHE];
@@ -120,6 +120,7 @@ const SHELL = [
   'js/registry.js',
   'js/render.js',
   'js/review.js',
+  'js/shapes.js',
   'js/station.js',
   'js/teens.js',
   'js/ui.js',

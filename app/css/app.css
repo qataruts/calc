@@ -1834,6 +1834,56 @@ button {
   transform: scale(1.06);
 }
 
+/* ————— الأشكالُ الأولى (المرحلة ٩ — الجلسة ش): رسمٌ هندسيّ لا صورة —————
+
+   **الشكلُ خطٌّ لا كتلة**: أضلاعُه قِطَعٌ مستقلّة (`data-side`) فتُعَدّ بالإصبع
+   وتُعلَّم واحدةً واحدة — ولذلك لا يُملأ جوفُه: الملءُ يجعل الشكلَ لطخةً واحدة،
+   والدرسُ **حدُّه** لا مساحتُه. */
+
+/* **ومقاسُ اللوحين يتبع أضيقَ الشاشتين**: القاسمُ عرضُ صندوق الشكل بوحدات الرسم
+   (صفُّ شكلٍ واحد ١٤٦ · وصندوقُ شيء العالم ٢٤٤ — من `VIEWS.shape` في المصيِّر)،
+   فيبقى **زرُّ الضلع فوق هدف اللمس** على الهاتف كما على اللوح. */
+.q-sides > .figure { --unit: min(2.1px, (min(100vw, 46rem) - 3.5rem) / 146); }
+.q-thing > .figure { --unit: min(1.5px, (min(100vw, 46rem) - 3.5rem) / 244); }
+.qcard--shape .figure { --unit: .8px; }
+.q-choices .qcard--shape { padding: .4rem; }
+
+.figure--shape {
+  background: var(--card);
+  border-radius: calc(26 * var(--unit));
+  box-shadow: inset 0 0 0 calc(3 * var(--unit)) var(--line);
+}
+
+.fig-side,
+.fig-round {
+  fill: none;
+  stroke: var(--accent, var(--accent-pattern));
+  stroke-width: 7;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+/* أثرُ العدّ على الضلع — **لونٌ ومعه غِلَظ** (اللون لا يحمل معنىً وحدَه، `DESIGN.md §٢`) */
+.fig-side.is-counted,
+.fig-shape.is-counted .fig-side,
+.fig-shape.is-counted .fig-round { stroke: var(--ok); stroke-width: 11; }
+
+/* عونُ «جرِّب معي»: حدٌّ متقطّع يقول «هنا تُلمَس» بلا أن يُلقّن الجواب */
+.fig-shape.is-open .fig-side,
+.fig-shape.is-open .fig-round { stroke-dasharray: 12 9; }
+
+.fig-tap.good { border-color: var(--ok); }
+.fig-tap.bad { border-color: var(--err); }
+
+/* **وجزءُ الشيء يُلمَس بصندوقه لا بقرصه**: البابُ مستطيلٌ ضيّقٌ طويل، فدائرةُ لمسٍ
+   حوله تبتلع ما جاوره — وصندوقُه من المصيِّر نفسِه (`marks[i].box`). */
+.q-pickspot--shape {
+  width: var(--w);
+  height: var(--h);
+  aspect-ratio: auto;
+  border-radius: 14px;
+}
+
 /* محطةُ التعارف (٨·٥): صفٌّ لكل رقمٍ — مشرقيُّنا ورسمُه الآخر، **بلا قياس** */
 .intro-grid {
   display: grid;

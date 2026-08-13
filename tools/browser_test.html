@@ -27,10 +27,15 @@
 
   /* **والتعلّقُ يُبلَّغ كما يُبلَّغ العطب**: انتظارُ حدثٍ لا يجيء يوقف النصَّ بلا خطأ،
      فلا يصل شيء. فمهلةٌ حارسة ترسل ما تمّ ومعه سطرٌ أحمر يسمّي التعلّق — «لم تصل
-     نتيجة» لا يجوز أن يكون آخرَ ما نعرف. */
+     نتيجة» لا يجوز أن يكون آخرَ ما نعرف.
+
+     **ووُسّعت ٥٨٠←٩٠٠ ثانية بقرارٍ معلَن** (الجلسة ش): دخلت الرحلةَ مرحلةٌ تاسعة
+     فزادت السَّوقةُ خمسَ فتحاتِ شاشة (لوحُ الأشكال وثلاثُ محطاتها)، وامتدّ مشيُ جرد
+     الصنف من عشر شاشاتٍ إلى ستَّ عشرة — وكلُّ فتحةٍ نمذجةٌ تُنتظَر. **وتبقى دون
+     مهلة السائق** (`--timeout` في `browser_test.py`) فيصل البلاغُ قبل اليأس. */
   const watchdog = setTimeout(() => {
     report([...out, { ok: false, msg: 'تعلّقت صفحةُ الفحص قبل تمامها (انتظارٌ لم ينتهِ)' }]);
-  }, 580000);
+  }, 900000);
 
   /* ————— «لا نطقَ آليّ»: يُقاس في مسار الطفل نفسِه (الجلسة ص) —————
 
@@ -282,6 +287,9 @@
     // منها — والمشهدُ تُعَدّ أشياؤه، وكلاهما يُقرأ هنا **مستقلاً** عن المصيِّر.
     pattern: (f) => f.querySelectorAll('[data-cell]').length,
     scene: (f) => f.querySelectorAll('[data-item]').length,
+    // **واللوحُ تُعَدّ أشكالُه** (الجلسة ش): وأضلاعُ كلٍّ تُقاس في §١١ك بجدول حقيقةٍ
+    // مستقلّ — فهنا عددُ الأشكال، وهناك عددُ أضلاعها.
+    shape: (f) => f.querySelectorAll('[data-shape]').length,
   };
   const miscount = figures.filter((f) => {
     const want = Number(f.dataset.count);
@@ -700,6 +708,24 @@
     /* **ومشهدُ القياس يُلمَس فيه الشيءُ نفسُه**: اللوحُ يعلن المطلوبَ مقروءاً من
        الرسم — **مقداراً** في الطول (`data-size`) **ورمزَ الشيء** في الثِّقَل والزمن
        (`data-item`، الجلسة ٨ب: لا حكمَ في الحجم) — فيُلمَس الزرُّ الذي يحمله. */
+    /* **ولوحُ الأشكال جوابُه صنفٌ مرسوم** (المرحلة ٩ — الجلسة ش): يعلن اللوحُ الصنفَ
+       المطلوب (`data-answer`) فتُلمَس البطاقةُ — أو الجزءُ في شيء العالم — الذي
+       **رسم** ذلك الصنف. **و«كم ضلعاً؟» يُلمَس فيه ضلعٌ ضلعاً أوّلاً** ثم تُختار
+       بطاقةُ الرمز التي رسمت عددَ ما عُدّ (سؤالُ العدديّة). وبه تمضي البوابةُ
+       والمراجعةُ على تمارين الأشكال كما تمضي على سواها. */
+    const sides = d.querySelector('.q-solve--sides');
+    if (sides) {
+      const untouched = [...d.querySelectorAll('.fig-tap')].filter((b) => !b.disabled);
+      if (untouched.length) return untouched[0];
+      return cardsOf(d).find((c) => drawnOf(c) === Number(sides.dataset.answer));
+    }
+    const shapeBoard = d.querySelector('.q-solve--shape, .q-solve--thing');
+    if (shapeBoard) {
+      const want = shapeBoard.dataset.answer;
+      const spots = [...d.querySelectorAll('.q-pickspot--shape')];
+      if (spots.length) return spots.find((s) => s.dataset.shape === want);
+      return cardsOf(d).find((c) => c.querySelector('[data-shape]')?.dataset.shape === want);
+    }
     const scene = d.querySelector('.q-solve--measure');
     if (scene) {
       const want = scene.dataset.answer;
@@ -1591,11 +1617,13 @@
     gdoc8.querySelector('.gate-go')?.click();
     await new Promise((r) => setTimeout(r, 500));
   }
+  // **وعددُ الأقسام محسوبٌ من المنهج لا مكتوبٌ هنا** (الجلسة ش: صارت ثمانية بالأشكال)
+  const conceptSections = (await import('/js/curriculum.js')).CONCEPT_SECTIONS;
   const groups = [...gdoc8.querySelectorAll('.concept-group h4')].map((el) => el.textContent);
   const conceptLines = [...gdoc8.querySelectorAll('.concept')]
     .map((el) => el.querySelector('.concept-line')?.textContent?.trim() || '');
-  ok(groups.length === 7 && conceptLines.length > 0,
-    `ولوحةُ وليّ الأمر تعرض أقسامَ الحساب السبعة (${groups.join(' · ')}) `
+  ok(groups.length === conceptSections.length && conceptLines.length > 0,
+    `ولوحةُ وليّ الأمر تعرض أقسامَ الحساب كلَّها (${groups.join(' · ')}) `
     + `و${conceptLines.length} مفهوماً مقيساً ممّا لعبه في هذا الجهاز`);
   const notPhrases = conceptLines.filter((t) => !/^ي/.test(t) || /[|0-9٪]/.test(t));
   ok(conceptLines.length > 0 && notPhrases.length === 0,
@@ -1686,6 +1714,143 @@
       ? ` — مخالفة: ${blindMedals.map((m) => `${m.title}${m.neutral ? ' (أيقونةُ واجهة)'
         : m.same ? ' (لا يُرى على القرص)' : ' (معلمٌ آخر)'}`).join('، ')}` : ''));
 
+  /* ————— ١١ك) المرحلة ٩: الشكلُ يُرسَم، وأضلاعُه تُعَدّ بالإصبع (الجلسة ش) —————
+
+     ثلاثةُ عهودٍ لا يُثبتها إلا متصفّح:
+
+     ١) **عددُ الأضلاع المرسومة هو المُدرَّس** — ويُقابَل بـ**جدول حقيقةٍ مكتوبٍ هنا
+        بيدٍ عمداً** لا يُقرأ من المنهج (سنّةُ `SCENE_TRUTH` في الجلسة ٨ب): فلو
+        انقلب رقمٌ في `SHAPES` وتبعه الرسمُ لَاتّفق المصيِّرُ وحارسُه على الغلط
+        ومرّا خضراوين — ولا يمسكه إلا جدولٌ من خارجهما. **والمقيسُ ما في الـDOM**:
+        `data-sides` وعددُ القِطَع المرسومة وطولُها بالبكسل بعد التنسيق.
+     ٢) **التناظرُ الفرديّ في عدّ الأضلاع**: لمستان على ضلعٍ واحد لا تُحتسبان مرّتين
+        — امتناعٌ في البنية (`disabled`) لا تحقّقٌ بعده.
+     ٣) **الخطأُ يُعَدّ أمامه ولا ينقل**: بطاقةٌ خاطئة تُبقي الجولةَ، ويُضاء الشكلُ
+        المطلوب وتُعَدّ أضلاعُه — فيرى الصوابَ عدّاً لا تلقيناً. */
+
+  /** جدولُ حقيقةٍ من خارج المنهج: كم ضلعاً لكلِّ شكلٍ في عالم الناس. */
+  const SHAPE_TRUTH = { circle: 0, triangle: 3, square: 4, rect: 4 };
+  const lenOf = (el) => {
+    const r = el.getBoundingClientRect();
+    return Math.hypot(r.width, r.height);
+  };
+
+  const shdoc = await open('#/render/shape', '&dev=1');
+  await until(shdoc, (d) => d.querySelector('[data-shape]'), 12000);
+  const drawnShapes = [...shdoc.querySelectorAll('[data-shape]')];
+  const wrongSides = drawnShapes.filter((g) => {
+    const truth = SHAPE_TRUTH[g.dataset.shape];
+    const pieces = g.querySelectorAll('[data-side]').length;
+    return truth === undefined || pieces !== truth || Number(g.dataset.sides) !== truth;
+  });
+  ok(drawnShapes.length > 0 && wrongSides.length === 0,
+    `لوحُ الأشكال يرسم ${drawnShapes.length} شكلاً، **وأضلاعُ كلٍّ مرسومةٌ بعددها الحقّ** `
+    + `(${Object.entries(SHAPE_TRUTH).map(([k, n]) => `${k}: ${n}`).join(' · ')} — `
+    + 'جدولٌ مكتوبٌ في الحارس لا يُقرأ من المنهج)'
+    + (wrongSides.length ? ` — **خالف: ${wrongSides.map((g) => `${g.dataset.shape} (${g.dataset.sides})`).slice(0, 4).join('، ')}**` : ''));
+
+  const squares = drawnShapes.filter((g) => g.dataset.shape === 'square');
+  const rects = drawnShapes.filter((g) => g.dataset.shape === 'rect');
+  const evenSided = squares.every((g) => {
+    const lens = [...g.querySelectorAll('[data-side]')].map(lenOf);
+    return Math.max(...lens) - Math.min(...lens) <= 2;
+  });
+  const unevenSided = rects.every((g) => {
+    const lens = [...g.querySelectorAll('[data-side]')].map(lenOf);
+    return Math.max(...lens) - Math.min(...lens) > 2;
+  });
+  ok(squares.length > 0 && rects.length > 0 && evenSided && unevenSided,
+    `**والمربّعُ أضلاعُه سواءٌ بالبكسل والمستطيلُ ليست** (${squares.length} مربّعاً `
+    + `و${rects.length} مستطيلاً مقيسةً بعد التنسيق) — وهي المواجهةُ المقصودة في ٩·٢`);
+
+  // ————— أ) «كَمْ ضِلْعًا؟» — لمسةٌ لكلّ ضلعٍ لا تُحتسَب مرّتين —————
+  const shdoc1 = await open('#/shape/sides', '&dev=1');
+  await until(shdoc1, (d) => d.querySelector('.station-body .next'), 22000);
+  shdoc1.querySelector('.station-body .next')?.click();
+  const sidesBoard = await until(shdoc1, (d) => d.querySelector('.q-solve--sides'), 12000);
+  const sideTaps = [...shdoc1.querySelectorAll('.q-solve--sides .fig-tap')];
+  const boardShape = shdoc1.querySelector('.q-solve--sides [data-shape]');
+  ok(!!sidesBoard && sideTaps.length === SHAPE_TRUTH[boardShape?.dataset.shape],
+    `لوحُ «كَمْ ضِلْعًا؟» يرسم «${boardShape?.dataset.shape}» وفوق كلِّ ضلعٍ زرُّ لمسه `
+    + `(${sideTaps.length} ضلعاً)`);
+  ok(Number(sidesBoard?.dataset.answer) === SHAPE_TRUTH[boardShape?.dataset.shape],
+    `**وجوابُه من المرسوم**: أعلن ${sidesBoard?.dataset.answer} وأضلاعُه المرسومة `
+    + `${SHAPE_TRUTH[boardShape?.dataset.shape]}`);
+
+  sideTaps[0]?.click();
+  await new Promise((r) => setTimeout(r, 320));
+  sideTaps[0]?.click();
+  await new Promise((r) => setTimeout(r, 320));
+  const litOnce = shdoc1.querySelectorAll('.q-solve--sides [data-side].is-counted').length;
+  ok(sideTaps[0]?.disabled === true && litOnce === 1,
+    `**ولمستان على ضلعٍ واحد لا تُحتسبان مرّتين** — الزرُّ يُعطَّل بعد لمسته `
+    + `(${litOnce} ضلعاً معلَّماً بعد لمستين)`);
+
+  for (const tap of sideTaps.slice(1)) {
+    tap.click();
+    await new Promise((r) => setTimeout(r, 320));
+  }
+  const sideCards = await until(shdoc1, (d) => d.querySelectorAll('.q-choices .qcard').length, 12000);
+  const sidesRight = [...shdoc1.querySelectorAll('.q-choices .qcard')]
+    .find((c) => drawnOf(c) === Number(sidesBoard.dataset.answer));
+  ok(sideCards > 0 && !!sidesRight,
+    `وبعد عدّها كلِّها يُسأل سؤالُ العدديّة ببطاقات الرمز (${sideCards} بطاقات، `
+    + `وفيها ${sidesBoard.dataset.answer})`);
+  const sidesWrong = [...shdoc1.querySelectorAll('.q-choices .qcard')].find((c) => c !== sidesRight);
+  const sidesBead = beadNow(shdoc1);
+  sidesWrong?.click();
+  await new Promise((r) => setTimeout(r, 700));
+  ok(!!shdoc1.querySelector('.qcard.bad') && beadNow(shdoc1) === sidesBead,
+    '**والخطأُ لا ينقل**: بطاقةٌ خاطئة تُهزّ وتبقى الجولةُ نفسُها');
+  /* **والمقيسُ أثرُ العدّ لا بقايا لمس الطفل**: أضلاعُه مضاءةٌ أصلاً من عدّه هو،
+     فانتظارُ ضلعٍ مضاءٍ يمرّ بلا عدٍّ وقع. **وعلامةُ المشي وسمُ الشكل نفسِه**
+     (`.fig-shape.is-counted`) — لا يضعه إلا `showShape` عند التصحيح والنمذجة. */
+  const sidesWalk = await until(shdoc1,
+    (d) => d.querySelector('.q-solve--sides .fig-shape.is-counted'), 14000);
+  ok(!!sidesWalk, 'وتُعَدّ أضلاعُه أمامه ضلعاً ضلعاً (يرى الصوابَ عدّاً لا تلقيناً)');
+
+  // ————— ب) «أَيْنَ الشَّكْل؟» — الجوابُ بطاقةٌ مرسومة لا كلمة —————
+  const shdoc2 = await open('#/shape/pair', '&dev=1');
+  await until(shdoc2, (d) => d.querySelector('.station-body .next'), 22000);
+  shdoc2.querySelector('.station-body .next')?.click();
+  const nameBoard = await until(shdoc2, (d) => d.querySelector('.q-solve--shape'), 12000);
+  const nameCards = [...shdoc2.querySelectorAll('.q-choices .qcard')];
+  const wantShape = nameBoard?.dataset.answer;
+  const goodCard = nameCards.find((c) => c.querySelector('[data-shape]')?.dataset.shape === wantShape);
+  ok(nameCards.length >= 2 && nameCards.every((c) => c.querySelector('[data-shape]'))
+    && !!goodCard,
+  `و«${askOf(shdoc2)}» بطاقاتُها **أشكالٌ مرسومة** لا كلمات (${nameCards.length} بطاقات، `
+    + `والمطلوبُ «${wantShape}» فيها)`);
+  const beadName = beadNow(shdoc2);
+  nameCards.find((c) => c !== goodCard)?.click();
+  await new Promise((r) => setTimeout(r, 700));
+  ok(!!shdoc2.querySelector('.qcard.bad') && beadNow(shdoc2) === beadName,
+    'وبطاقةٌ خاطئة لا تنقل — والجولةُ تبقى حتى يصيب');
+  const litShape = await until(shdoc2,
+    (d) => d.querySelector(`.qcard [data-shape="${wantShape}"].is-counted`), 14000);
+  ok(!!litShape, '**ويُضاء الشكلُ المطلوب ويُسمّى** — فيربط الاسمَ برسمه بعد محاولته');
+
+  // ————— ج) «الأَشْكَالُ حَوْلَنَا» — الشكلُ في شيءٍ مبنيٍّ من أشكالنا —————
+  const shdoc3 = await open('#/shape/world', '&dev=1');
+  await until(shdoc3, (d) => d.querySelector('.station-body .next'), 22000);
+  shdoc3.querySelector('.station-body .next')?.click();
+  const thingBoard = await until(shdoc3, (d) => d.querySelector('.q-solve--thing'), 12000);
+  const thingSpots = [...shdoc3.querySelectorAll('.q-pickspot--shape')];
+  // **والمرسومُ هو `.fig-shape`**: زرُّ اللمس يحمل `data-shape` الذي قرأه من جزئه،
+  // فجردٌ بالسمة وحدَها يعدّ الجزءَ وزرَّه معاً — والمقيسُ ما رسمه المصيِّر.
+  const thingParts = [...shdoc3.querySelectorAll('.q-solve--thing .fig-shape')];
+  const askedShape = thingBoard?.dataset.answer;
+  ok(thingParts.length >= 2 && thingSpots.length === thingParts.length
+    && thingParts.some((p) => p.dataset.shape === askedShape),
+  `وشيءُ العالم «${thingBoard?.dataset.thing}» مبنيٌّ من ${thingParts.length} أشكالٍ `
+    + `(${thingParts.map((p) => p.dataset.shape).join('، ')})، وفيه المطلوبُ «${askedShape}» `
+    + '— ولكلِّ جزءٍ زرُّ لمسه');
+  const beadWorld = beadNow(shdoc3);
+  thingSpots.find((s) => s.dataset.shape !== askedShape)?.click();
+  await new Promise((r) => setTimeout(r, 700));
+  ok(!!shdoc3.querySelector('.q-pickspot.bad') && beadNow(shdoc3) === beadWorld,
+    'وجزءٌ خاطئ لا ينقل — ويُضاء المطلوبُ وتُعَدّ أضلاعُه');
+
   /* ————— ١١ي) **جردُ الصنف**: لا زرَّ إلزاميٍّ وسيلتُه الوحيدة نصّ (الجلسة م٥) —————
 
      **بلاغُ الميدان ٤** (`docs/FIELD.md §٤` — أوّلُ امتحان طفلٍ حقيقيّ): أتمّ المجموعةَ
@@ -1750,6 +1915,10 @@
     ['#/subitize/two', '«كم ترى؟»'],
     ['#/more/five', '«أيُّهما أكثر؟» — وفيها زرُّ التساوي'],
     ['#/equal/five', '«اِجْعَلْهُمَا سَوَاء»'],
+    // **وشاشةُ الأشكال معها** (الجلسة ش): بطاقاتُها أشكالٌ مرسومة وأزرارُ أضلاعها
+    // شفّافة — فيُقاس فيها الصنفُ وهدفُ اللمس معاً يومَ دخلت الرحلة.
+    ['#/shape/sides', '«كَمْ ضِلْعًا؟»'],
+    ['#/shape/world', '«الأَشْكَالُ حَوْلَنَا» — وأجزاؤها أهدافُ لمس'],
   ]) {
     const cdoc = await open(hash, hash ? '&dev=1' : '');
     await until(cdoc, (d) => d.querySelector('.station-body .next')
@@ -1761,7 +1930,8 @@
     // ثم شاشةُ التمرين نفسِها — حيث الأزرارُ التي يلمسها الطفلُ ليجيب
     cdoc.querySelector('.station-body .next')?.click();
     await until(cdoc, (d) => d.querySelector('.q-choices .qcard')
-      || d.querySelector('.same-btn') || d.querySelector('.q-equal'), 22000);
+      || d.querySelector('.same-btn') || d.querySelector('.q-equal')
+      || d.querySelector('.q-solve--sides') || d.querySelector('.q-solve--thing'), 22000);
     seenScreens++;
     textOnly.push(...bareButtons(cdoc).map((el) => `${what} (تمرين): ${bareNames([el])}`));
     for (const row of undersized(cdoc)) undersizedRows.push(`${what} (تمرين): ${tightNames([row])}`);
@@ -1777,7 +1947,7 @@
     `وكلُّ زرِّ طفلٍ على ${seenScreens} شاشةٍ يبلغ عتبةَ اللمس المعلَنة `
     + `(${TOUCH_MIN}بك، وعناصرُ اللوح ${BOARD_MIN} — استثناءُ \`METHOD.md §١١\`)`
     + (undersizedRows.length ? ` — **دون عتبته: ${undersizedRows.join(' | ')}**` : ''));
-  ok(textOnly.length === 0 && seenScreens === 10,
+  ok(textOnly.length === 0 && seenScreens === 16,
     `وكلُّ زرٍّ على ${seenScreens} شاشةِ طفلٍ فيه ما يُرى لا حروفٌ وحدَها `
     + `(${EXEMPT.length} معفىً بسببه: ${EXEMPT.map(([sel, why]) => `${sel} — ${why}`).join(' · ')})`
     + (textOnly.length ? ` — **نصٌّ بلا صورة: ${textOnly.join(' | ')}**` : ''));

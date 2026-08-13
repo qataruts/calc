@@ -89,8 +89,18 @@ const WEAK = ['count|10|give', 'numeral|7|match'];
  */
 const WEAK_OPS = ['sub|5|solve'];
 
+/* **ونجومُه تقف عند بوابته** (تصحيحُ الجلسة ش): مَن لم يعبر بوابةَ الكمّ لم يبلغ ما
+   بعدها أصلاً، فنجمةٌ على محطةٍ فوقها **سجلٌّ لا يقع في جهاز طفل**. وكان الحارسُ
+   يمنحها فيمرّ بابُ «لا رسوب» بحكمٍ صحيحٍ لسببٍ خاطئ (الجبهةُ محبوسةٌ عند البوابة).
+   ولمّا صار المنجَزُ يبقى مفتوحاً (الترحيلُ الرحيم — `progress.js`) انكشف الاختلال.
+   **والمهاراتُ تُسجَّل للمراحل كلِّها كما كانت**: مادّةُ باب المدى، ولا شأن لها بالقفل. */
+const starred = new Set(curriculum.STAGES
+  .slice(0, curriculum.STAGES.findIndex((s) => s.id === gateOne.after) + 1)
+  .flatMap((stage) => stage.stations.map((s) => `${s.type}:${s.part}`)));
+
 for (const station of learned) {
-  progress.setStars(`${station.type}:${station.part}`, 3);
+  const nodeId = `${station.type}:${station.part}`;
+  if (starred.has(nodeId)) progress.setStars(nodeId, 3);
   for (const key of station.skills || []) {
     const [concept, range, kind] = key.split('|');
     // ثلاثُ درجاتٍ من الضعف: خارجُ المدى أضعفُها (ثلاثُ زلّات)، فداخلُه (زلّتان)،
@@ -284,6 +294,51 @@ if (!builders.length) {
       [...new Set(picks)].join('، ') || 'لا شيء'})`);
   ok(pool.every((i) => String(i.range) !== 'NaN'),
     'ولا تمرينَ في الحوض مدَاه NaN — «المدى عدداً إن كان عدداً» مصدرُها `spanOf` وحدَه');
+}
+
+/* ————— ٨) بوابةُ الختام تشمل آخرَ ما دخل الرحلة (الجلسة ش) —————
+
+   **علّةُ الموضع في `METHOD.md §٣`** (المرحلة ٩): «بوابةُ الختام تشملها بمداها
+   المعلَن (الرحلة كلُّها) فلا تدريسَ بلا بوابة». وذلك **دعوى تُقاس لا تُصدَّق**:
+   مدىً معلَنٌ لا يكفي أن يُكتب — يُسأل عنه المحرّكُ بسجلٍّ مصنوع.
+
+   فيُصنَع طفلٌ **أتمّ الرحلة كلَّها**، وأضعفُ ما في يده مفاتيحُ آخر مرحلةٍ دخلت،
+   ثم يُسأل: أتتصدّر جلستَه؟ فإن سُقط المدى أو نُسي الموضعُ عادت الجلسةُ من غيرها،
+   ومرّ الطفلُ بابَ «اِحْسِبْ ٢» ولم يُسأل عمّا تعلّمه أخيراً. */
+
+console.log('\n— ٨) بوابةُ الختام تشمل آخرَ ما دخل الرحلة (بسجلٍّ مصنوع) —');
+const finalGate = curriculum.GATES[curriculum.GATES.length - 1];
+const lastStage = curriculum.STAGES[curriculum.STAGES.length - 1];
+const lastKeys = [...new Set(lastStage.stations.flatMap((s) => s.skills || []))];
+const inScope = curriculum.gateSkills(finalGate.id);
+ok(lastKeys.length > 0 && lastKeys.every((k) => inScope.includes(k)),
+  `مفاتيحُ «${lastStage.title}» في مدى «${finalGate.title}» المعلَن `
+  + `(${lastKeys.join(' · ')})`);
+
+if (!builders.length) {
+  dormant('لا وحدةَ تمارينَ تسجّل بانياً بعد');
+} else {
+  progress.reset();
+  for (const station of curriculum.stations()) {
+    progress.setStars(station.id, 3);
+    for (const key of station.skills || []) {
+      const [concept, range, kind] = key.split('|');
+      // القويُّ ثلاثُ إصابات، وآخرُ مرحلةٍ **ثلاثُ زلّات** — فهي أضعفُ ما في يده
+      const tries = lastKeys.includes(key) ? [false, false, false] : [true, true, true];
+      for (const correct of tries) {
+        progress.recordAttempt(concept, progress.spanOf(range), kind, correct);
+      }
+    }
+  }
+  const items = gate.gateItems(finalGate.id, seeded(7));
+  const heads = items.slice(0, lastKeys.length).map(key);
+  ok(items.length === gate.GATE_SIZE,
+    `وجلستُها تُبنى تامّةً من الرحلة كلِّها (${items.length} تمريناً)`);
+  ok(lastKeys.every((k) => heads.includes(k)),
+    `و**تمارينُها الأولى تمارينُ آخر مرحلةٍ بعينها**: ${heads.join(' · ')}`);
+  ok(items.some((i) => i.concept === lastStage.stations[0].skills[0].split('|')[0]),
+    'وتُبنى مادّتُها فعلاً (لا مفتاحٌ يُسأل عنه بلا تمرينٍ يقابله)');
+  progress.reset();
 }
 
 console.log(fails

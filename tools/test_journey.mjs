@@ -284,6 +284,58 @@ ok(byHand.length === 0,
   `وميداليةُ كلِّ نوعِ محطةٍ تُبنى بالبيان (${[...new Set(stationNodes.map((n) => n.type))].length} نوعاً)`
   + (byHand.length ? ` — بيدٍ: ${byHand.join('، ')}` : ''));
 
+/* ————— ٦) الترحيلُ الرحيم: سجلٌّ مكتملٌ يُفتَح على رحلةٍ موسَّعة (الجلسة ش) —————
+
+   **والتطبيقُ حيٌّ بأجهزة أطفال**: مَن أتمّ الرحلةَ أمسِ يفتحها اليوم وفيها مرحلةٌ
+   جديدة. والقفلُ التسلسليّ يقول «العقدةُ مفتوحة إن كان موضعُها ≤ جبهةِ الفتح»، فجبهتُه
+   ترجع إلى أوّل الجديد — **فتُقفَل عليه بوابةٌ عبرها ومحطاتٌ أتمّها**. وذلك أذىً محضٌ:
+   لا يعلّمه شيئاً ولا يحمي منهجاً، ويُسقِط عن طفلٍ ثمرةَ أسابيع.
+
+   فالعهدُ ثلاثةٌ ويُقاس هنا **لكلِّ مرحلةٍ على حدة** (كأنّها هي الداخلةُ اليوم، فلا
+   يُقاس الحالُ الحاضرُ وحدَه ويرثّ الحارسُ يومَ تدخل مرحلةٌ في موضعٍ آخر):
+   **لا تُمحى نجمة · ولا يُقفَل ما فُتح · وتُفتَح الجديدةُ في موضعها**.
+
+   **ويُقاس فرقاً واقعاً لا دعوى**: يُحصى ما كان القفلُ القديم سيُغلقه (عقدٌ منجَزة
+   بعد الجبهة) — فإن كان صفراً في المرحلة الأخيرة فالبابُ لا يقيس شيئاً. */
+
+console.log('\n٦. الترحيلُ الرحيم: سجلٌّ مكتملٌ يُفتَح على رحلةٍ موسَّعة');
+
+const migration = [];
+let rescued = 0;
+for (const stage of curriculum.STAGES) {
+  const fresh = new Set(stage.stations.map((s) => `${s.type}:${s.part}`));
+  const where = `[${stage.id}]`;
+  progress.reset();
+  // سجلُّ طفلٍ أتمّ الرحلةَ **قبل** أن تدخلها هذه المرحلة: كلُّ ما سواها بثلاث نجوم
+  for (const node of nodes) if (!fresh.has(node.id)) progress.setStars(node.id, 3);
+  const kept = nodes.filter((n) => !fresh.has(n.id));
+  const at = nodes.findIndex((n) => fresh.has(n.id));
+
+  const lost = kept.filter((n) => progress.getStars(n.id) !== 3);
+  if (lost.length) migration.push(`${where} مُحيت نجمةُ «${lost[0].id}»`);
+  const shut = kept.filter((n) => !progress.isNodeUnlockedById(n.id));
+  if (shut.length) {
+    migration.push(`${where} أُقفلت على صاحبها عقدٌ أتمّها: ${shut.map((n) => n.id).slice(0, 3).join('، ')}`);
+  }
+  if (progress.unlockFrontier() !== at) {
+    migration.push(`${where} الجبهةُ عند ${progress.unlockFrontier()} والمنتظَر ${at} (أوّلُ الجديد)`);
+  }
+  if (!progress.isNodeUnlockedById(nodes[at].id)) {
+    migration.push(`${where} أوّلُ الجديد مقفلٌ — فلا يبلغ الطفلُ ما زِيد له`);
+  }
+  // ما كان القفلُ بالجبهة وحدَها سيغلقه: عقدٌ **منجَزة** تقع بعد أوّل الجديد
+  rescued += kept.filter((n) => nodes.indexOf(n) > at).length;
+}
+for (const line of migration.slice(0, 6)) console.log('  ✗', line);
+fails += migration.length;
+if (!migration.length) {
+  console.log('  ✓', `${curriculum.STAGES.length} مرحلةً قِيست كأنّها الداخلةُ اليوم: `
+    + 'لا نجمةَ تُمحى، ولا مفتوحٌ يُقفَل، والجديدةُ تُفتَح في موضعها');
+}
+ok(rescued > 0,
+  `و**البابُ يقيس فرقاً واقعاً**: ${rescued} عقدةً منجَزةً تقع بعد موضع الإدخال — `
+  + 'وكان القفلُ بالجبهة وحدَها يغلقها على صاحبها (منها بوابةُ الختام لمن عبرها)');
+
 progress.reset();
 
 console.log(fails

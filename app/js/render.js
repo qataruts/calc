@@ -27,7 +27,7 @@
 import {
   h, faceEl, isEmoji, seeded, shuffle, arNum, latinNum, icon, go, topbar, brandMark,
 } from './ui.js';
-import { SCENES } from './curriculum.js';
+import { SCENES, SHAPES, SHAPES_WORLD, shapeOf, worldThing } from './curriculum.js';
 
 // ————— المقاييس (بوحدات الرسم — و`--unit` في `app.css` يحوّلها إلى بكسل) —————
 
@@ -348,6 +348,130 @@ function scenePlan(count, rnd, view, opts) {
   };
 }
 
+// ————— الشكلُ الهندسيّ: **يُرسَم ولا يُستعار** (المرحلة ٩ — الجلسة ش) —————
+//
+// نصُّ `METHOD.md §٣` (المرحلة ٩): «الشكلُ يرسمه المصيِّر هندسياً (صنفٌ سادس بقارئ
+// مرسومه: `data-shape` وعددُ أضلاعه محسوبٌ من المرسوم) — **لا إيموجي ملتبس**».
+//
+// **وعلّةُ الرسم بدل الصورة** هي عينُ عقد «صدق الصورة» في أنقى صوره: رسمُ خطِّ النظام
+// يختلف من جهازٍ إلى جهاز، و«المثلثُ» في Twemoji مثلثٌ **بحوافَّ مستديرة** أو سهمٌ أو
+// قطعةُ بيتزا — فتُدرَّس الأضلاعُ الثلاثةُ على صورةٍ لا يُعَدّ فيها ضلع. وهنا: ثلاثةُ
+// قِطَعٍ مستقيمة تُرسَم فتُعَدّ من الـDOM نفسِه — **ما رُسِم لا ما نُوِي**.
+//
+// ————— وجهان: أشكالٌ مفردة، وشيءٌ من عالم الطفل —————
+//
+//   **صفُّ أشكالٍ** (`shapes: ['circle', 'triangle']`): كلُّ شكلٍ في خانته، والكلُّ
+//   **يقف على خطٍّ واحد** كمشهد القياس — فلا موضعٌ يرجّح أحدَها. ومنه بطاقاتُ الجواب
+//   (شكلٌ واحد في بطاقة) ولوحُ عدّ الأضلاع (شكلٌ واحد كبير).
+//
+//   **شيءٌ من عالم الطفل** (`thing: 'house'`): أجزاؤه من `SHAPES_WORLD` في المنهج،
+//   موضعُ كلٍّ **نسبةٌ من صندوقٍ مربَّع** يحسبها هذا الملفّ — فالبيتُ بيتٌ على كل مقاس.
+//   وأجزاؤه **تتلامس عمداً** (السقفُ على الجسم)، فلا يسري عليها حدُّ التلاصق.
+//
+// **وعددُ الأضلاع من الرسم لا من الجدول**: كلُّ قِطعةٍ تُعلن نفسَها (`data-side`)،
+// ويَعُدّها `paint` من الـDOM فيكتب `data-sides` — ويقابل الحارسُ ما عُدّ بما أعلنه
+// المنهجُ (`SHAPES[].sides`)، فرقمٌ يُبدَّل هناك بلا رسمٍ يوافقه يحمرّ.
+
+/** نصفُ ضلع صندوق الشكل الواحد — أكبرُ من عنصر الكمّية: يُقارَن ويُلمَس ضلعُه. */
+const SHAPE_R = 2.5 * R;
+/** خانةُ الشكل في الصفّ: تسعه وفاصلَه، فلا يتلامس شكلان. */
+const SHAPE_SLOT = 2 * SHAPE_R + GAP;
+/** أكثرُ ما يقف في لوحٍ واحد: أربعةُ أشكال الرحلة، والخامسةُ والسادسةُ سَعةُ أجزاءِ شيء. */
+const SHAPE_MAX = 6;
+/** صندوقُ شيءِ العالم: مربَّعٌ — فنسبةُ الجزء واحدةٌ في المحورين، والمربّعُ مربّع. */
+const THING_BOX = 4 * SHAPE_R;
+/** نسبةُ ارتفاع المستطيل المفرد إلى عرضه — يفارق المربّعَ بالعين لا بالاسم. */
+const RECT_RATIO = 0.62;
+
+/** الشكلُ الافتراضيّ حين لا يُملي المُنادي مادّتَه: أشكالُ المنهج بترتيبها، تدور. */
+const defaultShapes = (count) =>
+  Array.from({ length: count }, (_, i) => SHAPES[i % SHAPES.length].id);
+
+/**
+ * **هندسةُ شكلٍ في صندوقه** — رؤوسُه أعداداً، والدائرةُ بلا رؤوس.
+ * والصندوقُ `{x, y, w, h}` من أعلى اليسار (هندسةٌ لا اتجاه)، ويُرسَم الشكلُ فيه:
+ * الدائرةُ والمربّعُ في أكبر مربّعٍ يسعه، والمستطيلُ يملؤه، والمثلثُ متساوي الساقين.
+ */
+function shapeGeometry(kind, box) {
+  const side = Math.min(box.w, box.h);
+  const cx = box.x + box.w / 2;
+  const cy = box.y + box.h / 2;
+  if (kind === 'circle') return { r: side / 2, cx, cy, points: [] };
+  if (kind === 'triangle') {
+    return {
+      r: Math.max(box.w, box.h) / 2,
+      cx,
+      cy,
+      points: [[cx, box.y], [box.x + box.w, box.y + box.h], [box.x, box.y + box.h]],
+    };
+  }
+  const w = kind === 'square' ? side : box.w;
+  const h = kind === 'square' ? side : box.h;
+  const x0 = cx - w / 2;
+  const y0 = cy - h / 2;
+  return {
+    r: Math.max(w, h) / 2,
+    cx,
+    cy,
+    points: [[x0, y0], [x0 + w, y0], [x0 + w, y0 + h], [x0, y0 + h]],
+  };
+}
+
+/**
+ * علامةُ شكلٍ في الخطة: صنفُه ورؤوسُه وموضعُه — وما يقيسه الحارسُ من بعدُ.
+ *
+ * **ومواضعُ لمس الأضلاع من هنا** (`sides`): منتصفُ كلِّ ضلعٍ بنصف قطر عنصر الكمّية —
+ * فمن رسم الضلعَ يقول أين يُلمَس، ولا تحسب الشاشةُ موضعاً ثانياً يفترق عنه (عهدُ
+ * `spotStyle` نفسُه في «المس وعُدّ»).
+ */
+function shapeMark(kind, box) {
+  const geom = shapeGeometry(kind, box);
+  return {
+    shape: kind,
+    box,
+    ...geom,
+    sides: geom.points.map((p, i) => {
+      const q = geom.points[(i + 1) % geom.points.length];
+      return { x: (p[0] + q[0]) / 2, y: (p[1] + q[1]) / 2, r: R };
+    }),
+  };
+}
+
+function shapePlan(count, rnd, view, opts) {
+  // **شيءٌ من عالم الطفل**: أجزاؤه بيانُ منهجٍ، ومواضعُها نسبٌ من صندوقٍ مربَّع
+  if (opts.thing) {
+    const thing = worldThing(opts.thing);
+    const box = { w: 2 * PAD + THING_BOX, h: 2 * PAD + THING_BOX };
+    return {
+      view: box,
+      thing: thing.id,
+      shapes: thing.parts.map((p) => p.shape),
+      marks: thing.parts.map((p) => shapeMark(p.shape, {
+        x: PAD + p.x * THING_BOX,
+        y: PAD + p.y * THING_BOX,
+        w: p.w * THING_BOX,
+        h: p.h * THING_BOX,
+      })),
+    };
+  }
+
+  // **وصفُّ الأشكال بمقاس صفّه** (كالشريط والمشهد): لا يُترَك بياضٌ حول شكلٍ واحد
+  const kinds = opts.shapes || defaultShapes(count);
+  const box = { w: 2 * PAD + count * SHAPE_SLOT, h: 2 * PAD + 2 * SHAPE_R };
+  const base = box.h - PAD;                       // خطُّ الأرض: الكلُّ يقف عليه
+  const at = (i) => box.w - PAD - i * SHAPE_SLOT - SHAPE_SLOT / 2;
+  return {
+    view: box,
+    shapes: [...kinds],
+    marks: kinds.map((kind, i) => {
+      // **والمستطيلُ أقصرُ من المربّع بعرضه نفسِه** — فيفترقان شكلاً لا حجماً
+      const w = 2 * SHAPE_R;
+      const h = kind === 'rect' ? RECT_RATIO * 2 * SHAPE_R : 2 * SHAPE_R;
+      return shapeMark(kind, { x: at(i) - w / 2, y: base - h, w, h });
+    }),
+  };
+}
+
 // ————— سِجلُّ الأنماط —————
 //
 // **المعجمُ يملكه المنهج** (`DISPLAYS` في `curriculum.js`)، وهذا الملفُّ يُنفِّذ منه ما
@@ -367,6 +491,8 @@ const VIEWS = {
   line: { w: 660, h: 140 },
   pattern: { w: 2 * PAD + PATTERN_MAX * CELL, h: 2 * PAD + CELL },
   scene: { w: 2 * PAD + SCENE_MAX * SCENE_SLOT, h: 2 * PAD + 2 * SCENE_R },
+  // **وصندوقُ الأشكال أوسعُ ما تبلغه**: صفُّ ستةٍ عرضاً، وصندوقُ شيءِ العالم ارتفاعاً
+  shape: { w: 2 * PAD + SHAPE_MAX * SHAPE_SLOT, h: 2 * PAD + THING_BOX },
 };
 
 /**
@@ -391,6 +517,8 @@ const PAINTERS = {
   pattern: { kind: 'pattern', min: 3, max: PATTERN_MAX, plan: patternPlan, paint: paintPattern },
   // **والمشهدُ من شيئين فصاعداً**: القياسُ الوصفيّ مقارنةٌ، والواحدُ لا يُقارَن.
   scene: { kind: 'scene', min: 2, max: SCENE_MAX, plan: scenePlan, paint: paintScene },
+  // **والشكلُ من واحدٍ فصاعداً**: بطاقةُ جوابٍ شكلٌ واحد، ولوحُ عدّ الأضلاع كذلك.
+  shape: { kind: 'shape', min: 1, max: SHAPE_MAX, plan: shapePlan, paint: paintShape },
 };
 
 /**
@@ -406,6 +534,8 @@ const READERS = {
   pattern: (el) => el.querySelectorAll('[data-cell]').length,
   // والمشهدُ تُعَدّ **أشياؤه**: مقاديرُ تُقارَن لا كمّيةٌ تُعَدّ
   scene: (el) => el.querySelectorAll('[data-item]').length,
+  // **واللوحُ تُعَدّ أشكالُه** — ولكلِّ شكلٍ أضلاعُه معدودةً من قِطَعه هو (`data-sides`)
+  shape: (el) => el.querySelectorAll('[data-shape]').length,
 };
 
 /** أنماطُ العرض التي يرسمها المصيِّر اليوم، بترتيب الرحلة. */
@@ -508,6 +638,37 @@ export function plan(display, count, opts = {}) {
       throw new RangeError(`رتبُ المشهد ليست ١..${count} كلَّها مرّةً واحدة`);
     }
   }
+  // **ومادّةُ الأشكال من جدول المنهج وحدَه** (المرحلة ٩): صنفُ شكلٍ لا يعرفه المنهجُ
+  // **يُرمى ولا يُقرَّب** — لا شكلَ يُدرَّس بلا اسمٍ وأضلاعٍ معلَنة.
+  if (opts.shapes !== undefined) {
+    if (painter.kind !== 'shape') {
+      throw new RangeError(`«${display}» ليس لوحَ أشكال — ولا صنفَ شكلٍ لِما لا يرسمه`);
+    }
+    if (opts.thing !== undefined) {
+      throw new RangeError('شيءُ عالمٍ وصفُّ أشكالٍ في لوحٍ واحد — والوجهُ واحدٌ لا وجهان');
+    }
+    if (!Array.isArray(opts.shapes) || opts.shapes.length !== count) {
+      throw new RangeError(`مادّةُ اللوح ${opts.shapes?.length} شكلاً والمقصود ${count}`);
+    }
+    const alien = opts.shapes.filter((s) => !shapeOf(s));
+    if (alien.length) {
+      throw new RangeError(`شكلٌ خارج أشكال المنهج: «${alien[0]}» — لا اسمَ له ولا أضلاع`);
+    }
+  }
+  // **وشيءُ العالم من `SHAPES_WORLD` وحدَه**، وعددُه عددُ أجزائه المعلَنة
+  if (opts.thing !== undefined) {
+    if (painter.kind !== 'shape') {
+      throw new RangeError(`«${display}» لا يرسم شيئاً من عالم الطفل — وأجزاؤه أشكال`);
+    }
+    const thing = worldThing(opts.thing);
+    if (!thing) {
+      throw new RangeError(`شيءٌ خارج جدول عالم المنهج: «${opts.thing}»`);
+    }
+    if (thing.parts.length !== count) {
+      throw new RangeError(
+        `«${thing.id}» أجزاؤه ${thing.parts.length} والمقصود ${count} — والعددُ عددُ أجزائه`);
+    }
+  }
   // **والسَّعةُ لِمَن يتبدّل عددُه بيد الطفل** (`room` — الجلسة م٥): تُطلَب من نمطٍ
   // موضعُه رهنُ عدده (المُبعثَر وعناصرُه)، ولا معنى لها في نمطٍ مواضعُه ثابتةٌ أصلاً
   // (الإطارُ يُملأ من اليمين، ووجهُ النرد صورةٌ لعدده) — فتُرمى هناك ولا تُبتلَع صامتة.
@@ -542,7 +703,8 @@ export function plan(display, count, opts = {}) {
   const figure = {
     display, count, view, r: R, glyph, kind: painter.kind, split,
     seed: (opts.seed ?? 0) >>> 0,
-    cells: [], frames: [], ticks: [], slots: [], labels: [], items: [], ranks: [], text: null,
+    cells: [], frames: [], ticks: [], slots: [], labels: [], items: [], ranks: [],
+    shapes: [], thing: null, text: null,
     ...painter.plan(count, rnd, view, opts),
   };
   if (split !== null) figure.marks = splitMarks(figure.marks, split);
@@ -709,6 +871,32 @@ function paintScene(figure) {
 }
 
 /**
+ * **الشكلُ الهندسيّ**: قِطعةٌ لكلِّ ضلعٍ تُعلن نفسَها (`data-side`)، أو قرصٌ للدائرة.
+ *
+ * **وعددُ الأضلاع يُعَدّ من الـDOM بعد الرسم** (`data-sides`) لا من جدولٍ ولا من نيّة
+ * المولّد — فلو أسقط الرسّامُ ضلعاً أو كرّره لظهر الفرقُ في المُعلَن، لا في جهاز طفل.
+ * وهو عينُ عقد `drawn` مطبَّقاً على ما ليس كمّاً (`METHOD.md §١٠.٢`).
+ */
+function paintShape(figure) {
+  const svg = figure.marks.map((m) => {
+    const inner = m.points.length
+      ? m.points.map((p, i) => {
+        const q = m.points[(i + 1) % m.points.length];
+        return `<line data-side="${i}" class="fig-side" x1="${p[0].toFixed(2)}"`
+          + ` y1="${p[1].toFixed(2)}" x2="${q[0].toFixed(2)}" y2="${q[1].toFixed(2)}"/>`;
+      }).join('')
+      : `<circle class="fig-round" cx="${m.cx.toFixed(2)}" cy="${m.cy.toFixed(2)}"`
+        + ` r="${m.r.toFixed(2)}"/>`;
+    return `<g data-shape="${m.shape}" class="fig-shape">${inner}</g>`;
+  }).join('');
+  const el = svgFigure(figure, svg);
+  for (const g of el.querySelectorAll('[data-shape]')) {
+    g.dataset.sides = String(g.querySelectorAll('[data-side]').length);
+  }
+  return el;
+}
+
+/**
  * **يرسم الشكلَ ويُرجِع ما رسم**.
  *
  * `drawn` **يُقرأ من الـDOM** لا من `count` (بقارئ صنفه — `READERS`): لو أسقط رسّامٌ
@@ -751,7 +939,24 @@ const TITLES = {
   line: 'خَطُّ الأَعْدَاد — الصِّفْرُ مِنَ اليَمِين',
   pattern: 'شَرِيطُ النَّمَط — خَانَاتٌ مِنَ اليَمِين وَآخِرُهَا سُؤَال',
   scene: 'مَشْهَدُ القِيَاس — الشَّيْءُ نَفْسُهُ بِمَقَادِير',
+  shape: 'الأَشْكَالُ الأُولَى — رَسْمٌ هَنْدَسِيٌّ تُعَدُّ أَضْلَاعُه',
 };
+
+/**
+ * **لوحُ أشياء عالم الطفل** (المرحلة ٩): الأربعةُ مصفوفةً باسم كلٍّ — **وبوابةُ عينِ
+ * المالك عليها هذه** (شرطُ الجلسة ش): أشياءٌ مبنيّةٌ من أشكالنا لا رسومٌ مستعارة،
+ * فتُرى مجتمعةً في لوحٍ واحد بدل أن تُلتقَط جولةً جولة من شاشة الطفل.
+ */
+function worldSheet() {
+  const items = SHAPES_WORLD.map((thing) => {
+    const { el } = paint('shape', thing.parts.length, { seed: 3, thing: thing.id });
+    return h('div', { class: 'gallery-item' },
+      el, h('span', { class: 'gallery-num' }, thing.name));
+  });
+  return h('section', { class: 'gallery-sheet' },
+    h('h2', {}, 'أَشْيَاءُ عَالَمِ الطِّفْل — مَبْنِيَّةٌ مِنْ أَشْكَالِنَا'),
+    h('div', { class: 'gallery-row' }, items));
+}
 
 function sheet(display) {
   const { min, max } = rangeOf(display);
@@ -784,6 +989,7 @@ export function renderGallery(part) {
     h('main', { class: 'gallery' },
       h('p', { class: 'hint' },
         'لوحُ المصيِّر — مرجعٌ بصريّ لأنماط الكميات، لا يظهر للطفل.'),
-      names.map(sheet)),
+      names.map(sheet),
+      names.includes('shape') && worldSheet()),
   );
 }

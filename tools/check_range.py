@@ -63,7 +63,7 @@ def load_curriculum() -> dict:
     const m = await import({json.dumps(CURRICULUM.as_uri())});
     console.log(JSON.stringify({{
       ops: m.OPS, signs: m.SIGNS, displays: m.DISPLAYS, scenes: m.SCENES,
-      skipSteps: m.SKIP_STEPS,
+      skipSteps: m.SKIP_STEPS, shapes: m.SHAPES, world: m.SHAPES_WORLD, partMin: m.PART_MIN,
       levelMax: m.LEVEL_MAX, subitizeMax: m.SUBITIZE_MAX, countMax: m.COUNT_MAX,
       stages: m.STAGES.map((s) => ({{ id: s.id, count: s.stations.length }})),
       gates: m.GATES,
@@ -272,6 +272,113 @@ def scene_usage_errors(label: str, used: dict, scenes: dict) -> list:
                 errors.append(f"{label}: «{glyph}» و«{ranks[rank]}» برتبةٍ واحدة ({rank}) "
                               "في سؤالٍ واحد — ولا يُسأل عن أثقل سواءين")
             ranks[rank] = glyph
+    return errors
+
+
+# ————— ١د) الأشكالُ الأولى: لكلِّ شكلٍ اسمٌ وأضلاعٌ وموضع (الجلسة ش) —————
+#
+# المرحلة ٩ **مجالٌ لا مدى** (`METHOD.md §٣`): لا تمسّ ق٣ بحرف، وإنما تدخل الرحلةَ
+# بيانات: أربعةُ أشكالٍ لكلٍّ اسمٌ يُنطَق وعددُ أضلاعٍ يُدرَّس وموضعُ تقديمٍ في الرحلة.
+# وثلاثةُ شروطٍ تحرسها هنا:
+#
+#   • **لكلِّ شكلٍ اسمٌ يُنطَق وأضلاعٌ معلَنة وموضعٌ من محطات المرحلة**: شكلٌ يُقدَّم
+#     في محطةٍ لا وجودَ لها لا يظهر لطفلٍ أبداً، وشكلٌ بلا اسمٍ لا يُسمَّى في خطأٍ
+#     ولا في نمذجة.
+#   • **وأشياءُ العالم مبنيّةٌ من أشكالٍ معلومة**: جزءٌ بصنفٍ لا يعرفه المنهجُ لا
+#     رسمَ له، **وصندوقُ المربّع والدائرة مربَّع** (وإلّا سُمّي المرسومُ باسم غيره)،
+#     **وصندوقُ المستطيل مختلفُ الضلعين** — وهي كذبةُ رسمٍ أشدُّ من كذبة الاسم.
+#   • **ولكلِّ جزءٍ أرضيّةُ إصبع** (`PART_MIN`): الجزءُ هدفُ لمسٍ يُسأل عنه، فلا يصغر
+#     عن رُبع الصندوق — ولو صغر لَبلغ على شاشة الهاتف دون عتبة اللمس (`METHOD.md §١١`).
+
+def shape_table_errors(shapes: list, world: list, parts_min: float, stations: list) -> list:
+    """بنيةُ جدولَي الأشكال: اسمٌ وأضلاعٌ وموضعٌ لكلٍّ، وأشياءُ العالم من أشكالها."""
+    errors = []
+    if not shapes:
+        return ["[الأشكال] لا شكلَ واحداً في المنهج — والمرحلة ٩ تدرّس أربعة"]
+    known = {s["id"] for s in shapes}
+    parts_of = {s["part"] for s in stations if s["type"] == "shape"}
+    seen = set()
+    for shape in shapes:
+        at = f"[شكل {shape.get('id', '؟')}]"
+        if shape["id"] in seen:
+            errors.append(f"{at}: معرّفٌ مكرَّر")
+        seen.add(shape["id"])
+        if not shape.get("name") or len(shape["name"]) < 3:
+            errors.append(f"{at}: بلا اسمٍ يُنطَق — والاسمُ يُقال في النمذجة وفي الخطأ")
+        if not isinstance(shape.get("sides"), int) or shape["sides"] < 0:
+            errors.append(f"{at}: عددُ أضلاعٍ غيرُ صحيح ({shape.get('sides')})")
+        elif shape["sides"] == 1 or shape["sides"] == 2:
+            errors.append(f"{at}: {shape['sides']} ضلعاً — ولا شكلَ بضلعٍ ولا بضلعين")
+        if parts_of and shape.get("at") not in parts_of:
+            errors.append(f"{at}: يُقدَّم في محطةٍ لا وجودَ لها («{shape.get('at')}») "
+                          "— فلا يراه طفلٌ أبداً")
+    if not any(s["sides"] == 0 for s in shapes):
+        errors.append("[الأشكال] لا شكلَ بلا أضلاع — والدائرةُ تُميَّز بأنها لا ضلعَ لها")
+
+    if not world:
+        errors.append("[عالم الأشكال] لا شيءَ واحداً — ومحطةُ «الأشكال حولنا» تسأل عنها")
+    for thing in world:
+        at = f"[شيء {thing.get('id', '؟')}]"
+        if not thing.get("name"):
+            errors.append(f"{at}: بلا اسمٍ يُراجَع")
+        parts = thing.get("parts") or []
+        if len(parts) < 2:
+            errors.append(f"{at}: {len(parts)} جزءاً — والسؤالُ «أين الشكل» يقتضي شكلين فأكثر")
+        kinds = [p.get("shape") for p in parts]
+        alien = [k for k in kinds if k not in known]
+        if alien:
+            errors.append(f"{at}: جزءٌ بصنفٍ لا يعرفه المنهج ({'، '.join(map(str, alien))})")
+        if len(set(kinds)) < 2:
+            errors.append(f"{at}: أجزاؤه شكلٌ واحد مكرَّر — فلا مشتّتَ في سؤاله")
+        for part in parts:
+            box = f"{at} · {part.get('shape')}"
+            w, h = part.get("w"), part.get("h")
+            if not all(isinstance(v, (int, float)) for v in (part.get("x"), part.get("y"), w, h)):
+                errors.append(f"{box}: موضعٌ ليس عدداً")
+                continue
+            if part["x"] < 0 or part["y"] < 0 or part["x"] + w > 1 + 1e-9 \
+                    or part["y"] + h > 1 + 1e-9:
+                errors.append(f"{box}: يخرج عن صندوق الشيء (نسبةً من ٠ إلى ١)")
+            if min(w, h) < parts_min - 1e-9:
+                errors.append(f"{box}: أصغرُ بُعديه {min(w, h)} دون {parts_min} — "
+                              "وهو هدفُ لمسٍ يُسأل عنه (`METHOD.md §١١`)")
+            if part.get("shape") in ("square", "circle") and abs(w - h) > 1e-9:
+                errors.append(f"{box}: صندوقُه ليس مربّعاً ({w}×{h}) — "
+                              "فيُرسَم مستطيلاً ويُسمّى مربّعاً")
+            if part.get("shape") == "rect" and abs(w - h) <= 1e-9:
+                errors.append(f"{box}: صندوقُه مربّعٌ ({w}×{h}) — فيُرسَم مربّعاً ويُسمّى مستطيلاً")
+
+    # **ولكلِّ شكلٍ شيءٌ يسكنه**: شكلٌ لا يوجد في شيءٍ من عالم الطفل لا يُسأل عنه في
+    # محطة «الأشكال حولنا» أبداً — تدريسٌ في نصف الرحلة وسكوتٌ في نصفها.
+    homeless = [s["id"] for s in shapes
+                if not any(p["shape"] == s["id"] for t in world for p in t["parts"])]
+    if homeless:
+        errors.append(f"[عالم الأشكال] شكلٌ لا يسكن شيئاً من عالم الطفل: {'، '.join(homeless)} "
+                      "— فلا يُسأل عنه في «الأشكال حولنا»")
+    return errors
+
+
+def shape_usage_errors(label: str, used: dict, shapes: list, station: dict) -> list:
+    """جولةٌ ترسم أشكالاً: **لا شكلَ قبل موضعه** — كما لا رمزَ قبل موضعه."""
+    drawn = used.get("shapes") or []
+    if not drawn:
+        return []
+    known = {s["id"]: s for s in shapes}
+    if station["type"] != "shape":
+        return [f"{label}: يرسم شكلاً هندسياً ({'، '.join(drawn)}) ومحطتُه ليست محطةَ أشكال"]
+    order = []
+    for shape in shapes:
+        if shape["at"] not in order:
+            order.append(shape["at"])
+    at = order.index(station["part"]) if station["part"] in order else len(order)
+    allowed = {s["id"] for s in shapes if order.index(s["at"]) <= at}
+    errors = []
+    for kind in drawn:
+        if kind not in known:
+            errors.append(f"{label}: شكلٌ لا يعرفه المنهج («{kind}»)")
+        elif kind not in allowed:
+            errors.append(f"{label}: يرسم «{kind}» ولم يُقدَّم بعد (موضعُه "
+                          f"«{known[kind]['at']}») — ولا شكلَ قبل موضعه")
     return errors
 
 
@@ -515,7 +622,7 @@ def generator_modules() -> list:
     return out
 
 
-def probe(modules: list, stations: list, scenes: dict) -> tuple:
+def probe(modules: list, stations: list, scenes: dict, shapes: list) -> tuple:
     """يستورد المولّدات في node ويجرد إعلانَها وجولاتِها. يُرجِع (أخطاء، محصيّ)."""
     if not modules:
         return [], 0
@@ -563,6 +670,7 @@ def probe(modules: list, stations: list, scenes: dict) -> tuple:
         label = f"[جولة {round_['id']} · بذرة {round_['seed']}/{round_['index']}]"
         errors += usage_errors(label, round_["used"], station["frontier"])
         errors += scene_usage_errors(label, round_["used"], scenes)
+        errors += shape_usage_errors(label, round_["used"], shapes, station)
     return errors, len(data["rounds"])
 
 
@@ -624,6 +732,12 @@ def check(data: dict) -> int:
          scene_table_errors(data["scenes"]),
          f"{sum(len(t) for t in data['scenes'].values())} مشهداً في "
          f"{len(data['scenes'])} وجهاً، كلُّ رمزٍ فيها برتبةٍ معلَنة مفردة")
+    door("١د) الأشكالُ الأولى: لكلِّ شكلٍ اسمُه وأضلاعُه وموضعُه",
+         shape_table_errors(data["shapes"], data["world"], data["partMin"], stations),
+         f"{len(data['shapes'])} أشكالٍ بأسمائها وأضلاعها "
+         f"({'، '.join(s['name'] + ': ' + str(s['sides']) for s in data['shapes'])}) "
+         f"و{len(data['world'])} أشياءَ من عالم الطفل مبنيّةٍ منها "
+         f"({'، '.join(t['name'] for t in data['world'])})")
     door("١ج) قفزاتُ العدّ: كلُّ قفزةٍ تنتهي عند سقف المستوى",
          skip_errors(data["skipSteps"], data["levelMax"]),
          f"{len(data['skipSteps'])} قفزات ({'، '.join(str(s) for s in data['skipSteps'])}) "
@@ -644,7 +758,7 @@ def check(data: dict) -> int:
         dormant("لا وحدةَ تمارينَ تُعلن `CONSUMES` ولا `probeRounds` "
                 "(الجلسة ٣ تكتب أولاها)")
     else:
-        errors, rounds = probe(modules, stations, data["scenes"])
+        errors, rounds = probe(modules, stations, data["scenes"], data["shapes"])
         for e in errors[:12]:
             print("  ✗", e)
         if not errors:
@@ -812,6 +926,71 @@ def self_test(data: dict) -> int:
     ok(find(scene_usage_errors("ج", {"scenes": [
         {"face": "hologram", "items": []}]}, scenes), "لا مشاهدَ له في المنهج"),
        "ومشهدٌ لوجهٍ لا يعرفه المنهج يُمسَك")
+
+    print("\n— ١د) الأشكالُ تُمسك ما لا اسمَ له ولا موضع (الجلسة ش) —")
+    shapes = data["shapes"]
+    world = data["world"]
+    part_min = data["partMin"]
+
+    def shaped(mutate_shapes=None, mutate_world=None):
+        s_copy = copy.deepcopy(shapes)
+        w_copy = copy.deepcopy(world)
+        if mutate_shapes:
+            mutate_shapes(s_copy)
+        if mutate_world:
+            mutate_world(w_copy)
+        return shape_table_errors(s_copy, w_copy, part_min, stations)
+
+    ok(not shape_table_errors(shapes, world, part_min, stations),
+       f"أشكالُ المنهج الحيّة نظيفة ({'، '.join(s['name'] for s in shapes)})")
+    ok(find(shaped(lambda s: s[1].update(name="")), "بلا اسمٍ يُنطَق"),
+       "شكلٌ بلا اسمٍ يُنطَق يُمسَك (الاسمُ يُقال في النمذجة وفي الخطأ)")
+    ok(find(shaped(lambda s: s[1].update(at="nowhere")), "محطةٍ لا وجودَ لها"),
+       "وشكلٌ يُقدَّم في محطةٍ لا وجودَ لها يُمسَك (فلا يراه طفلٌ أبداً)")
+    ok(find(shaped(lambda s: s[1].update(sides=2)), "ولا شكلَ بضلعٍ ولا بضلعين"),
+       "وشكلٌ بضلعين يُمسَك")
+    ok(find(shaped(lambda s: [x.update(sides=4) for x in s if x["sides"] == 0]),
+            "لا شكلَ بلا أضلاع"),
+       "وسقوطُ الشكل الذي لا ضلعَ له يُمسَك (الدائرةُ تُميَّز بذلك)")
+    ok(find(shaped(mutate_world=lambda w: w[0]["parts"][0].update(shape="hexagon")),
+            "صنفٍ لا يعرفه المنهج"),
+       "**وجزءُ شيءٍ بصنفٍ لا يعرفه المنهج يُمسَك**")
+    ok(find(shaped(mutate_world=lambda w: w[0]["parts"][1].update(w=0.4, h=0.6)),
+            "صندوقُه ليس مربّعاً"),
+       "**ومربّعٌ صندوقُه مستطيل يُمسَك** — فيُرسَم مستطيلاً ويُسمّى مربّعاً")
+    ok(find(shaped(mutate_world=lambda w: [p.update(h=p["w"]) for t in w for p in t["parts"]
+                                           if p["shape"] == "rect"]), "صندوقُه مربّعٌ"),
+       "ومستطيلٌ صندوقُه مربّع يُمسَك")
+    ok(find(shaped(mutate_world=lambda w: w[0]["parts"][2].update(w=0.08)), "دون"),
+       "**وجزءٌ أصغرُ من أرضيّة الإصبع يُمسَك** (هدفُ لمسٍ يُسأل عنه — `METHOD.md §١١`)")
+    ok(find(shaped(mutate_world=lambda w: w[0]["parts"][0].update(x=0.8, w=0.5)),
+            "يخرج عن صندوق الشيء"),
+       "وجزءٌ يخرج عن صندوق شيئه يُمسَك")
+    ok(find(shaped(mutate_world=lambda w: [t.update(parts=t["parts"][:1]) for t in w]),
+            "شكلين فأكثر"),
+       "وشيءٌ بجزءٍ واحد يُمسَك (لا مشتّتَ في سؤاله)")
+    ok(find(shaped(mutate_world=lambda w: [t.update(
+        parts=[p for p in t["parts"] if p["shape"] != "circle"]) for t in w]),
+            "لا يسكن شيئاً"),
+       "**وشكلٌ لا يسكن شيئاً من عالم الطفل يُمسَك** — يُدرَّس ولا يُسأل عنه في محطته")
+
+    print("\n— ١د‌ب) ولا شكلَ قبل موضعه في جولةٍ مولَّدة —")
+    first = next(s for s in stations if s["type"] == "shape")
+    last = [s for s in stations if s["type"] == "shape"][-1]
+    early = next(s for s in shapes if s["at"] != first["part"])
+    ok(not shape_usage_errors("ج", {"shapes": [shapes[0]["id"]]}, shapes, first),
+       f"جولةُ «{first['part']}» ترسم شكلاً قُدِّم فيها تمرّ")
+    ok(find(shape_usage_errors("ج", {"shapes": [early["id"]]}, shapes, first),
+            "ولم يُقدَّم بعد"),
+       f"**وجولةٌ ترسم «{early['name']}» قبل محطته تُمسَك** — ولا شكلَ قبل موضعه")
+    ok(not shape_usage_errors("ج", {"shapes": [s["id"] for s in shapes]}, shapes, last),
+       "والمحطةُ الأخيرة ترسم الأشكالَ كلَّها (وقد قُدِّمت)")
+    ok(find(shape_usage_errors("ج", {"shapes": ["hexagon"]}, shapes, last), "لا يعرفه المنهج"),
+       "وشكلٌ لا يعرفه المنهج يُمسَك في الجولة كما في الجدول")
+    other = next(s for s in stations if s["type"] != "shape")
+    ok(find(shape_usage_errors("ج", {"shapes": [shapes[0]["id"]]}, shapes, other),
+            "ليست محطةَ أشكال"),
+       "وشكلٌ هندسيّ في محطةٍ ليست محطةَ أشكالٍ يُمسَك")
 
     print("\n— ١ج) قفزاتُ العدّ تُمسك ما لا ينتهي عند السقف —")
     top = data["levelMax"]

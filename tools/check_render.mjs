@@ -24,7 +24,9 @@
 import { readdirSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import * as render from '../app/js/render.js';
-import { DISPLAYS, LEVEL_MAX, SCENES, SKIP_STEPS, stations } from '../app/js/curriculum.js';
+import {
+  DISPLAYS, LEVEL_MAX, SCENES, SHAPES, SHAPES_WORLD, SKIP_STEPS, shapeOf, stations,
+} from '../app/js/curriculum.js';
 import { isEmoji, emojiSrc } from '../app/js/ui.js';
 
 const EMOJI_DIR = new URL('../app/emoji/', import.meta.url);
@@ -478,6 +480,116 @@ function sceneErrors(name, figure, want) {
   return [...errors, ...placeErrors(name, marks, figure.view)];
 }
 
+// ————— ٣ح) الشكلُ الهندسيّ: **المرسومُ هو المُعلَن، وأضلاعُه تُعَدّ** (الجلسة ش) —————
+//
+// المرحلة ٩ تدرّس **رسماً لا صورة** (`METHOD.md §٣`)، فشرطُ صدقها حسابيّ:
+//
+//   • **عددُ الأضلاع المرسومة هو المُعلَن في المنهج** (`SHAPES[].sides`): مثلثٌ ثلاثُ
+//     قِطَع ومربّعٌ أربع ودائرةٌ بلا قِطعة — **وهذا هو الوصلُ بين البيان والرسم**:
+//     رقمٌ يُبدَّل في المنهج بلا رسمٍ يوافقه يحمرّ هنا، فلا يُعَدّ الطفلُ ضلعين ويُقال
+//     له «ثلاثة».
+//   • **والمربّعُ أضلاعُه سواء، والمستطيلُ ضلعاه مختلفان**: وإلّا سُمّي المرسومُ باسم
+//     غيره — وهي **المواجهةُ المقصودة** في ٩·٢، فكذبةُ الرسم فيها تهدم الدرس نفسَه.
+//   • **ومنتصفُ كلِّ ضلعٍ موضعُ لمسِه** (`sides`): من رسم الضلعَ يقول أين يُلمَس،
+//     فلا تحسب الشاشةُ موضعاً ثانياً يفترق عنه فيلمس الطفلُ فراغاً.
+//   • **وصفُّ الأشكال يقف على خطٍّ واحد** ويمضي إلى اليسار بلا تراكب — كمشهد القياس؛
+//     **وشيءُ العالم أجزاؤه تتلامس عمداً** (السقفُ على الجسم) فلا يسري عليه حدُّ
+//     التلاصق، ويبقى شرطُ **ألّا يخرج جزءٌ عن صندوقه**.
+
+function shapeErrors(name, figure, want) {
+  const errors = [];
+  const marks = figure.marks || [];
+  if (marks.length !== want) {
+    errors.push(`${name}: رسم ${marks.length} شكلاً والمقصود ${want}`);
+    return errors;
+  }
+  const len = (a, b) => Math.hypot(a[0] - b[0], a[1] - b[1]);
+  for (const [i, m] of marks.entries()) {
+    const known = shapeOf(m.shape);
+    if (!known) {
+      errors.push(`${name}: الشكل ${i} صنفٌ لا يعرفه المنهج («${m.shape}»)`);
+      continue;
+    }
+    const points = m.points || [];
+    if (points.length !== known.sides) {
+      errors.push(`${name}: «${m.shape}» رُسم بـ${points.length} ضلعاً والمنهجُ يعلن `
+        + `${known.sides} — **المرسومُ ليس هو المُعلَن**`);
+      continue;
+    }
+    const sides = points.map((p, at) => len(p, points[(at + 1) % points.length]));
+    if (sides.some((s) => s <= EPS)) {
+      errors.push(`${name}: «${m.shape}» فيه ضلعٌ بلا طول — شكلٌ لا يُرى ولا يُلمَس`);
+    }
+    if (m.shape === 'square' && Math.max(...sides) - Math.min(...sides) > 1e-6) {
+      errors.push(`${name}: **مربّعٌ أضلاعُه غيرُ متساوية** `
+        + `(${Math.min(...sides).toFixed(1)}..${Math.max(...sides).toFixed(1)}) — `
+        + 'فهو مستطيلٌ سُمّي مربّعاً، وذلك هدمُ درس ٩·٢');
+    }
+    if (m.shape === 'rect' && Math.abs(sides[0] - sides[1]) <= 1e-6) {
+      errors.push(`${name}: **مستطيلٌ ضلعاه سواء** — فهو مربّعٌ سُمّي مستطيلاً`);
+    }
+    if (m.shape === 'circle' && !(m.r > 0)) errors.push(`${name}: دائرةٌ بلا نصف قطر`);
+    // **ومنتصفُ الضلع موضعُ لمسه**: لكلِّ ضلعٍ موضعٌ، وهو على الضلع نفسِه
+    const spots = m.sides || [];
+    if (spots.length !== points.length) {
+      errors.push(`${name}: «${m.shape}» له ${points.length} ضلعاً و${spots.length} موضعَ لمس`);
+    } else {
+      for (const [at, spot] of spots.entries()) {
+        const p = points[at];
+        const q = points[(at + 1) % points.length];
+        if (Math.abs(spot.x - (p[0] + q[0]) / 2) > EPS
+          || Math.abs(spot.y - (p[1] + q[1]) / 2) > EPS) {
+          errors.push(`${name}: موضعُ لمسِ الضلع ${at} ليس منتصفَه — يلمس فراغاً`);
+          break;
+        }
+      }
+    }
+    /* **ولا يخرج شكلٌ عن صندوقه**: ما خرج يُقتصّ فلا يُرى ولا يُلمَس. ويُقاس
+       **بصندوقه هو** لا بقرصٍ حوله: المستطيلُ عريضٌ قصير، فقرصٌ يسعه يجاوز اللوح
+       وهو داخلَه (وهو ما أمسكه هذا البابُ يومَ كُتب). */
+    const b = m.box;
+    if (b.x < -EPS || b.y < -EPS
+      || b.x + b.w > figure.view.w + EPS || b.y + b.h > figure.view.h + EPS) {
+      errors.push(`${name}: «${m.shape}» يخرج عن صندوق الشكل `
+        + `(${b.x.toFixed(1)}، ${b.y.toFixed(1)} — ${b.w.toFixed(1)}×${b.h.toFixed(1)})`);
+    }
+    const out = points.find((p) => p[0] < b.x - EPS || p[1] < b.y - EPS
+      || p[0] > b.x + b.w + EPS || p[1] > b.y + b.h + EPS);
+    if (out) {
+      errors.push(`${name}: رأسٌ من «${m.shape}» خارج صندوقه (${out[0].toFixed(1)}، ${out[1].toFixed(1)})`);
+    }
+    if (m.shape === 'circle'
+      && (m.cx - m.r < b.x - EPS || m.cx + m.r > b.x + b.w + EPS)) {
+      errors.push(`${name}: دائرةٌ أوسعُ من صندوقها`);
+    }
+  }
+  if (figure.thing) return errors;      // أجزاءُ الشيء تتلامس عمداً، فلا صفَّ ولا فاصل
+
+  const base = marks[0].box.y + marks[0].box.h;
+  if (marks.some((m) => Math.abs(m.box.y + m.box.h - base) > EPS)) {
+    errors.push(`${name}: الأشكالُ لا تقف على خطٍّ واحد — فالفرقُ موضعٌ يخدع لا شكلٌ يُرى`);
+  }
+  const steps = marks.slice(1).map((m, i) => marks[i].cx - m.cx);
+  if (steps.some((s) => s <= 0)) {
+    errors.push(`${name}: صفُّ الأشكال لا يمضي إلى اليسار — وجهةُ العرض جهةُ القراءة`);
+  }
+  // **ولا يتلاصق شكلان دون الفاصل الأدنى**: حدّان متجاوران يُقرآن شكلاً واحداً
+  for (let i = 0; i < marks.length; i++) {
+    for (let j = i + 1; j < marks.length; j++) {
+      const [a, c] = [marks[i].box, marks[j].box];
+      const apart = Math.max(a.x - (c.x + c.w), c.x - (a.x + a.w));
+      if (apart < GAP - EPS) {
+        errors.push(`${name}: الشكلان ${i} و${j} متلاصقان دون الفاصل الأدنى `
+          + `(${apart.toFixed(1)} < ${GAP})`);
+      }
+    }
+  }
+  return errors;
+}
+
+/** أشياءُ عالم الطفل كما يعلنها المنهج — مادّةُ كنسِ وجه «الأشكال حولنا». */
+const worldMaterial = () => SHAPES_WORLD.map((t) => ({ id: t.id, count: t.parts.length }));
+
 // ————— ٤) صدق الصورة: عناصرُ عالم الطفل —————
 
 function objectErrors() {
@@ -601,6 +713,7 @@ function sweep() {
         if (kind === 'line') errors.push(...lineErrors(name, figure, n));
         if (kind === 'pattern') errors.push(...patternErrors(name, figure, n));
         if (kind === 'scene') errors.push(...sceneErrors(name, figure, n));
+        if (kind === 'shape') errors.push(...shapeErrors(name, figure, n));
         if (figure.frames.length) errors.push(...frameErrors(name, figure, n));
         if (display === 'dice') errors.push(...diceErrors(name, figure, n));
         if (display === 'objects' && !render.OBJECTS.some((o) => o.glyph === figure.glyph)) {
@@ -714,6 +827,48 @@ function sweep() {
     errors.push('[المشاهد] كمّيةٌ قَبِلت مادّةَ مشهدٍ — ولا رموزَ لِما يُعَدّ');
   }
 
+  /* **وأشكالُ المنهج تُكنَس بكل صفٍّ وكلِّ شيءٍ من عالم الطفل** (الجلسة ش): كلُّ
+     صنفٍ مفرداً في بطاقته (فبطاقاتُ الجواب منها)، وكلُّ شيءٍ بأجزائه المعلَنة —
+     فيُقابَل عددُ الأضلاع المرسومة بما يعلنه المنهج في كل موضعٍ يراه الطفل. */
+  let shapes = 0;
+  for (const kind of SHAPES) {
+    const figure = render.plan('shape', 1, { seed: 5, shapes: [kind.id] });
+    shapes++;
+    errors.push(...shapeErrors(`[شكل ${kind.id}]`, figure, 1));
+  }
+  for (const size of [2, 3, 4]) {
+    const kinds = SHAPES.slice(0, size).map((s) => s.id);
+    const figure = render.plan('shape', size, { seed: size * 11, shapes: kinds });
+    shapes++;
+    errors.push(...shapeErrors(`[صفُّ ${kinds.join('،')}]`, figure, size));
+  }
+  for (const { id, count } of worldMaterial()) {
+    const figure = render.plan('shape', count, { seed: 3, thing: id });
+    shapes++;
+    errors.push(...shapeErrors(`[شيءُ ${id}]`, figure, count));
+    // **وأجزاؤه من جدول المنهج بترتيبها** — لا يخترع الرسّامُ جزءاً ولا يُسقِط جزءاً
+    const want = SHAPES_WORLD.find((t) => t.id === id).parts.map((p) => p.shape);
+    if (figure.shapes.join('|') !== want.join('|')) {
+      errors.push(`[شيءُ ${id}]: أعلن (${figure.shapes.join('، ')}) والمنهجُ `
+        + `(${want.join('، ')}) — **المرسومُ ليس هو المُعلَن**`);
+    }
+  }
+  // **ومادّةُ الأشكال تُرمى ولا تُقرَّب**: صنفٌ لا يعرفه المنهج أو شيءٌ لا وجودَ له
+  for (const [call, why] of [
+    [() => render.plan('shape', 2, { shapes: ['circle', 'hexagon'] }), 'صنفٌ خارج أشكال المنهج'],
+    [() => render.plan('shape', 2, { shapes: ['circle'] }), 'مادّةٌ لا توافق العدد'],
+    [() => render.plan('shape', 1, { thing: 'castle' }), 'شيءٌ خارج جدول عالم المنهج'],
+    [() => render.plan('shape', 2, { thing: SHAPES_WORLD[0].id }), 'عددٌ ليس عددَ أجزائه'],
+    [() => render.plan('shape', 1, { shapes: ['circle'], thing: SHAPES_WORLD[0].id }),
+      'شيءٌ وصفُّ أشكالٍ في لوحٍ واحد'],
+    [() => render.plan('scene', 2, { shapes: ['circle', 'square'] }), 'أشكالٌ لنمطٍ لا يرسمها'],
+    [() => render.plan('numeral', 1, { thing: SHAPES_WORLD[0].id }), 'شيءُ عالمٍ لبطاقة رمز'],
+  ]) {
+    let threw = false;
+    try { call(); } catch { threw = true; }
+    if (!threw) errors.push(`[الأشكال] مرّت بلا اعتراض: ${why}`);
+  }
+
   // **خارجَ المدى يُرمى لا يُقرَّب**: كميةٌ لا يستطيع النمطُ رسمَها خطأُ برمجةٍ يصرخ
   for (const display of painted) {
     const { min, max } = render.rangeOf(display);
@@ -740,7 +895,7 @@ function sweep() {
       errors.push(`[${display}] قَبِل شقّاً وهو لا يُعَدّ عناصرَ — لا يُقسَم ما ليس كمّاً`);
     }
   }
-  return { errors, figures, splits, scenes, strips, rooms };
+  return { errors, figures, splits, scenes, strips, rooms, shapes };
 }
 
 const throws = (fn) => { try { fn(); return false; } catch { return true; } };
@@ -759,7 +914,7 @@ function check() {
   const dormant = (msg) => { asleep++; console.log('  ⏸', `${msg} — نائم، يستيقظ ذاتياً`); };
 
   const painted = render.displays();
-  const { errors, figures, splits, scenes, strips, rooms } = sweep();
+  const { errors, figures, splits, scenes, strips, rooms, shapes } = sweep();
   const covered = painted.map((d) => render.rangeOf(d));
 
   const byKind = (kind) => painted.filter((d) => render.kindOf(d) === kind);
@@ -776,7 +931,9 @@ function check() {
     + '(رمزاً كان أو رقماً مشرقياً)، '
     + `و${byKind('scene').length} مشهدَ قياسٍ مقاديرُه تتبع رتبَها على خطٍّ واحد، `
     + '**وأشياءُ المشاهد الحقيقية سواءٌ في الحجم** فلا حكمَ فيه، '
-    + `و${rooms} لوحاً ذا سَعةٍ **ينمو وينقص في مكانه** فلا يزحزح ما زاد ما بقي`);
+    + `و${rooms} لوحاً ذا سَعةٍ **ينمو وينقص في مكانه** فلا يزحزح ما زاد ما بقي، `
+    + `و${shapes} لوحَ أشكالٍ **أضلاعُها المرسومة هي التي يعلنها المنهج** `
+    + `(${SHAPES.map((s) => `${s.name}: ${s.sides}`).join(' · ')})`);
 
   const sceneGlyphs = Object.values(SCENES).flat().flatMap((s) => s.items);
   door('٢) صدق الصورة: عناصرُ عالم الطفل وأشياءُ المشاهد من Twemoji المحلية',
@@ -1079,6 +1236,49 @@ function selfTest() {
     && throws(() => render.plan('scene', real.length, { items: real, ranks: [1, 2] }))
     && throws(() => render.plan('objects', 2, { items: [real[0], real[1]] })),
   'ورمزٌ خارج جدول المشاهد أو مكرَّرٌ أو معه رتبٌ أو على نمطٍ يُعَدّ — كلُّه يُرمى');
+
+  console.log('\n— ٣ح) الشكلُ الهندسيّ: يُمسَك ما خالف أضلاعَه المعلَنة (الجلسة ش) —');
+  const row = render.plan('shape', 3, { seed: 9, shapes: ['circle', 'triangle', 'square'] });
+  const twins = render.plan('shape', 2, { seed: 4, shapes: ['square', 'rect'] });
+  const house = render.plan('shape', SHAPES_WORLD[0].parts.length, { seed: 2, thing: SHAPES_WORLD[0].id });
+  ok(!shapeErrors('ش', row, 3).length && !shapeErrors('ش', twins, 2).length,
+    'صفّا (دائرةٌ ومثلثٌ ومربّع) و(مربّعٌ ومستطيل) نظيفان — أضلاعُهما ما يعلنه المنهج');
+  ok(!shapeErrors('ش', house, house.marks.length).length,
+    `وشيءُ العالم «${SHAPES_WORLD[0].id}» نظيف — أجزاؤه تتلامس ولا تخرج عن صندوقه`);
+  ok(found(shapeErrors('ش', broke(row, (f) => { f.marks[1].points.pop(); }), 3),
+    'المرسومُ ليس هو المُعلَن'),
+  '**ومثلثٌ رُسم بضلعين يُمسَك** — والمنهجُ يعلن ثلاثة، فالطفلُ يَعُدّ ما رُسِم');
+  ok(found(shapeErrors('ش', broke(twins, (f) => {
+    const [, m] = f.marks; const b = m.box;
+    m.points = [[b.x, b.y], [b.x + b.w, b.y], [b.x + b.w, b.y + b.w], [b.x, b.y + b.w]];
+  }), 2), 'ضلعاه سواء'),
+  '**ومستطيلٌ رُسم مربّعاً يُمسَك** — وهو عينُ ما تفرّق فيه محطةُ ٩·٢');
+  ok(found(shapeErrors('ش', broke(row, (f) => {
+    const m = f.marks[2]; m.points[1][0] += 24;
+  }), 3), 'أضلاعُه غيرُ متساوية'),
+  '**ومربّعٌ رُسم مستطيلاً يُمسَك** — فلا يُسمّى المرسومُ باسم غيره');
+  ok(found(shapeErrors('ش', broke(row, (f) => { f.marks[1].sides[0].x += 12; }), 3),
+    'ليس منتصفَه'),
+  'وموضعُ لمسِ ضلعٍ زاح عن منتصفه يُمسَك (يلمس فراغاً)');
+  ok(found(shapeErrors('ش', broke(row, (f) => { f.marks[0].box.y -= 30; }), 3), 'خطٍّ واحد'),
+    'وشكلٌ رُفع عن خطّ الأرض يُمسَك');
+  ok(found(shapeErrors('ش', broke(row, (f) => {
+    f.marks[1].box.x = f.marks[0].box.x - 4; f.marks[1].cx = f.marks[0].cx - 4;
+  }), 3), 'متلاصقان'),
+  'وشكلان متلاصقان دون الفاصل يُمسَكان (يُقرآن شكلاً واحداً)');
+  ok(found(shapeErrors('ش', broke(row, (f) => { f.marks[0].shape = 'hexagon'; }), 3),
+    'لا يعرفه المنهج'),
+  'وصنفٌ لا يعرفه المنهج يُمسَك (لا اسمَ له ولا أضلاع)');
+  ok(found(shapeErrors('ش', broke(house, (f) => { f.marks[0].box.y -= 40; }),
+    house.marks.length), 'يخرج عن صندوق'),
+  'وجزءٌ من شيءِ العالم خرج عن صندوقه يُمسَك');
+  ok(!found(shapeErrors('ش', house, house.marks.length), 'متلاصقان'),
+    '**وأجزاءُ الشيء تتلامس ولا تُمسَك** — السقفُ على الجسم عمداً، والحدُّ للصفّ وحدَه');
+  ok(throws(() => render.plan('shape', 2, { shapes: ['circle', 'hexagon'] }))
+    && throws(() => render.plan('shape', 1, { thing: 'castle' }))
+    && throws(() => render.plan('shape', 2, { thing: SHAPES_WORLD[0].id }))
+    && throws(() => render.plan('scene', 2, { shapes: ['circle', 'square'] })),
+  'وصنفٌ أو شيءٌ خارج جدول المنهج، أو عددٌ ليس عددَ أجزائه، أو أشكالٌ لنمطٍ لا يرسمها — كلُّه يُرمى');
 
   console.log('\n— ٤) صدق الصورة والمعجم: يُمسَك ما لا صورةَ له —');
   ok(found(vocabErrors(['dice', 'hologram'], DISPLAYS), 'ولا يعرفه المنهج'),

@@ -31,7 +31,7 @@
 
 import * as progress from './progress.js';
 import * as audio from './audio.js';
-import { stations } from './curriculum.js';
+import { stations, worldThing } from './curriculum.js';
 import { paint, spotStyle, spanStyle } from './render.js';
 import { setBuilders } from './review.js';
 import {
@@ -285,6 +285,12 @@ export const usedOf = (round) => {
     // لكلِّ رمزٍ رتبةً معلَنة في `SCENES` ولا رتبتين متساويتين في سؤالٍ واحد.
     scenes: figures.filter((f) => f.display === 'scene' && f.items)
       .map((f) => ({ face: round.range, items: [...f.items] })),
+    // **وأشكالُ المرحلة ٩ تُجرَد بأصنافها** (الجلسة ش): كلُّ شكلٍ سيُرسَم — مفرداً
+    // في بطاقةٍ أو جزءاً من شيءٍ من عالم الطفل (وأجزاؤه بيانُ منهجٍ يُقرأ لا يُخمَّن)
+    // — فيفرض `check_range.py` أن **لا شكلَ يُرسَم قبل موضعه** من الرحلة: مَن لم
+    // يلقَ المستطيلَ بعدُ لا يظهر له في بطاقةٍ ولا في بيت.
+    shapes: [...new Set(figures.flatMap((f) => f.shapes
+      || (f.thing ? (worldThing(f.thing)?.parts || []).map((p) => p.shape) : [])))],
   };
 };
 
@@ -402,10 +408,16 @@ export function markButton(kind, { onclick, label = '', disabled = false } = {})
  *
  * وهي **زرٌّ حقيقيّ** (`<button>`) لا مستمعٌ على شكل: بها يجرد حارسُ هدف اللمس في
  * `browser_test.html` عناصرَ العدّ من تلقائه (وعدُ `DESIGN.md §٥`).
+ *
+ * **وما يُلمَس قد لا يكون عنصرَ كمّية** (الجلسة ش): أضلاعُ الشكل تُعَدّ لمساً كما
+ * تُعَدّ النقاط، ومواضعُها من المصيِّر نفسِه (`marks[i].sides`) — فتُمرَّر مواضعُ
+ * اللمس صريحةً، والقاعدةُ واحدة: **من رسم الشيءَ يقول أين يُلمَس**.
+ *
+ * @param {{x: number, y: number, r: number}[]} spots مواضعُ اللمس — وأصلُها العناصر
  */
-export function touchLayer(fig, onTap) {
+export function touchLayer(fig, onTap, spots = fig.plan.marks) {
   const layer = h('div', { class: 'fig-taps' });
-  const taps = fig.plan.marks.map((mark, i) => {
+  const taps = spots.map((mark, i) => {
     const btn = h('button', {
       class: 'fig-tap',
       css: spotStyle(mark, fig.plan.view),

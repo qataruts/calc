@@ -18,7 +18,7 @@
 //    حقلاً حقلاً.
 //
 // وستةُ أبواب:
-//   ١) **المفاهيم**: كلُّ مفهومٍ تكتبه الرحلةُ له عبارتُه وقسمُه من السبعة، ولا سطرَ
+//   ١) **المفاهيم**: كلُّ مفهومٍ تكتبه الرحلةُ له عبارتُه وقسمُه المعلَن، ولا سطرَ
 //      بائد، ولا مدىً وصفيٌّ بلا اسمٍ يُقرأ.
 //   ٢) **العبارة من السجلّ**: نصُّ المنهج حرفاً على سجلٍّ مصنوع.
 //   ٣) **الرقمُ محسوبٌ لا مكتوب**: يتبدّل السجلُّ فتتبدّل العبارة.
@@ -64,7 +64,7 @@ const record = (key, tries, day) => {
 
 // ————— ١) المفاهيم: كلُّ ما تكتبه الرحلةُ له عبارتُه وقسمُه —————
 
-console.log('\n١. المفاهيم: أقسامُ اللوحة السبعة');
+console.log(`\n١. المفاهيم: أقسامُ اللوحة (${curriculum.CONCEPT_SECTIONS.length})`);
 
 const written = curriculum.journeyConcepts();
 const sections = curriculum.CONCEPT_SECTIONS.map((s) => s.id);
@@ -83,14 +83,14 @@ if (!written.length) {
 
   const alien = written.filter((c) => !sections.includes(curriculum.conceptOf(c)?.section));
   ok(alien.length === 0,
-    `وكلُّ مفهومٍ في قسمٍ من السبعة (${curriculum.CONCEPT_SECTIONS.map((s) => s.title).join(' · ')})`
+    `وكلُّ مفهومٍ في قسمٍ من الأقسام (${curriculum.CONCEPT_SECTIONS.map((s) => s.title).join(' · ')})`
     + (alien.length ? ` — خارجها: ${alien.join('، ')}` : ''));
 
   // **ولا قسمَ فارغ**: قسمٌ في اللوحة لا مفهومَ فيه ترويسةٌ تعد الوالدَ بما لا يجيء
   const empty = sections.filter((id) =>
     !written.some((c) => curriculum.conceptOf(c).section === id));
   ok(empty.length === 0,
-    'ولكلِّ قسمٍ من السبعة مفهومٌ يسكنه' + (empty.length ? ` — فارغ: ${empty.join('، ')}` : ''));
+    'ولكلِّ قسمٍ مفهومٌ يسكنه (فلا ترويسةٌ تعد الوالدَ بما لا يجيء)' + (empty.length ? ` — فارغ: ${empty.join('، ')}` : ''));
 
   // **والمدى الوصفيّ يُسمّى** (المرحلة ٨): مفتاحٌ خام في لوحةِ والدٍ عيبٌ لا اختصار
   const faces = [...new Set(curriculum.stations()
