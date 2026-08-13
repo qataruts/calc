@@ -652,71 +652,80 @@
     "category": "instruction",
     "requestedBy": "session-shapes",
     "priority": 20,
-    "status": "pending",
-    "doneAt": null
+    "status": "done",
+    "doneAt": "2026-08-13",
+    "model": "gemini-3.1-flash-tts-preview"
   },
   {
     "text": "أَيْنَ الْمُثَلَّثْ؟",
     "category": "instruction",
     "requestedBy": "session-shapes",
     "priority": 20,
-    "status": "pending",
-    "doneAt": null
+    "status": "done",
+    "doneAt": "2026-08-13",
+    "model": "gemini-3.1-flash-tts-preview"
   },
   {
     "text": "أَيْنَ الْمُرَبَّعْ؟",
     "category": "instruction",
     "requestedBy": "session-shapes",
     "priority": 20,
-    "status": "pending",
-    "doneAt": null
+    "status": "done",
+    "doneAt": "2026-08-13",
+    "model": "gemini-3.1-flash-tts-preview"
   },
   {
     "text": "أَيْنَ الْمُسْتَطِيلْ؟",
     "category": "instruction",
     "requestedBy": "session-shapes",
     "priority": 20,
-    "status": "pending",
-    "doneAt": null
+    "status": "done",
+    "doneAt": "2026-08-13",
+    "model": "gemini-3.1-flash-tts-preview"
   },
   {
     "text": "كَمْ ضِلْعًا؟",
     "category": "instruction",
     "requestedBy": "session-shapes",
     "priority": 20,
-    "status": "pending",
-    "doneAt": null
+    "status": "done",
+    "doneAt": "2026-08-13",
+    "model": "gemini-3.1-flash-tts-preview"
   },
   {
     "text": "دَائِرَةْ",
     "category": "instruction",
     "requestedBy": "session-shapes",
     "priority": 20,
-    "status": "pending",
-    "doneAt": null
+    "status": "done",
+    "doneAt": "2026-08-13",
+    "model": "gemini-3.1-flash-tts-preview"
   },
   {
     "text": "مُثَلَّثْ",
     "category": "instruction",
     "requestedBy": "session-shapes",
     "priority": 20,
-    "status": "pending",
-    "doneAt": null
+    "status": "done",
+    "doneAt": "2026-08-13",
+    "model": "gemini-3.1-flash-tts-preview"
   },
   {
     "text": "مُرَبَّعْ",
     "category": "instruction",
     "requestedBy": "session-shapes",
     "priority": 20,
-    "status": "pending",
-    "doneAt": null
+    "status": "done",
+    "doneAt": "2026-08-13",
+    "model": "gemini-3.1-flash-tts-preview"
   },
   {
     "text": "مُسْتَطِيلْ",
     "category": "instruction",
     "requestedBy": "session-shapes",
     "priority": 20,
-    "status": "pending",
-    "doneAt": null
+    "status": "done",
+    "doneAt": "2026-08-13",
+    "model": "gemini-3.1-flash-tts-preview"
   }
 ]
