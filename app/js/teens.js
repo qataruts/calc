@@ -81,7 +81,7 @@ const TEN = rangeOf('ten-frame').max;
 // الْخَطّ» لكشفها، ودعوةُ «شاهِدْ» من جدول الحلقة) — زهدٌ صوتيّ بحكم المدير.
 
 const ASK = {
-  build: 'اِبْنِ الْعَدَدْ',
+  build: 'ابْنِ الْعَدَدْ',
   read: 'كَمْ هَذَا؟',
   ten: 'وَقَدِ اكْتَمَلَتِ الْعَشَرَةْ',
   rest: 'كَمْ بَقِيَ لِتَمْتَلِئَ الْعَشَرَةْ؟',
@@ -342,7 +342,7 @@ function skipRound(station, rnd, { aided = false } = {}) {
   return {
     kind: 'count', concept: skill.concept, range: skill.range, mode: 'skip', aided,
     ask: ASK.jump,
-    hint: 'اُنْظُرْ إِلَى القَفَزَاتِ المُضَاءَة، ثُمَّ الْمَسْ مَوْضِعَ التَّالِيَة',
+    hint: 'انْظُرْ إِلَى القَفَزَاتِ المُضَاءَة، ثُمَّ الْمَسْ مَوْضِعَ التَّالِيَة',
     step,
     lit: stops.slice(0, shown),
     rail,

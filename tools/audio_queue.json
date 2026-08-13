@@ -15,7 +15,9 @@
     "priority": 10,
     "status": "done",
     "doneAt": "2026-08-11",
-    "model": "gemini-3.1-flash-tts-preview"
+    "model": "gemini-3.1-flash-tts-preview",
+    "retired": "2026-08-13",
+    "retiredWhy": "لم تعد الشجرةُ تنطق هذا النصّ"
   },
   {
     "text": "ثَلَاثَةْ",
@@ -132,7 +134,9 @@
     "priority": 20,
     "status": "done",
     "doneAt": "2026-08-11",
-    "model": "gemini-3.1-flash-tts-preview"
+    "model": "gemini-3.1-flash-tts-preview",
+    "retired": "2026-08-13",
+    "retiredWhy": "لم تعد الشجرةُ تنطق هذا النصّ"
   },
   {
     "text": "كَمْ صَارَتْ كُلُّهَا؟",
@@ -168,7 +172,9 @@
     "priority": 20,
     "status": "done",
     "doneAt": "2026-08-11",
-    "model": "gemini-3.1-flash-tts-preview"
+    "model": "gemini-3.1-flash-tts-preview",
+    "retired": "2026-08-13",
+    "retiredWhy": "لم تعد الشجرةُ تنطق هذا النصّ"
   },
   {
     "text": "اُنْظُرْ وَعُدَّ مَعِي",
@@ -177,7 +183,9 @@
     "priority": 30,
     "status": "done",
     "doneAt": "2026-08-11",
-    "model": "gemini-3.1-flash-tts-preview"
+    "model": "gemini-3.1-flash-tts-preview",
+    "retired": "2026-08-13",
+    "retiredWhy": "لم تعد الشجرةُ تنطق هذا النصّ"
   },
   {
     "text": "الْآنَ جَرِّبْ مَعِي",
@@ -366,7 +374,9 @@
     "priority": 20,
     "status": "done",
     "doneAt": "2026-08-12",
-    "model": "gemini-3.1-flash-tts-preview"
+    "model": "gemini-3.1-flash-tts-preview",
+    "retired": "2026-08-13",
+    "retiredWhy": "لم تعد الشجرةُ تنطق هذا النصّ"
   },
   {
     "text": "وَالْآنَ بِطَرِيقَةٍ أُخْرَى",
@@ -429,7 +439,9 @@
     "priority": 10,
     "status": "done",
     "doneAt": "2026-08-12",
-    "model": "gemini-3.1-flash-tts-preview"
+    "model": "gemini-3.1-flash-tts-preview",
+    "retired": "2026-08-13",
+    "retiredWhy": "لم تعد الشجرةُ تنطق هذا النصّ"
   },
   {
     "text": "ثَلَاثَةَ عَشَرْ",
@@ -600,7 +612,9 @@
     "priority": 20,
     "status": "done",
     "doneAt": "2026-08-12",
-    "model": "gemini-3.1-flash-tts-preview"
+    "model": "gemini-3.1-flash-tts-preview",
+    "retired": "2026-08-13",
+    "retiredWhy": "لم تعد الشجرةُ تنطق هذا النصّ"
   },
   {
     "text": "كَمْ هَذَا؟",
@@ -736,5 +750,61 @@
     "status": "done",
     "doneAt": "2026-08-13",
     "model": "gemini-3.1-flash-tts-preview"
+  },
+  {
+    "text": "اثْنَانْ",
+    "category": "number_name",
+    "requestedBy": "session-audio",
+    "priority": 10,
+    "status": "pending",
+    "doneAt": null
+  },
+  {
+    "text": "اثْنَا عَشَرْ",
+    "category": "number_name",
+    "requestedBy": "session-audio",
+    "priority": 10,
+    "status": "pending",
+    "doneAt": null
+  },
+  {
+    "text": "انْظُرْ وَعُدَّ مَعِي",
+    "category": "modeling",
+    "requestedBy": "session-audio",
+    "priority": 30,
+    "status": "pending",
+    "doneAt": null
+  },
+  {
+    "text": "اصْنَعْهُ بِجُزْأَيْنْ",
+    "category": "instruction",
+    "requestedBy": "session-audio",
+    "priority": 20,
+    "status": "pending",
+    "doneAt": null
+  },
+  {
+    "text": "الْمَسْ وَعُدَّ",
+    "category": "instruction",
+    "requestedBy": "session-audio",
+    "priority": 20,
+    "status": "pending",
+    "doneAt": null
+  },
+  {
+    "text": "اجْعَلْهُمَا سَوَاءْ",
+    "category": "instruction",
+    "requestedBy": "session-audio",
+    "priority": 20,
+    "status": "pending",
+    "doneAt": null
+  },
+  {
+    "text": "ابْنِ الْعَدَدْ",
+    "category": "instruction",
+    "requestedBy": "session-audio",
+    "priority": 20,
+    "status": "pending",
+    "doneAt": null
   }
 ]

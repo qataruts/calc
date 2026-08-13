@@ -3,6 +3,7 @@
 //   node tools/queue_texts.mjs                 # عرضُ الناقص والبائد والمنحرف (لا يكتب)
 //   node tools/queue_texts.mjs --add           # إضافةُ الناقص إلى القائمة
 //   node tools/queue_texts.mjs --prune         # إسقاطُ المنتظِر الذي لم يعد يُنطق
+//   node tools/queue_texts.mjs --retire        # تقاعُدُ المُصرَّف الذي لم يعد يُنطق
 //   node tools/queue_texts.mjs --retag         # ردُّ فئةِ المنتظِر إلى المشتقّة من موضعه
 //   node tools/queue_texts.mjs --wanted-json   # «المطلوب» JSON (لعدّة الصوت)
 //
@@ -242,6 +243,43 @@ if (process.argv.includes('--prune')) {
     const next = rewriteQueue((disk) => disk.filter(
       (e) => !((e.status ?? 'pending') !== 'done' && deadTexts.has(e.text))));
     console.log(`\nحُذف ${before - next.length} مدخلاً من tools/audio_queue.json (بقي ${next.length})`);
+  }
+}
+
+// ————————————— التقاعُد: المُصرَّفُ الذي لم يعد يُنطق (الجلسة ع١) —————————————
+//
+// **علّتُه**: تبديلُ نصٍّ **يبدّل مفتاحَه** (المفتاح من النصّ) — فقرارُ همزة الوصل
+// (`METHOD.md §٨`) بدّل سبعةَ نصوصٍ **مُصرَّفة**، فصار في القائمة سبعةُ مدخلاتٍ تقول
+// «صُرِّف» ولا تنطقها الشجرةُ بعد، ومعها سبعةُ ملفّاتٍ في البنك لا يطلبها أحد.
+//
+// **ولا يُحذَف المُصرَّف ولا ملفُّه هنا**: `--prune` محصورٌ في `pending` بعلّته، وحذفُ
+// سجلِّ ما سُمع يمحو أثرَ مراجعةٍ بالأذن. فيُقاعَد: يبقى المدخلُ بتاريخ تقاعده وسببه،
+// **ويخرج من «المنجَز» و«المنتظِر» معاً** (`generate_audio.py` يعرف `retired` سلفاً)،
+// فتسقط بصمتُه من الفهرس يومَ يُعاد بناؤه وتُسمّى ملفّاتُه اليتيمة في جرد المصرِّف —
+// **وحذفُ الملفّ شأنُ جلسة الصوتيات** التي تولّد بديلَه، لا شأنُ جلسة تطوير.
+//
+// **وبجردٍ لا بيد**: ما يُقاعَد هو فارقُ ما تُعلنه الشجرةُ عمّا في القائمة — لا اسمَ
+// نصٍّ مكتوبٌ في أمرٍ ولا في هذا الملفّ.
+
+const retiring = queue.filter((e) => (e.status ?? 'pending') === 'done'
+  && !e.retired && !wanted.has(e.text));
+
+if (retiring.length) {
+  console.log(`\nمُصرَّفٌ لم تعد الشجرةُ تنطقه: ${retiring.length} مدخلاً — يُقاعَد بـ\`--retire\`:`);
+  for (const e of retiring) console.log(`  ⏏ ${e.text}   (${e.category} · ${e.doneAt ?? '؟'})`);
+}
+
+if (process.argv.includes('--retire')) {
+  if (!retiring.length) {
+    console.log('\nالتقاعُد: لا مُصرَّفَ خارج ما تنطقه الشجرة — القائمة مستوية.');
+  } else {
+    const dead = new Set(retiring.map((e) => e.text));
+    const stamp = process.env.QUEUE_TODAY || new Date().toISOString().slice(0, 10);
+    rewriteQueue((disk) => disk.map((e) => (
+      dead.has(e.text) && (e.status ?? 'pending') === 'done' && !e.retired
+        ? { ...e, retired: stamp, retiredWhy: 'لم تعد الشجرةُ تنطق هذا النصّ' }
+        : e)));
+    console.log(`\nقُوعِد ${dead.size} مدخلاً في tools/audio_queue.json (وملفّاتُها لجلسة الصوتيات)`);
   }
 }
 

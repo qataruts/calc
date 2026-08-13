@@ -505,27 +505,27 @@ export const STAGES = [
     mark: 'count',
     stations: [
       {
-        type: 'count', part: 'three', title: 'اِلْمَسْ وَعُدَّ ١–٣',
+        type: 'count', part: 'three', title: 'الْمَسْ وَعُدَّ ١–٣',
         frontier: { min: 1, max: 3, numeral: null, ops: [], signs: [], displays: ['dice', 'scatter', 'objects'] },
         skills: ['count|3|touch'],
       },
       {
-        type: 'count', part: 'five', title: 'اِلْمَسْ وَعُدَّ ١–٥',
+        type: 'count', part: 'five', title: 'الْمَسْ وَعُدَّ ١–٥',
         frontier: { min: 1, max: 5, numeral: null, ops: [], signs: [], displays: ['dice', 'scatter', 'objects'] },
         skills: ['count|5|touch'],
       },
       {
-        type: 'equal', part: 'five', title: 'اِجْعَلْهُمَا سَوَاء',
+        type: 'equal', part: 'five', title: 'اجْعَلْهُمَا سَوَاء',
         frontier: { min: 1, max: 5, numeral: null, ops: [], signs: [], displays: ['scatter', 'objects'] },
         skills: ['equal|5|make'],
       },
       {
-        type: 'count', part: 'seven', title: 'اِلْمَسْ وَعُدَّ ٦–٧',
+        type: 'count', part: 'seven', title: 'الْمَسْ وَعُدَّ ٦–٧',
         frontier: { min: 1, max: 7, numeral: null, ops: [], signs: [], displays: ['scatter', 'objects'] },
         skills: ['count|7|touch'],
       },
       {
-        type: 'count', part: 'ten', title: 'اِلْمَسْ وَعُدَّ ٨–١٠',
+        type: 'count', part: 'ten', title: 'الْمَسْ وَعُدَّ ٨–١٠',
         frontier: { min: 1, max: 10, numeral: null, ops: [], signs: [], displays: ['scatter', 'objects'] },
         skills: ['count|10|touch', 'count|10|give'],
       },
