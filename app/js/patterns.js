@@ -243,7 +243,7 @@ function measureRound(station, rnd, { face, aided = false, nth = null } = {}) {
     ask: face === 'time' ? ASK.order : ASK[big ? MEASURE[face].big : MEASURE[face].small],
     hint: face === 'time'
       ? 'اِلْمَسِ الأَوَّلَ أَوَّلًا — ثُمَّ مَا يَلِيه'
-      : 'قَارِنْ بِعَيْنِكْ، ثُمَّ الْمَسْ',
+      : 'قَارِنْ بِعَيْنِكْ، ثُمَّ الْمِسْ',
     // **المطلوبُ أقصى القيم أم أدناها** — والقيمةُ مقدارٌ مرسوم أو رتبةٌ معلَنة
     big,
     scene,

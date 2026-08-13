@@ -1,6 +1,6 @@
 // **المرحلة ٢ — العَدُّ المرتبط بالكمّ** (`METHOD.md §٣`): ستُّ محطاتٍ بشاشتين.
 //
-//   `count`  «الْمَسْ وَعُدَّ» ١–٣ ثم ١–٥ ثم ٦–٧ ثم ٨–١٠، وختامُها «الترتيب لا يغيّر العدد»
+//   `count`  «الْمِسْ وَعُدَّ» ١–٣ ثم ١–٥ ثم ٦–٧ ثم ٨–١٠، وختامُها «الترتيب لا يغيّر العدد»
 //            ومعها «أَعْطِنِي هَذَا العَدَد» في محطة ٢·٥
 //   `equal`  «اجْعَلْهُمَا سَوَاء» ضمن ٥
 //
@@ -36,7 +36,7 @@ const SOLO = 5;
 const TYPES = new Set(['count', 'equal']);
 
 const ASK = {
-  touch: 'الْمَسْ وَعُدَّ',
+  touch: 'الْمِسْ وَعُدَّ',
   howMany: 'كَمْ صَارَتْ كُلُّهَا؟',
   again: 'بَعْثَرْتُهَا، فَكَمْ صَارَتْ؟',
   give: 'أَعْطِنِي هَذَا الْعَدَدْ',
@@ -300,7 +300,7 @@ function countBoard(spec, { onFinish, alive }) {
 
 function touchView(round, hooks) {
   const head = h('h2', {}, round.ask);
-  const hint = h('p', { class: 'hint' }, 'الْمَسْ كُلَّ وَاحِدٍ مَرَّةً وَاحِدَة');
+  const hint = h('p', { class: 'hint' }, 'الْمِسْ كُلَّ وَاحِدٍ مَرَّةً وَاحِدَة');
   const stage = h('div', { class: 'q-stage' });
   const choices = h('div', { class: 'q-choices' });
   const foot = h('div', { class: 'row foot' });
@@ -597,7 +597,7 @@ function equalView(round, hooks) {
 
   return h('div', {},
     h('h2', {}, round.ask),
-    h('p', { class: 'hint' }, 'الْمَسْ وَاحِدًا لِيَذْهَب، وَالْمَسِ الفَرَاغَ لِيَأْتِيَ وَاحِد'),
+    h('p', { class: 'hint' }, 'الْمِسْ وَاحِدًا لِيَذْهَب، وَالْمِسِ الفَرَاغَ لِيَأْتِيَ وَاحِد'),
     pair,
     h('div', { class: 'row foot q-judge' }, scaleBtn),
   );

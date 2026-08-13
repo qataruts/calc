@@ -794,7 +794,9 @@
     "priority": 20,
     "status": "done",
     "doneAt": "2026-08-13",
-    "model": "gemini-3.1-flash-tts-preview"
+    "model": "gemini-3.1-flash-tts-preview",
+    "retired": "2026-08-13",
+    "retiredWhy": "لم تعد الشجرةُ تنطق هذا النصّ"
   },
   {
     "text": "اجْعَلْهُمَا سَوَاءْ",
@@ -807,6 +809,15 @@
   },
   {
     "text": "ابْنِ الْعَدَدْ",
+    "category": "instruction",
+    "requestedBy": "session-audio",
+    "priority": 20,
+    "status": "done",
+    "doneAt": "2026-08-13",
+    "model": "gemini-3.1-flash-tts-preview"
+  },
+  {
+    "text": "الْمِسْ وَعُدَّ",
     "category": "instruction",
     "requestedBy": "session-audio",
     "priority": 20,

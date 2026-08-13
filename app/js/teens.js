@@ -342,7 +342,7 @@ function skipRound(station, rnd, { aided = false } = {}) {
   return {
     kind: 'count', concept: skill.concept, range: skill.range, mode: 'skip', aided,
     ask: ASK.jump,
-    hint: 'انْظُرْ إِلَى القَفَزَاتِ المُضَاءَة، ثُمَّ الْمَسْ مَوْضِعَ التَّالِيَة',
+    hint: 'انْظُرْ إِلَى القَفَزَاتِ المُضَاءَة، ثُمَّ الْمِسْ مَوْضِعَ التَّالِيَة',
     step,
     lit: stops.slice(0, shown),
     rail,
