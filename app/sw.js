@@ -82,7 +82,7 @@
 // ملفّاتٍ في القشرة — `station.js` (صانعُ زرّ المعلم وكبسةُ النمذجة) و`counting.js`
 // (الحكمُ صار كبسةً لا وقوعاً) و`app.css`. **والرفعةُ هنا شرطُ الامتحان المعاد**:
 // جهازُ الطفل يحمل المخزون، فبلا رفعةٍ يمتحن المالكُ الشاشةَ التي اشتكى منها.
-const VERSION = 'v18';
+const VERSION = 'v19';
 const SHELL_CACHE = `ihsib-shell-${VERSION}`;
 const AUDIO_CACHE = 'ihsib-audio';        // ثابتٌ عمداً — لا يحمل VERSION
 const KEEP = [SHELL_CACHE, AUDIO_CACHE];
@@ -281,8 +281,14 @@ async function report(state) {
   for (const client of windows) client.postMessage({ type: 'audio-progress', ...state });
 }
 
-/** طلبٌ صريح من المستعمل: «نزّل الأصوات الآن» — يتجاوز مهلةَ الشفاء ولا ينتظرها. */
+/** طلبٌ صريح من المستعمل: «نزّل الأصوات الآن» — يتجاوز مهلةَ الشفاء ولا ينتظرها.
+ *  و«ما نسختُك؟» (أمر المالك، ١٣ أغسطس ٢٠٢٦ — بلاغُ العائلة version-visibility):
+ *  رؤيةُ النسخة تؤكّد وصولَ آخر قشرةٍ فلا يشهد ميدانٌ على شيفرةٍ لم تصله. */
 self.addEventListener('message', (event) => {
+  if (event.data?.type === 'version') {
+    event.source?.postMessage({ type: 'version', version: VERSION });
+    return;
+  }
   if (event.data?.type !== 'audio-sync') return;
   event.waitUntil(syncAudio());
 });

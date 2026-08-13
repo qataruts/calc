@@ -247,6 +247,10 @@ function backupSection(rerender) {
   const slot = h('div', { class: 'confirm-slot' });
   const storage = h('p', { class: 'hint' }, 'التخزين على هذا الجهاز: جارٍ الفحص…');
 
+  // نسخةُ القشرة تُرى (أمر المالك، ١٣ أغسطس ٢٠٢٦): سطرٌ هادئ يؤكّد وصولَ آخر
+  // تحديثٍ إلى هذا الجهاز — تُسأل القشرةُ نفسُها فلا رقمَ يُكتب بيد.
+  const swVersion = h('p', { class: 'hint', 'data-sw-version': '' }, 'نسخة القشرة: —');
+
   /* ————— سطرُ الأصوات المخزونة (الجلسة ص — عاد مع بنك الصوت، `SEED.md §٢`) —————
 
      **حالُ التحميل تُرى وتُدار** (أمر المالك في اقرأ، ١٣ أغسطس ٢٠٢٦): كان الخزنُ
@@ -289,7 +293,11 @@ function backupSection(rerender) {
   // بلاغاتُ العامل بعد كل دفعة — فالشريطُ يتحرّك بما يجري لا بتقديرٍ منّا
   navigator.serviceWorker?.addEventListener?.('message', (e) => {
     if (e.data?.type === 'audio-progress') paint(e.data.stored, e.data.total, e.data.busy);
+    if (e.data?.type === 'version' && swVersion.isConnected) {
+      swVersion.textContent = `نسخة القشرة: ${e.data.version}`;
+    }
   });
+  navigator.serviceWorker?.controller?.postMessage({ type: 'version' });
   progress.audioStored().then((count) => {
     if (count) paint(count.stored, count.total, false);
   });
@@ -361,6 +369,7 @@ function backupSection(rerender) {
     slot,
     dlRow,
     storage,
+    swVersion,
     h('p', { class: 'note' },
       'في النسخة: النجوم وصناديق المراجعة ودقائق التعلّم. ولا شيء فيها يخرج من'
       + ' جهازك إلا إن أرسلتَ الملفَّ بنفسك.'),

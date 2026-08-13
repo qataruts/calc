@@ -110,6 +110,16 @@ ok(/AUDIO_RE\s*=\s*\/.*audio.*mp3/.test(sw), 'الأصوات لها مسار خ�
 ok(/\?v=\$\{tags\[\w+\]\}/.test(sw) && sw.includes('dropOtherTags'),
   'والخزن بالرابط الموسوم مع كنس الوسم الأقدم لذلك الملف وحده');
 ok(sw.includes("json('audio/versions.json')"), 'وبيانُ بصمات المحتوى مقروء');
+
+// **النسخةُ تُرى** (أمر المالك، ١٣ أغسطس ٢٠٢٦): القشرةُ تجيب عن «ما نسختُك؟»
+// واللوحةُ تسألها وتعرضها — فميدانٌ لا يشهد على شيفرةٍ لم تصله. طرفان يُقاسان:
+ok(/type\s*===\s*'version'/.test(sw) && sw.includes("{ type: 'version', version: VERSION }"),
+  'القشرةُ تجيب عن سؤال النسخة بقيمة VERSION نفسِها');
+{
+  const parent = read('js/parent.js');
+  ok(parent.includes("postMessage({ type: 'version' })") && parent.includes('data-sw-version'),
+    'ولوحةُ وليّ الأمر تسأل النسخةَ وتعرضها سطراً');
+}
 ok(sw.includes('cacheFirst') && sw.includes('staleWhileRevalidate'),
   'واستراتيجيتان: المخزون أولاً للصوت، والتحديث في الخلفية للهيكل');
 ok(sw.includes('precacheAudio') && sw.includes("json('audio/manifest.json')"),
