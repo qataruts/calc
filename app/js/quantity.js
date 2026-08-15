@@ -20,8 +20,8 @@ import { registerScreen } from './registry.js';
 import { h, icon, landmark, pick, shuffle, seeded, shake, pop, QUANTITY_ACCENT } from './ui.js';
 import {
   BEAT, FLASH_MS, SAY, say, praiseThen, span, nearOptions, seeder, skillOf,
-  stationById, stationForSkill, figureBox, quantityCard, countAloud, clearCount,
-  usedOf, registerExercise, stationScreen, roundGate,
+  stationById, stationForReview, figureBox, quantityCard, countAloud, clearCount,
+  probeOf, registerExercise, stationScreen, roundGate,
 } from './station.js';
 
 const OPTIONS = 3;         // ثلاثُ بطاقاتٍ: هدفٌ ومجاوران
@@ -239,9 +239,7 @@ export function buildStation(stationId, seed) {
 
 /** جردُ الجولات للحارس — **النمذجةُ والعونُ و«وحدك» كلُّها**، فلا شكلَ يفلت. */
 export function probeRounds(stationId, seed) {
-  const plan = buildStation(stationId, seed);
-  if (!plan) return [];
-  return [plan.model, ...plan.guided, ...plan.solo].map(usedOf);
+  return probeOf(buildStation(stationId, seed));
 }
 
 // ————— تسجيلُ المحاولة —————
@@ -455,7 +453,7 @@ registerScreen('more', screen('more'));
 
 /** جولةٌ واحدة لمهارةٍ مستحقّة — مادّةُ المراجعة والبوابات (`review.js`). */
 const single = (build) => (skill, rnd) => {
-  const station = stationForSkill(skill);
+  const station = stationForReview(skill, rnd, TYPES);
   return station && TYPES.has(station.type) ? build(station, rnd) : null;
 };
 

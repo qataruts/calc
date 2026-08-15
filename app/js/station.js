@@ -35,7 +35,8 @@ import { stations, worldThing } from './curriculum.js';
 import { paint, spotStyle, spanStyle } from './render.js';
 import { setBuilders } from './review.js';
 import {
-  h, icon, go, topbar, starsRow, mascot, cheer, toast, shuffle, arNum, landmark, pop, onScreen, DEV,
+  h, icon, go, topbar, starsRow, mascot, cheer, toast, shuffle, pick, arNum, landmark, pop,
+  onScreen, DEV,
 } from './ui.js';
 
 // ————— إيقاعُ الشاشة (بالمللي ثانية) — لا مؤقّتَ ضغطٍ في أيٍّ منها —————
@@ -234,18 +235,41 @@ export const stationById = (id) => stations().find((s) => s.id === id) || null;
 export const medalOf = (id) => stationById(id)?.mark || null;
 
 /**
- * المحطةُ التي تُبنى منها مادّةُ مهارةٍ في المراجعة.
+ * **حوضُ المراجعة: كلُّ محطةٍ تدرّس المهارةَ — لا أوّلُها ولا آخرُها** (الجلسة م٨،
+ * بند ب‑٥ في المراجعة المستقلة).
  *
- * تُطلَب أولاً بمفتاحها التامّ (فيُبنى التمرينُ على جبهة المحطة التي تدرّسه فعلاً)،
- * وإلّا فأوّلُ محطةٍ تدرّس نوعَ التمرين نفسَه — ومنها يأتي المدى. والثانيةُ ليست
- * تساهلاً: بها تُجيب المراجعةُ عن مهارةٍ سُجِّلت بمدىً لا محطةَ له اليوم بدل أن تصمت.
+ * **العلّة المقيسة**: عهدُ «لا تدريسَ بلا قياس» محروسٌ على مستوى **المفتاح** وصادقٌ
+ * به، **والتغطيةُ المدَّعاة أوسعُ منه على مستوى المحتوى**: محطاتٌ تدرّس شيئاً يشترك
+ * مفتاحُه مع أختها، فإن بُنيت المراجعةُ من واحدةٍ بعينها **لم يعد ما تدرّسه الأخرى
+ * أبداً**. وكانت ثلاثُ سياساتٍ متعارضة في ثلاثة ملفّات: **أوّلُ من يدرّس** (فلا
+ * يُراجَع «الصفرُ في العمليات» ولا محطتا التثبيت) · **وآخرُ من يدرّس** (صوابٌ في
+ * الأشكال، وفي القسمة **يُسقِط محطةَ الباقي** وهي الفكرةُ الجديدة الوحيدة في
+ * المرحلة) · **وقرعةٌ على الكلّ** (في `units.js` وحدها — وهي أصوبُها).
+ *
+ * فصارت **القرعةُ سياسةً واحدة**: يُجمَع حوضُ مَن يدرّس المهارةَ بمفتاحها التامّ،
+ * ويُقترَع منه — فما دُرِّس عاد. **وحوضُ النوع احتياطٌ لا أصل**: به تُجيب المراجعةُ
+ * عن مهارةٍ سُجِّلت بمدىً لا محطةَ له اليوم بدل أن تصمت.
+ * ويحرسه `test_measure.mjs`: **كلُّ محطةٍ مدروسةٍ قابلةٌ للاختيار**.
+ *
+ * **والحوضُ يُجمَع من الرحلة كلِّها ثم يُصفّى بأنواع سائله** (`types`) — لا العكس:
+ * نوعُ التمرين `make` يشترك فيه مفهومان (`equal|5|make` و`bond|10|make` و
+ * `share|10|make`)، فلو صُفِّي أوّلاً لَسقط المفتاحُ التامُّ من حوض غير صاحبه
+ * **فأجاب عن مهارته بمحطةٍ من عنده** — وهو عينُ ما يمنعه عقدُ «يُسأل كلُّ مالكٍ
+ * بدوره ويجيب صاحبُها» (`registerExercise` أدناه).
  */
-export function stationForSkill(skill) {
+export function stationsForSkill(skill, types = null) {
   const all = stations();
-  const exact = all.find((s) =>
+  const exact = all.filter((s) =>
     (s.skills || []).includes(`${skill.concept}|${skill.range}|${skill.kind}`));
-  return exact || all.find((s) =>
-    (s.skills || []).some((k) => k.split('|')[2] === skill.kind)) || null;
+  const pool = exact.length ? exact
+    : all.filter((s) => (s.skills || []).some((k) => k.split('|')[2] === skill.kind));
+  return types ? pool.filter((s) => types.has(s.type)) : pool;
+}
+
+/** قرعةُ حوض المراجعة — نقطةُ الدخول الوحيدة لكلِّ باني تمرينِ مراجعة. */
+export function stationForReview(skill, rnd = Math.random, types = null) {
+  const pool = stationsForSkill(skill, types);
+  return pool.length ? pick(pool, rnd) : null;
 }
 
 // ————— جردُ ما تستهلكه الجولة (البابان ٤+٥ في `check_range.py`) —————
@@ -299,6 +323,23 @@ export const usedOf = (round) => {
       || (f.thing ? (worldThing(f.thing)?.parts || []).map((p) => p.shape) : [])))],
   };
 };
+
+/**
+ * **جردُ خطة المحطة كلِّها — كلُّ جولةٍ بخطوتها ونوعها** (الجلسة م٨، بند أ‑١).
+ *
+ * كان الجردُ يَرُصُّ «شاهِدْ» و«جرِّب معي» و«وحدك» في قائمةٍ واحدة بلا فاصل، فلا يعلم
+ * حارسٌ أيَّ خطوةٍ وقعت فيها جولة. **وقاعدةُ `METHOD.md §٤`** تُقاس بالخطوة لا بالجرد:
+ * «نوعُ سؤالٍ لا يُرى إلا في الخطوة المقيسة امتحانٌ بما لم يُنمذَج». فصار لكلِّ مُجرَدٍ
+ * `step` و`kind` — ويقابلهما البابُ ٦ في `check_range.py`.
+ *
+ * **ونوعُ النمذجة تُعلنه هي** (`model.kind`): النمذجةُ لوحٌ يُعرَض لا جولةٌ تُلعَب،
+ * فلا `kind` فيها بالبناء — ومَن نمذَج نوعاً بعينه يسمّيه، ومَن سكت لم يُنمذِج نوعاً.
+ */
+export const probeOf = (plan) => (plan ? [
+  { step: 'watch', kind: plan.model.kind || null, ...usedOf(plan.model) },
+  ...plan.guided.map((r) => ({ step: 'guided', kind: r.kind || null, ...usedOf(r) })),
+  ...plan.solo.map((r) => ({ step: 'solo', kind: r.kind || null, ...usedOf(r) })),
+] : []);
 
 // ————— أدواتُ التوليد: حتميةٌ ببذرة، ومشتّتاتٌ متجاورة —————
 
@@ -1015,7 +1056,7 @@ function fillersOf(rnd = Math.random) {
       const [concept, range, kind] = key.split('|');
       if (!EXERCISES.has(kind)) continue;
       // **والمدى بقاعدة `spanOf` لا بـ`Number`** (الجلسة و — آخرُ مواضع صنف NaN):
-      // `Number('weight')` يعطي `NaN` فيسقط التطابقُ التامّ في `stationForSkill`
+      // `Number('weight')` يعطي `NaN` فيسقط التطابقُ التامّ في `stationsForSkill`
       // ويُبنى **أولُ وجهٍ** بدل الوجه المعلَن — فيراجع الطفلُ الطولَ وقد أتمّ الثِّقَل.
       out.push(() => itemFor({ concept, range: spanOf(range), kind }, rnd));
     }

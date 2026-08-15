@@ -130,8 +130,9 @@ const STATIONS = {
 
   // ————— حزمةُ الإثراء: الترتيبيّة والقسمة والقياس بوحدة (الجلسة ث) —————
   // **والترتيبيّةُ نوعُ شاشةٍ مستقلٌّ ومفهومُها `order` نفسُه**: «رتِّب» في ٤·٣ يرتّب
-  // **أعداداً** (`order|10|sort`)، وهذه تسمّي **موضعاً** (`order|5|rank`) — مفهومٌ
-  // واحد ودرسان في مرحلتين، فشاشتان ونوعا تمرين (سنّةُ `more`/`compare`).
+  // **أعداداً** (`order|10|sort`)، وهذه تسمّي **موضعاً** (`rank|5|rank`) — **ومفهومُها
+  // أُفرد في م٨** (بند ب‑٦): الترتيبُ يُخبر بالأكبر، والترتيبيّةُ تُخبر بالموضع، ولو
+  // اجتمعا في مفهومٍ واحدٍ لَقرأ الوالدُ جملةً نكوصاً. فشاشتان ومفهومان ونوعا تمرين.
   rank: { title: 'الترتيبيّة: الأولُ والثاني', file: 'patterns.js', kinds: ['rank'] },
   // **والقسمةُ نوعانِ في أربع محطات**: التوزيعُ باللمس ونصيبُ الواحد.
   share: { title: 'القسمة بالعدل', file: 'share.js', kinds: ['make', 'each'] },
@@ -276,6 +277,91 @@ if (!types.length) {
     // والبوابةُ تُبنى بالمحرّك نفسِه، فما دخل المراجعةَ دخلها
     ok(/sessionItems/.test(src('gate.js')) && /weakestSkills/.test(src('gate.js')),
       'والبوابةُ تبني بالمحرّك نفسِه من أضعف المهارات — فما يُقاس يُسأل عنه فيها');
+
+    // ————— ٣ب) قرعةُ المراجعة: كلُّ محطةٍ مدروسةٍ داخلةٌ في الحوض (م٨، ب‑٥) —————
+    //
+    // **العلّة المقيسة** (المراجعة المستقلة §٤·٢): عهدُ «لا تدريسَ بلا قياس» محروسٌ
+    // على مستوى **المفتاح** (البابُ أعلاه) وصادقٌ به — **والتغطيةُ المدَّعاة أوسعُ منه
+    // على مستوى المحتوى**: مفتاحٌ يملكه أكثرُ من محطةٍ يُبنى تمرينُه من **واحدةٍ
+    // بعينها**، فما تدرّسه أخواتُها لا يعود في مراجعةٍ ولا بوابةٍ أبداً — «الصفرُ في
+    // العمليات» ومحطتا التثبيت ومحطةُ **الباقي** في القسمة (وهي الفكرةُ الجديدة
+    // الوحيدة في مرحلتها). وكانت ثلاثُ سياساتٍ في ثلاثة ملفّات (أوّلُ · آخرُ · قرعة).
+    //
+    // **والمقياسُ ما يقع لا ما يُعلَن**: تُبنى جلساتُ مراجعةٍ حقيقيةٌ ببذورٍ كثيرة
+    // ويُقرأ **اسمُ المحطة من `sig` الجولة** — فلا يُصدَّق ملفٌّ يقول إنّه يقترع.
+
+    console.log('\n— قرعةُ المراجعة: كلُّ محطةٍ مدروسةٍ قابلةٌ للاختيار —');
+    const { spanOf } = p;
+    const owned = new Map();  // مفتاحٌ ← محطاتُ مَن يدرّسه
+    for (const st of curriculum.stations()) {
+      for (const key of st.skills || []) {
+        const [, , kind] = key.split('|');
+        if (!kinds.includes(kind)) continue;
+        if (!owned.has(key)) owned.set(key, []);
+        owned.get(key).push(st.id);
+      }
+    }
+    const shared = [...owned].filter(([, ids]) => ids.length > 1);
+    if (!shared.length) {
+      dormant('لا مفتاحَ تشترك فيه محطتان بعد — فلا حوضَ يُقترَع منه');
+    }
+    for (const [key, ids] of shared) {
+      const [concept, range, kind] = key.split('|');
+      const due = [{ kind, box: 0, wrong: 1, concept, range: spanOf(range) }];
+      const drawn = new Set();
+      for (let s = 1; s <= 80; s++) {
+        for (const item of review.sessionItems(due, review.SESSION_SIZE, seeded(s * 31 + 7))) {
+          if (item.kind === kind && item.sig) drawn.add(String(item.sig).split('|')[0]);
+        }
+      }
+      const missing = ids.filter((id) => !drawn.has(id));
+      ok(!missing.length,
+        `[${key}] محطاتُه ${ids.length} وكلُّها تُختار في المراجعة`
+        + (missing.length ? ` — **لا تُختار أبداً: ${missing.join('، ')}**` : ''));
+    }
+
+    // **وسياسةٌ واحدة لا ثلاث**: لا بانيَ مراجعةٍ يختار محطتَه بيده
+    const handPicked = screenFiles.filter((f) => f !== 'station.js'
+      && /stationsForSkill\s*\(/.test(src(f)));
+    ok(!handPicked.length,
+      'ولا وحدةَ تمارينَ تختار محطتَها بيدها — القرعةُ في `station.js` وحدَها'
+      + (handPicked.length ? ` (**${handPicked.join('، ')}**)` : ''));
+  }
+}
+
+// ————— ٣ج) تغطيةُ التعشيرات: كلُّ عددٍ تحت المفتاح يُلقى مقيساً (م٨، ب‑٤) —————
+//
+// **العلّة المقيسة** (المراجعة المستقلة §٤·١): `METHOD §٦` يقول «مفتاحٌ لكلّ رمز»،
+// ونُفِّذ في المرحلة ٣ بتغطيةٍ مضمونةٍ حسابياً — **وسقطت القاعدةُ في المرحلة ٧**:
+// خمسةُ أعدادٍ تحت `teen|15|build` وأربعةٌ تحت `teen|19|build`، **وهدفُ الجولة قرعةٌ
+// محضة**. فطفلٌ يُتمّ «١٦–١٩» بثلاث نجومٍ ويُعلن ليتنر المفتاحَ متقناً **وهو لم يلقَ
+// ١٧ ولا ١٨ قطّ**. والحارسُ يحسبها **لكلِّ بذرةٍ على حدة** — فبذرةٌ واحدة تُفلت
+// عددٌ فيها طفلٌ واحدٌ يُظلَم.
+
+console.log('\n— تغطيةُ التعشيرات: كلُّ عددٍ في شريحة محطته يُلقى في «وحدك» —');
+if (!has('teens.js')) {
+  dormant('لا وحدةَ للمرحلة ٧ بعد');
+} else {
+  const teens = await import(new URL('teens.js', APP));
+  const band = (st) => {
+    const { low, high } = teens.bandOf(st);
+    return Array.from({ length: Math.max(0, high - low + 1) }, (_, i) => low + i);
+  };
+  const teenStations = curriculum.stations().filter((s) => s.type === 'teen');
+  ok(teenStations.length > 0, `${teenStations.length} محطاتِ تعشيراتٍ في الرحلة`);
+  for (const st of teenStations) {
+    const wanted = band(st);
+    let worst = null;
+    for (let seed = 1; seed <= 40 && !worst; seed++) {
+      const plan = teens.buildStation(st.id, seed);
+      const met = new Set((plan?.solo || []).map((r) => (
+        r.mode === 'build' ? r.symbol?.count : r.mode === 'read' ? r.fact?.count : null)));
+      const missing = wanted.filter((n) => !met.has(n));
+      if (missing.length) worst = { seed, missing };
+    }
+    ok(!worst,
+      `[${st.id}] شريحتُه ${wanted.join('، ')} — كلُّها مقيسةٌ في كل بذرة`
+      + (worst ? ` — **البذرة ${worst.seed} تُسقِط: ${worst.missing.join('، ')}**` : ''));
   }
 }
 

@@ -51,9 +51,9 @@ import { rangeOf, kindOf } from './render.js';
 import { h, icon, pick, shuffle, seeded, shake, pop, arNum, BOND_ACCENT } from './ui.js';
 import {
   BEAT, NUMBER_NAME, SAY, say, praiseThen, span, nearOptions, seeder, skillOf,
-  stationById, stationForSkill, figureBox, numeralCard, quantityCard, countAloud,
+  stationById, stationForReview, figureBox, numeralCard, quantityCard, countAloud,
   countCells, clearCount, clearCells, clearLine, countMarks, slotLayer,
-  usedOf, registerExercise, stationScreen, roundGate,
+  probeOf, registerExercise, stationScreen, roundGate,
 } from './station.js';
 import { lineRound, lineView } from './compare.js';
 
@@ -132,7 +132,7 @@ function frameFor(frontier, count) {
  * مقروءةً من ترتيب محطات النوع في المنهج لا مكتوبةً هنا. و**محطةُ الحزمة وحدَها
  * تُعرَف بأنّها لا تملك الإطارين** (٧·١ جبهتُها إطارٌ واحد): فمادّتُها العشرةُ نفسُها.
  */
-function bandOf(station) {
+export function bandOf(station) {
   const f = station.frontier;
   if (!f.displays.includes('two-frames')) return { low: f.max, high: f.max };
   const family = stations().filter((s) => s.type === station.type);
@@ -141,11 +141,39 @@ function bandOf(station) {
   return { low: Math.max(TEN + 1, before + 1), high: f.max };
 }
 
-/** هدفُ الجولة: ثلثاها من شريحة المحطة، وثلثُها مراجعةٌ لِما دونها من التعشيرات. */
+/** هدفُ الجولة الواحدة: ثلثاها من شريحة المحطة، وثلثُها مراجعةٌ لِما دونها. */
 function targetOf(station, rnd) {
   const { low, high } = bandOf(station);
   const older = span(TEN + 1, low - 1);
   return older.length && rnd() >= 2 / 3 ? pick(older, rnd) : pick(span(low, high), rnd);
+}
+
+/**
+ * **أهدافُ جولات المحطة — وتغطيةُ شريحتها مضمونةٌ حسابياً** (الجلسة م٨، بند ب‑٤ في
+ * المراجعة المستقلة): `targetsOf` المرحلة ٣ بعينها (`numerals.js`) منقولةً إلى هنا.
+ *
+ * **العلّة المقيسة**: خمسةُ أعدادٍ تحت مفتاحٍ واحد (`teen|15|build`) وأربعةٌ تحت آخر،
+ * **والهدفُ قرعةٌ محضة** — فبخمس جولاتٍ يلقى الطفلُ نحوَ ثلاثةٍ من الخمسة في المتوسط،
+ * ويُتمّ محطةَ «١٦–١٩» بثلاث نجومٍ ويُعلن ليتنر `teen|19|build` متقناً **وهو لم يلقَ
+ * ١٧ ولا ١٨ قطّ**، ولوحةُ الوالد تقول «يبني ويقرأ حتى ١٩». فصار **كلُّ عددٍ في شريحة
+ * المحطة مرّةً على الأقل**، ثم يُكمَّل ما بقي مراجعةً لتعشيراتٍ دونها. ويحرسه
+ * `test_measure.mjs` حساباً لا ظنّاً.
+ */
+function targetsOf(station, count, rnd) {
+  const { low, high } = bandOf(station);
+  const band = span(low, high);
+  // **ومحطةٌ لا شريحةَ جديدة لها لا هدفَ يُوزَّع عليها** (التثبيتُ والعبورُ والقفز:
+  // مادّتُها حقائقُ لا أعداد) — فتبني جولاتُها أهدافَها كما كانت.
+  if (!band.length) return Array.from({ length: count }, () => null);
+  const older = span(TEN + 1, low - 1);
+  const focus = Math.max(band.length, Math.ceil((count * 2) / 3));
+  const out = [];
+  while (out.length < focus) out.push(...shuffle(band, rnd));
+  const rest = shuffle(older, rnd);
+  for (let i = 0; out.length < count; i++) {
+    out.push(rest.length ? rest[i % rest.length] : pick(band, rnd));
+  }
+  return out.slice(0, count);
 }
 
 /**
@@ -210,11 +238,11 @@ async function countJumps(fig, step, upTo, alive = () => true) {
  * **جولةُ بناء**: الرمزُ معلومٌ فوق، وخانتاه تحته — **حزمةٌ وآحاد**. وما دون العشرةِ
  * خانةٌ واحدة (٧·١: تُبنى العشرةُ نفسُها حزمةً)، وما فوقها خانتان.
  */
-function buildRound(station, rnd, { aided = false } = {}) {
+function buildRound(station, rnd, { aided = false, target: given = null } = {}) {
   const f = station.frontier;
   const skill = skillOf(station, 'teen', 'build');
   const next = seeder(rnd);
-  const target = targetOf(station, rnd);
+  const target = given ?? targetOf(station, rnd);
   const ones = target - TEN;
   const shape = frameFor(f, target);
 
@@ -244,11 +272,11 @@ function buildRound(station, rnd, { aided = false } = {}) {
  * **جولةُ قراءة** (٧·٣ «قراءةُ الرمز المركّب»): الإطاران مبنيّان — حزمةً وآحاداً
  * بلونين من المصيِّر — والمطلوبُ رمزُهما. وهي **بعد البناء** لا قبله.
  */
-function readRound(station, rnd, { aided = false } = {}) {
+function readRound(station, rnd, { aided = false, target: given = null } = {}) {
   const f = station.frontier;
   const skill = skillOf(station, 'teen', 'build');
   const next = seeder(rnd);
-  const target = targetOf(station, rnd);
+  const target = given ?? targetOf(station, rnd);
   const shape = frameFor(f, target);
   const pool = span(f.min, f.numeral);
   const values = shuffle([target, ...nearOptions(target, pool, OPTIONS - 1, rnd)], rnd);
@@ -353,12 +381,12 @@ function skipRound(station, rnd, { aided = false } = {}) {
 }
 
 /** جولةُ وجهٍ بعينه — والأوجهُ من `facesOf` (مقروءةً من مفاتيح المنهج). */
-function roundFor(station, rnd, face, aided) {
-  if (face === 'read') return readRound(station, rnd, { aided });
+function roundFor(station, rnd, face, aided, target = null) {
+  if (face === 'read') return readRound(station, rnd, { aided, target });
   if (face === 'place') return lineRound(station, rnd, { aided });
   if (face === 'bridge') return bridgeRound(station, rnd, { aided });
   if (face === 'skip') return skipRound(station, rnd, { aided });
-  return buildRound(station, rnd, { aided });
+  return buildRound(station, rnd, { aided, target });
 }
 
 /**
@@ -427,17 +455,20 @@ export function buildStation(stationId, seed) {
   const rnd = seeded(seed >>> 0);
   const faces = facesOf(station);
 
-  const step = (count, aided) => Array.from({ length: count },
-    (_, i) => roundFor(station, rnd, faces[i % faces.length], aided));
+  /* **والأهدافُ تُوزَّع على جولات الخطوة دفعةً** (م٨، ب‑٤): فتُضمَن تغطيةُ الشريحة
+     في «وحدك» — والوجوهُ التي لا هدفَ لها من الشريحة (الخطُّ والعبورُ والقفز) تُهمله. */
+  const step = (count, aided) => {
+    const targets = targetsOf(station, count, rnd);
+    return Array.from({ length: count },
+      (_, i) => roundFor(station, rnd, faces[i % faces.length], aided, targets[i]));
+  };
 
   return { model: modelOf(station, rnd), guided: step(GUIDED, true), solo: step(SOLO, false) };
 }
 
 /** جردُ الجولات للحارس — **النمذجةُ والعونُ و«وحدك» كلُّها**، فلا شكلَ يفلت. */
 export function probeRounds(stationId, seed) {
-  const plan = buildStation(stationId, seed);
-  if (!plan) return [];
-  return [plan.model, ...plan.guided, ...plan.solo].map(usedOf);
+  return probeOf(buildStation(stationId, seed));
 }
 
 // ————— تسجيلُ المحاولة (بابُ الشيفرة في `test_measure.mjs`: مَن أعلن قياساً كتبه) —————
@@ -788,7 +819,7 @@ registerScreen('skip', screen('skip'));
  * مالكان (`line|10|place` في `compare.js` و`line|20|place` هنا)، فيُسأل كلٌّ بدوره.
  */
 const single = (build) => (skill, rnd) => {
-  const station = stationForSkill(skill);
+  const station = stationForReview(skill, rnd, TYPES);
   return station && TYPES.has(station.type) ? build(station, rnd) : null;
 };
 

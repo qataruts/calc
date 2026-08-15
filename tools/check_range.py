@@ -18,6 +18,8 @@
      نفسِه، فلا يمرّ عددٌ إلى عمليةٍ ولمّا يُعَدّ ولم يُرسَم رمزُه.
   ٤) **استهلاكُ المولّدات**: ما تعلن وحدةُ التمارين أنّها تستهلكه ⊆ جبهةُ محطاتها.
   ٥) **الجولاتُ المولَّدة**: كلُّ جولةٍ تُولَّد ببذرةٍ تُجرَد ويُقابَل ما فيها بالجبهة.
+  ٦) **لا امتحانَ بما لم يُنمذَج** (`METHOD.md §٤` — الجلسة م٨): كلُّ نوعِ جولةٍ يقع
+     في «وَحْدَكْ» (وهي المقيسة) وقع قبلها في «شَاهِدْ» أو «جَرِّبْ مَعِي».
 
 والبابان ٤ و٥ **نائمان نوماً ذاتياً** (`docs/SEED.md §٥`): لا مولّدَ اليوم، والشرطُ
 يُجرَد ولا يُضبَط بيد — فيستيقظان من تلقائهما يومَ تُكتب أوّلُ وحدةِ تمارين (الجلسة ٣).
@@ -761,7 +763,54 @@ def probe(modules: list, stations: list, scenes: dict, shapes: list) -> tuple:
         errors += usage_errors(label, round_["used"], station["frontier"])
         errors += scene_usage_errors(label, round_["used"], scenes)
         errors += shape_usage_errors(label, round_["used"], shapes, station)
-    return errors, len(data["rounds"])
+    return errors, len(data["rounds"]), data["rounds"]
+
+
+# ————— ٦) لا امتحانَ بما لم يُنمذَج (الجلسة م٨، بند أ‑١) —————
+#
+# **العلّة المقيسة** (المراجعة المستقلة §٣·١): «أَعْطِنِي هَذَا العَدَد» كانت تقع في
+# «وحدك» **وحدَها** — شاشةٌ جديدة وقاعدةٌ جديدة وزرُّ ختامٍ جديد أوّلَ ما يلقاها الطفلُ
+# **في الخطوة المقيسة**، فيُسجَّل خطآن على مهارةٍ لم تُدرَّس، فتتصدّر مراجعةَ الغد
+# وبوابةَ الكمّ ضعفاً **صنعناه**. والقاعدةُ كتبها المشروعُ في شيفرته سنةَ ٥ (`bonds.js`)
+# ولم يحرسها أحد: **«نوعُ سؤالٍ لا يُرى إلا في الخطوة المقيسة امتحانٌ بما لم يُنمذَج»**.
+#
+# **والمقياسُ ما رآه الطفلُ قبلها لا ما نوى المولّد**: يُمشى على الرحلة **عقدةً عقدة
+# بترتيبها** (وبكل بذرة على حدة — فجولةُ محطةٍ قد تدور بالبذرة)، ويُقابَل نوعُ كلِّ
+# جولةٍ مقيسة بما نُمذِج قبلها. **وما نُمذِج في محطةٍ سابقة يمرّ ويُسمّى** (لا صامتاً):
+# «أين يقع على الخطّ» يلقاه الطفلُ مُنمذَجاً في ٤·٢ ثم يعود مدىً أوسعَ في ٧·٤ — فليس
+# جديداً عليه. أمّا نوعٌ لم يقع قبل الخطوة المقيسة قطّ **فامتحانٌ بما لم يُنمذَج**.
+
+def staging_errors(rounds: list, stations: list) -> tuple:
+    order = [s["id"] for s in stations]
+    by_seed = {}
+    for r in rounds:
+        by_seed.setdefault(r["seed"], {}).setdefault(r["id"], []).append(r["used"])
+
+    bad, allowed = {}, {}
+    for seed in sorted(by_seed):
+        taught = {}  # نوعُ الجولة ← المحطةُ التي نمذجته أوّلاً
+        for sid in order:
+            here = by_seed[seed].get(sid)
+            if not here:
+                continue
+            shown = {u.get("kind") for u in here
+                     if u.get("step") in ("watch", "guided") and u.get("kind")}
+            for used in here:
+                kind = used.get("kind")
+                if used.get("step") != "solo" or not kind or kind in shown:
+                    continue
+                if kind in taught:
+                    allowed[(sid, kind)] = taught[kind]
+                else:
+                    bad[(sid, kind)] = seed
+            for kind in shown:
+                taught.setdefault(kind, sid)
+
+    errors = [f"[{sid}] نوعُ الجولة «{kind}» يقع في «وَحْدَكْ» (المقيسة) ولم يقع قبلها "
+              f"في «شَاهِدْ» ولا «جَرِّبْ مَعِي» ولا في محطةٍ سابقة — امتحانٌ بما لم "
+              f"يُنمذَج (`METHOD.md §٤`؛ بذرة {seed})"
+              for (sid, kind), seed in sorted(bad.items())]
+    return errors, allowed
 
 
 # ————— جردُ مادّةِ الشريط: يُسأل `usedOf` نفسُها في node (الجلسة ك) —————
@@ -855,14 +904,25 @@ def check(data: dict) -> int:
     if not modules:
         dormant("لا وحدةَ تمارينَ تُعلن `CONSUMES` ولا `probeRounds` "
                 "(الجلسة ٣ تكتب أولاها)")
+        dormant("ولا جولةَ تُجرَد بخطوتها، فبابُ «لا امتحانَ بما لم يُنمذَج» معه")
     else:
-        errors, rounds = probe(modules, stations, data["scenes"], data["shapes"])
+        errors, count, rounds = probe(modules, stations, data["scenes"], data["shapes"])
         for e in errors[:12]:
             print("  ✗", e)
         if not errors:
-            print("  ✓", f"{len(modules)} وحدةَ مولّدٍ و{rounds} جولةً مولَّدة، "
+            print("  ✓", f"{len(modules)} وحدةَ مولّدٍ و{count} جولةً مولَّدة، "
                          "كلُّها تحت جبهاتها")
         fails += len(errors)
+
+        staged, allowed = staging_errors(rounds, stations)
+        measured = len({(r["id"], r["used"].get("kind")) for r in rounds
+                        if r["used"].get("step") == "solo" and r["used"].get("kind")})
+        door("٦) لا امتحانَ بما لم يُنمذَج: كلُّ نوعٍ مقيسٍ سُبِق بنمذجته",
+             staged,
+             f"{measured} نوعَ جولةٍ مقيسةٍ في الرحلة، كلٌّ منها نُمذِج قبل قياسه"
+             + ("" if not allowed else " — ومنها "
+                + "، ".join(f"«{kind}» في {sid} (نُمذِج في {at})"
+                            for (sid, kind), at in sorted(allowed.items()))))
 
     print(f"\n{fails} فشل" if fails
           else "\nكل تمارين الرحلة تحت جبهاتها"
@@ -1189,6 +1249,43 @@ def self_test(data: dict) -> int:
        "ورمزُ عمليةٍ فوق رموز المحطة يُمسَك")
     ok(find(usage_errors("ج", {"displays": ["two-frames"]}, quiet), "ليس من أنماط محطته"),
        "ونمطُ عرضٍ فوق أنماط المحطة يُمسَك")
+
+    print("\n— ٦) «لا امتحانَ بما لم يُنمذَج» يمسك ما لم يُنمذَج —")
+    # **بجولاتٍ مصنوعةٍ بيد** لا بما يولّده مولّد: فالحكمُ يُمتحَن على حالاتٍ لا وجودَ
+    # لها اليوم في الرحلة (وإلّا لَما فُحص إلا ما مرّ). ومحطتان متتاليتان تكفيان.
+    first, second = stations[0]["id"], stations[1]["id"]
+
+    def staged(rows):
+        return staging_errors([{"id": sid, "seed": 1, "index": i, "used": used}
+                               for i, (sid, used) in enumerate(rows)], stations)
+
+    modeled = [(first, {"step": "watch", "kind": "touch"}),
+               (first, {"step": "guided", "kind": "touch"}),
+               (first, {"step": "solo", "kind": "touch"})]
+    ok(not staged(modeled)[0], "محطةٌ نُمذِج نوعُها ثم قِيس تمرّ")
+    ok(not staged([(first, {"step": "guided", "kind": "give"}),
+                   (first, {"step": "solo", "kind": "give"})])[0],
+       "و«جرِّب معي» وحدَها تكفي نمذجةً (شاهِدْ ليست شرطاً)")
+    caught, _ = staged([(first, {"step": "watch", "kind": "touch"}),
+                        (first, {"step": "guided", "kind": "touch"}),
+                        (first, {"step": "solo", "kind": "touch"}),
+                        (first, {"step": "solo", "kind": "give"})])
+    ok(find(caught, "«give»") and find(caught, "امتحانٌ بما لم يُنمذَج"),
+       "**ونوعٌ يقع في «وحدك» وحدَها يُمسَك باسمه** — وهي علّةُ «أَعْطِنِي هَذَا العَدَد» "
+       "التي بلّغت عنها المراجعةُ المستقلّة (§٣·١)")
+    passed, allowed = staged([(first, {"step": "guided", "kind": "place"}),
+                              (first, {"step": "solo", "kind": "place"}),
+                              (second, {"step": "guided", "kind": "touch"}),
+                              (second, {"step": "solo", "kind": "touch"}),
+                              (second, {"step": "solo", "kind": "place"})])
+    ok(not passed and allowed.get((second, "place")) == first,
+       "ونوعٌ نُمذِج في محطةٍ سابقة يمرّ **ويُسمّى** (لا صامتاً) — فالطفلُ رآه")
+    laundered, _ = staged([(first, {"step": "solo", "kind": "place"}),
+                           (second, {"step": "guided", "kind": "touch"}),
+                           (second, {"step": "solo", "kind": "touch"}),
+                           (second, {"step": "solo", "kind": "place"})])
+    ok(len(laundered) == 2,
+       "**ونوعٌ لم يُنمذَج قطُّ يُمسَك في المحطتين** — فلا تُبيِّض محطةٌ خرقاً لأختها")
 
     print(f"\n{fails} فشل" if fails else "\n✓ الفاحص يمسك المخالفات كلها")
     return 1 if fails else 0

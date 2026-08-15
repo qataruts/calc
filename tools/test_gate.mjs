@@ -211,7 +211,7 @@ if (!builders.length) {
           .find((k) => k.startsWith(`${concept}|`) && k.endsWith(`|${kind}`)).split('|');
         /* **والمدى كما كتبه المنهج** (الجلسة ٧): مدياتُ المرحلة ٨ **وصفيةٌ لا عددية**
            (`measure|length|pick`)، فتحويلُها عدداً يعطي `NaN` فيسقط التطابقُ التامّ في
-           `stationForSkill` وتُبنى مهارةُ غيرِها — وهو عينُ ما يحرسه هذا الباب، فلا
+           `stationsForSkill` وتُبنى مهارةُ غيرِها — وهو عينُ ما يحرسه هذا الباب، فلا
            يجوز أن يقع فيه هو. */
         const range = Number.isFinite(Number(skill[1])) ? Number(skill[1]) : skill[1];
         const [item] = review.sessionItems([{ concept: skill[0], range, kind }], 1, seeded(7));
@@ -276,7 +276,7 @@ ok(!/export\s+const\s+SPOKEN\b/.test(gateSrc),
 // ————— ٧) تنويعُ المراجعة بمفتاحٍ وصفيّ (الجلسة و — آخرُ مواضع صنف NaN) —————
 //
 // `fillersOf` في `station.js` كان يحوّل المدى بـ`Number` — فمفتاح المرحلة ٨ الوصفيّ
-// (`measure|weight|pick`) يصير مدَاه `NaN`: يسقط التطابقُ التامّ في `stationForSkill`
+// (`measure|weight|pick`) يصير مدَاه `NaN`: يسقط التطابقُ التامّ في `stationsForSkill`
 // ويسقط `MEASURE[NaN]` في `single` فيُبنى **أولُ وجهٍ** (`length`) بدل المعلَن —
 // **إحلالٌ صامت**: يراجع الطفلُ الطولَ وقد أتمّ محطةَ الثِّقَل، ولا حمرةَ في شيء.
 // فيُمتحَن هنا: تُتمَّم محطةُ ٨·٤ (`measure|length|pick` و`measure|weight|pick`)

@@ -687,47 +687,96 @@
   ok(answer && answer.length >= 2 && answer.every((c) => c.querySelector('.figure [data-mark]')),
     `وبعد العدّ يُسأل «كم صارت كلها؟» وجوابُه بطاقةُ كمّ (${answer ? answer.length : 0} بطاقة)`);
 
-  /* ————— ج) «أَعْطِنِي هَذَا الْعَدَدْ»: النموذجُ يُسمّى ثم يُخطَف (قيدُ الجلسة ٩) —————
+  /* ————— ج) «أَعْطِنِي هَذَا الْعَدَدْ»: تُنمذَج ظاهرةً ثم تُقاس مخطوفة —————
 
-     **العلّة**: نموذجٌ مرئيٌّ **دائم** يحوّل «أعطني ن» مطابقةً بصرية — إصبعٌ على نقطةٍ
-     هنا وأخرى هناك حتى يستوي المنظران، فلا يُقاس إنتاجُ كمٍّ بقدرٍ معلوم أصلاً.
-     فالمحروسُ هنا ثلاثة: أن **يُسمَع اسمُ المطلوب** (وشرطُه تحقّق: أسماءُ الأعداد
-     مصروفةٌ مُقَرّة)، وأن **يُغطّى النموذجُ فعلاً على الشاشة** (لا برمجياً وحدَه —
-     درسُ `hidden`)، وأن تكون **الإعادةُ بلا حدٍّ ولا احتساب** (عهدُ الخطف القائم).
+     **العلّة الأولى** (قيدُ الجلسة ٩): نموذجٌ مرئيٌّ **دائم** يحوّل «أعطني ن» مطابقةً
+     بصرية — إصبعٌ على نقطةٍ هنا وأخرى هناك حتى يستوي المنظران، فلا يُقاس إنتاجُ كمٍّ
+     بقدرٍ معلوم أصلاً. **والعلّةُ الثانية** (المراجعة المستقلة §٣·١ — الجلسة م٨):
+     كانت الجولةُ تقع في **«وحدك» وحدَها**، فيلقى الطفلُ شاشةً وقاعدةً وزرَّ ختامٍ
+     جديدةً أوّلَ ما يلقاها **في الخطوة المقيسة** — امتحانٌ بما لم يُنمذَج.
+
+     **فالمحروسُ خمسة**: أن تقع جولةٌ منها في **«جَرِّبْ مَعِي»** وأن يكون **نموذجُها
+     ظاهراً** (`flash: false` — ولا زرَّ إعادةِ عرضٍ فيها إذ لا خطفة)، ثم أن تقع في
+     **«وَحْدَكْ»** فيُسمَع اسمُ المطلوب و**يُغطّى النموذجُ فعلاً على الشاشة** (لا
+     برمجياً وحدَه — درسُ `hidden`) و**الإعادةُ بلا حدٍّ ولا احتساب**.
      (وجدولُ `NAME_HEARD` المكتوبُ بيدٍ عمداً فوق النطاقات — بعلّته هناك.) */
 
   sdoc = await open('#/count/ten');
-  const giveFrom = played.length;
+  let giveFrom = played.length;
+  const stepNow = (d) => d.querySelector('.step--now .step-name')?.textContent.trim() || '';
+  const replayBtn = (d) => [...d.querySelectorAll('.station-body button')]
+    .find((b) => b.textContent.includes('أَعِدِ الْعَرْض'));
+  // **وجولةُ «أعطني» تُجاب بيد الطفل المصيب**: يلتقط بقدر المرسوم ثم يقول «تَمَّ»
+  const answerGive = async (d) => {
+    // **يُنتظَر رسمُ النموذج قبل قراءة قدره** — وإلّا التُقط `NaN` فلم يُلتقط شيء
+    await until(d, (x) => Number(
+      x.querySelector('.q-give .q-model .figure')?.dataset.drawn) > 0, 6000);
+    const want = Number(d.querySelector('.q-give .q-model .figure')?.dataset.drawn);
+    const taps = [...d.querySelectorAll('.q-give .q-touch .fig-tap')];
+    for (const tap of taps.slice(0, want)) tap.click();
+    [...d.querySelectorAll('.station-body button')]
+      .find((b) => b.textContent.includes('تَمَّ'))?.click();
+    // **ويُنتظَر ذهابُ الشاشة نفسِها** لا ظهورُ لمسةٍ فيها: جولةُ «أعطني» مملوءةٌ
+    // بأهدافِ لمسٍ، فانتظارُ اللمسة يعود من فوره والشاشةُ هي هي (عيبٌ أمسكته
+    // التجربةُ: بقي السَّوقُ في «جرِّب معي» وحُسب أنّه بلغ «وحدك»).
+    await until(d, (x) => !x.querySelector('.q-give'), 14000);
+  };
   // سَوقٌ باللمس حتى تقع جولةُ «أعطني»: كلُّ عنصرٍ يُلمَس مرّةً، ثم تُختار البطاقةُ
   // التي رُسِم فيها مثلُ ما عُدَّ — وهو عينُ ما يفعله الطفلُ المصيب.
-  // (والسَّوقُ **بانتظار الحالة لا بمهلةٍ ثابتة**: سبعُ جولاتٍ تسبق «أعطني» في هذه
+  // (والسَّوقُ **بانتظار الحالة لا بمهلةٍ ثابتة**: جولاتٌ تسبق «أعطني» في هذه
   //  المحطة، فمهلةٌ ثابتةٌ لكل خطوةٍ تُطيل الصفحةَ حتى تبلغ مهلتَها الحارسة.)
-  for (let step = 0; step < 24 && !sdoc.querySelector('.q-give'); step++) {
-    const ready = await until(sdoc, (d) => d.querySelector('.q-give')
-      || d.querySelector('.fig-tap:not([disabled])')
-      || d.querySelector('.q-choices .qcard')
-      || d.querySelector('.station-body .next'), 12000);
-    if (!ready || sdoc.querySelector('.q-give')) break;
-    const tapsNow = [...sdoc.querySelectorAll('.fig-tap:not([disabled])')];
-    const stageNow = sdoc.querySelector('.q-stage');
-    const cardsNow = [...sdoc.querySelectorAll('.q-choices .qcard')];
-    if (tapsNow.length) {
-      for (const tap of tapsNow) tap.click();
-      await until(sdoc, (d) => d.querySelector('.q-choices .qcard'), 9000);
-    } else if (cardsNow.length && stageNow) {
-      cardsNow.find((c) => drawnOf(c) === drawnOf(stageNow))?.click();
-      await until(sdoc, (d) => d.querySelector('.q-give')
-        || d.querySelector('.fig-tap:not([disabled])'), 9000);
-    } else {
-      sdoc.querySelector('.station-body .next')?.click();
-      await new Promise((r) => setTimeout(r, 260));
+  const driveToGive = async () => {
+    for (let step = 0; step < 30 && !sdoc.querySelector('.q-give'); step++) {
+      const ready = await until(sdoc, (d) => d.querySelector('.q-give')
+        || d.querySelector('.fig-tap:not([disabled])')
+        || d.querySelector('.q-choices .qcard')
+        || d.querySelector('.station-body .next'), 12000);
+      if (!ready || sdoc.querySelector('.q-give')) break;
+      const tapsNow = [...sdoc.querySelectorAll('.fig-tap:not([disabled])')];
+      const stageNow = sdoc.querySelector('.q-stage');
+      const cardsNow = [...sdoc.querySelectorAll('.q-choices .qcard')];
+      if (tapsNow.length) {
+        for (const tap of tapsNow) tap.click();
+        await until(sdoc, (d) => d.querySelector('.q-choices .qcard'), 9000);
+      } else if (cardsNow.length && stageNow) {
+        cardsNow.find((c) => drawnOf(c) === drawnOf(stageNow))?.click();
+        await until(sdoc, (d) => d.querySelector('.q-give')
+          || d.querySelector('.fig-tap:not([disabled])'), 9000);
+      } else {
+        sdoc.querySelector('.station-body .next')?.click();
+        await new Promise((r) => setTimeout(r, 260));
+      }
     }
-  }
+  };
+
+  // ٠) **أوّلُ «أعطني» في «جَرِّبْ مَعِي» ونموذجُها ظاهر** — نمذجةٌ قبل القياس
+  await driveToGive();
+  const guidedStep = stepNow(sdoc);
+  const guidedGive = sdoc.querySelector('.q-give');
+  const guidedName = played.slice(giveFrom).map((key) => bank[key])
+    .lastIndexOf('أَعْطِنِي هَذَا الْعَدَدْ') >= 0;
+  ok(!!guidedGive && guidedStep === 'جَرِّبْ مَعِي' && guidedName,
+    `و**«أَعْطِنِي هَذَا الْعَدَدْ» تُنمذَج قبل أن تُقاس**: أوّلُ جولةٍ منها في `
+    + `«${guidedStep || 'لا خطوة'}»`);
+  const guidedCoverUp = await until(sdoc, (d) => {
+    const c = d.querySelector('.q-give .q-cover');
+    return c && c.hidden ? c : null;
+  }, 6000);
+  const guidedPainted = guidedCoverUp
+    && sdoc.defaultView.getComputedStyle(guidedCoverUp).display === 'none';
+  ok(!!guidedCoverUp && !!guidedPainted && !replayBtn(sdoc),
+    'و**نموذجُها ظاهرٌ غير مخطوف** (الغطاءُ مرفوعٌ رسماً، ولا زرَّ إعادةِ عرضٍ إذ لا خطفة)');
+
+  // ثم تُجاب وتُساق الجولاتُ حتى تقع «أعطني» في الخطوة المقيسة
+  if (guidedGive) await answerGive(sdoc);
+  giveFrom = played.length;
+  await driveToGive();
   const give = sdoc.querySelector('.q-give');
   const giveModel = give?.querySelector('.q-model .figure');
   const giveWant = giveModel ? Number(giveModel.dataset.drawn) : NaN;
-  ok(!!give && Number.isFinite(giveWant) && giveWant > 0,
-    `وجولةُ «أَعْطِنِي هَذَا الْعَدَدْ» تقع في «وحدك» (المطلوبُ المرسوم: ${giveWant || '؟'})`);
+  ok(!!give && Number.isFinite(giveWant) && giveWant > 0 && stepNow(sdoc) === 'وَحْدَكْ',
+    `وجولةُ «أَعْطِنِي هَذَا الْعَدَدْ» تقع في «وحدك» (المطلوبُ المرسوم: ${giveWant || '؟'}`
+    + ` · الخطوة: «${stepNow(sdoc) || 'لا خطوة'}»)`);
 
   // ١) **والنموذجُ يُغطّى فعلاً** — قياساً بعد التنسيق لا قراءةً لِـ`hidden`.
   //    (وهو أوّلُ ما يُنتظَر: سدلُ الغطاء يقع **بعد** تمام السؤال والاسم، فانتظارُه
@@ -755,8 +804,7 @@
     + (namedNext === NAME_HEARD[giveWant] ? '' : ` — وما تلا السؤالَ: «${namedNext || 'لا شيء'}»`));
 
   // ٣) **والإعادةُ بلا حدٍّ ولا احتساب** — ثلاثُ إعاداتٍ لا تُقدِّم الجولةَ ولا تحكم
-  const giveReplay = [...sdoc.querySelectorAll('.station-body button')]
-    .find((b) => b.textContent.includes('أَعِدِ الْعَرْض'));
+  const giveReplay = replayBtn(sdoc);
   const beadAtGive = beadNow(sdoc);
   for (let i = 0; i < 3; i++) {
     giveReplay?.click();

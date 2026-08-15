@@ -28,14 +28,14 @@
 //    المرسوم أو كبسةُ معلم — ولا زرَّ فيه حروفٌ وحدَها (`FIELD.md §٤`).
 
 import * as progress from './progress.js';
-import { UNIT_SPAN, stations } from './curriculum.js';
+import { UNIT_SPAN } from './curriculum.js';
 import { registerScreen } from './registry.js';
 import { spanStyle } from './render.js';
 import { h, pick, shuffle, seeded, shake, pop, PATTERN_ACCENT } from './ui.js';
 import {
   BEAT, NUMBER_NAME, SAY, say, praiseThen, span, nearOptions, seeder, skillOf,
-  stationById, stationForSkill, figureBox, numeralCard, markButton, countMarks,
-  usedOf, registerExercise, stationScreen, roundGate,
+  stationById, stationForReview, figureBox, numeralCard, markButton, countMarks,
+  probeOf, registerExercise, stationScreen, roundGate,
 } from './station.js';
 
 const OPTIONS = 3;
@@ -245,9 +245,7 @@ export function buildStation(stationId, seed) {
 
 /** جردُ الجولات للحارس — **النمذجةُ والعونُ و«وحدك» كلُّها**. */
 export function probeRounds(stationId, seed) {
-  const plan = buildStation(stationId, seed);
-  if (!plan) return [];
-  return [plan.model, ...plan.guided, ...plan.solo].map(usedOf);
+  return probeOf(buildStation(stationId, seed));
 }
 
 // ————— تسجيلُ المحاولة (بابُ الشيفرة في `test_measure.mjs`: مَن أعلن قياساً كتبه) —————
@@ -473,14 +471,15 @@ registerScreen('units', screen('units'));
  * **والوجهُ يدور على أوجه المفتاح الثلاثة**: المفتاحُ واحدٌ لثلاث محطات
  * (`measure|8|units`)، فالمراجعةُ تسأل عن أحدها بالقرعة لا عن الأولى أبداً — وإلّا
  * لم يُراجَع «قِسْ بيدك» ولا المقارنةُ بالوحدات قطّ، وهما ثمرةُ المرحلة.
+ *
+ * **وقرعتُها هذه صارت سنّةَ الرحلة كلِّها** (م٨، ب‑٥): كانت مكتوبةً هنا وحدَها بين
+ * أحدَ عشرَ بانياً، فرُفعت إلى `stationForReview` في `station.js` — موضعٌ واحد لسياسةٍ
+ * واحدة، فلا تفترق ثلاثةُ ملفّاتٍ في عهدٍ واحد ثانيةً.
  */
 const single = () => (skill, rnd) => {
-  const station = stationForSkill(skill);
+  const station = stationForReview(skill, rnd, TYPES);
   if (!station || !TYPES.has(station.type)) return null;
-  const mine = stations().filter((s) => TYPES.has(s.type)
-    && (s.skills || []).some((key) => key.split('|')[2] === skill.kind));
-  const where = mine.length ? pick(mine, rnd) : station;
-  return roundFor(where, rnd, pick(spans(), rnd), false);
+  return roundFor(station, rnd, pick(spans(), rnd), false);
 };
 
 registerExercise('units', { build: single(), view: viewOf });

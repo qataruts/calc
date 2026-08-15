@@ -45,8 +45,8 @@ import { rangeOf, OBJECTS } from './render.js';
 import { h, icon, pick, shuffle, seeded, shake, pop, BOND_ACCENT } from './ui.js';
 import {
   BEAT, SAY, say, praiseThen, span, nearOptions, seeder, skillOf, rangesOf,
-  stationById, stationForSkill, figureBox, quantityCard, countAloud,
-  countCells, clearCount, clearCells, usedOf, registerExercise, stationScreen,
+  stationById, stationForReview, figureBox, quantityCard, countAloud,
+  countCells, clearCount, clearCells, probeOf, registerExercise, stationScreen,
   roundGate,
 } from './station.js';
 
@@ -345,9 +345,7 @@ export function buildStation(stationId, seed) {
 
 /** جردُ الجولات للحارس — **النمذجةُ والعونُ و«وحدك» كلُّها**، فلا شكلَ يفلت. */
 export function probeRounds(stationId, seed) {
-  const plan = buildStation(stationId, seed);
-  if (!plan) return [];
-  return [plan.model, ...plan.guided, ...plan.solo].map(usedOf);
+  return probeOf(buildStation(stationId, seed));
 }
 
 // ————— تسجيلُ المحاولة (بابُ الشيفرة في `test_measure.mjs`: مَن أعلن قياساً كتبه) —————
@@ -571,7 +569,7 @@ registerScreen('bond', screen);
  * ويجيب صاحبُها (`registerExercise` في `station.js`).
  */
 function reviewRound(skill, rnd) {
-  const station = stationForSkill(skill);
+  const station = stationForReview(skill, rnd, TYPES);
   if (!station || !TYPES.has(station.type)) return null;
   if (restShare(station) === 'all') return restRound(station, rnd);
   return pairRound(station, rnd, { whole: wholesOf(station, 1, rnd)[0] ?? station.frontier.max });

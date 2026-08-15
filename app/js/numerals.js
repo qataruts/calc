@@ -35,8 +35,8 @@ import { rangeOf } from './render.js';
 import { h, pick, shuffle, seeded, shake, pop, NUMERAL_ACCENT } from './ui.js';
 import {
   BEAT, NUMBER_NAME, SAY, say, praiseThen, span, nearOptions, seeder, rangesOf,
-  stationById, stationForSkill, figureBox, quantityCard, numeralCard, countAloud,
-  clearCount, usedOf, registerExercise, stationScreen, roundGate,
+  stationById, stationForReview, figureBox, quantityCard, numeralCard, countAloud,
+  clearCount, probeOf, registerExercise, stationScreen, roundGate,
 } from './station.js';
 
 const OPTIONS = 3;         // ثلاثُ بطاقات: هدفٌ ومجاوران (`METHOD.md §٣`)
@@ -205,9 +205,7 @@ export function buildStation(stationId, seed) {
 
 /** جردُ الجولات للحارس — **النمذجةُ والعونُ و«وحدك» كلُّها**، فلا شكلَ يفلت. */
 export function probeRounds(stationId, seed) {
-  const plan = buildStation(stationId, seed);
-  if (!plan) return [];
-  return [plan.model, ...plan.guided, ...plan.solo].map(usedOf);
+  return probeOf(buildStation(stationId, seed));
 }
 
 // ————— تسجيلُ المحاولة (بابُ الشيفرة في `test_measure.mjs`: مَن أعلن قياساً كتبه) —————
@@ -315,7 +313,7 @@ registerScreen('numeral', screen);
  * تعيد ما ضعف لا ما جاوره (وهو معنى «مفتاحٌ لكل رمز»).
  */
 function reviewRound(skill, rnd) {
-  const station = stationForSkill(skill);
+  const station = stationForReview(skill, rnd, TYPES);
   if (!station || !TYPES.has(station.type)) return null;
   const taught = rangesOf(station, 'numeral', 'match');
   const target = taught.includes(skill.range) ? skill.range : pick(taught, rnd);

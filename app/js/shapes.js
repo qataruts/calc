@@ -32,12 +32,12 @@
 // «كم ضلعاً؟» وحدَها (٣ و٤ وجاراهما). ولا عددَ فوق ذلك: **مجالٌ لا مدى** (ق٣ لم يُمَسّ).
 
 import * as progress from './progress.js';
-import { SHAPES, shapeOf, shapesUpTo, shapesAt, stations, thingsWith } from './curriculum.js';
+import { SHAPES, shapeOf, shapesUpTo, shapesAt, thingsWith } from './curriculum.js';
 import { registerScreen } from './registry.js';
 import { h, pick, shuffle, seeded, shake, pop, PATTERN_ACCENT } from './ui.js';
 import {
   BEAT, NUMBER_NAME, SAY, say, praiseThen, span, nearOptions, seeder, skillOf, countMarks,
-  stationById, stationForSkill, figureBox, numeralCard, quantityCard, touchLayer, usedOf,
+  stationById, stationForReview, figureBox, numeralCard, quantityCard, touchLayer, probeOf,
   registerExercise, stationScreen, roundGate,
 } from './station.js';
 
@@ -310,9 +310,7 @@ export function buildStation(stationId, seed) {
 
 /** جردُ الجولات للحارس — **النمذجةُ والعونُ و«وحدك» كلُّها**، فلا شكلَ يفلت. */
 export function probeRounds(stationId, seed) {
-  const plan = buildStation(stationId, seed);
-  if (!plan) return [];
-  return [plan.model, ...plan.guided, ...plan.solo].map(usedOf);
+  return probeOf(buildStation(stationId, seed));
 }
 
 // ————— تسجيلُ المحاولة (بابُ الشيفرة في `test_measure.mjs`: مَن أعلن قياساً كتبه) —————
@@ -550,24 +548,21 @@ registerScreen('shape', screen('shape'));
  * **والوجهُ يدور بالقرعة على ما تدرّسه محطتُها**: مفتاحُ الأشكال واحدٌ لأربعتها
  * (`shape|4|name`)، فالمراجعةُ تسأل عن أحدها لا عن الأول أبداً.
  *
- * **ومحطتُها آخرُ مَن يدرّس نوعَها لا أولُه**: `name` تدرّسه محطتان — التمييزُ
- * المتباعد (دائرةٌ ومثلث) ثم **الشبيهان قصداً** (مربّعٌ ومستطيل) — و`stationForSkill`
- * تردّ أولاهما، فلو بُنيت المراجعةُ منها **لما رُوجع المربّعُ والمستطيل أبداً** وهما
- * أصعبُ ما في المرحلة وأحوجُ ما يكون إلى تثبيت. فتُبنى من **آخر** محطةٍ تدرّس النوعَ:
- * حوضُها أوسعُ وفيه ما قبله (وهو عينُ ما تفعله المحطةُ نفسُها في جولاتها).
+ * **ومحطتُها بالقرعة من كلِّ مَن يدرّس نوعَها** (م٨، ب‑٥ — `stationForReview`): `name`
+ * تدرّسه محطتان — التمييزُ المتباعد (دائرةٌ ومثلث) ثم **الشبيهان قصداً** (مربّعٌ
+ * ومستطيل). وكانت تُبنى من **آخرهما** بعلّةٍ صحيحة (بناؤها من أولاهما يُسقِط المربّعَ
+ * والمستطيل من المراجعة أبداً) — **وثمنُها أنّ الأولى لا تُختار قطّ**. والقرعةُ تفي
+ * بالطرفين: حوضُ كلِّ محطةٍ ما قُدِّم حتى موضعها، فيدور على الأربعة كلِّها.
  */
 const single = (build) => (skill, rnd) => {
-  const station = stationForSkill(skill);
+  const station = stationForReview(skill, rnd, TYPES);
   if (!station || !TYPES.has(station.type)) return null;
-  const widest = [...stations()].reverse().find((s) => TYPES.has(s.type)
-    && (s.skills || []).some((key) => key.split('|')[2] === skill.kind)) || station;
-  /* **وأوجهُ المراجعة ما تعلّمه كلُّه لا ما تدرّسه محطةٌ بعينها**: `stationFaces`
-     تردّ **درسَ المحطة** (وهو ما يجب أن تدور عليه جولاتُها هي)، والمراجعةُ تسأل عن
-     المفتاح كلِّه — فحوضُها الأشكالُ المُقدَّمة حتى تلك المحطة (والأضلاعُ ما يُعَدّ
-     منها). ولولا ذلك لَراجعت نصفَ ما تعلّم ونسيت نصفَه. */
-  const faces = (widest.part === 'sides' ? polygonsOf(widest.part) : shapesUpTo(widest.part))
+  /* **وأوجهُ المراجعة ما تعلّمه كلُّه لا وجهُ المحطة وحدَه**: `stationFaces` تردّ
+     **درسَ المحطة** (وهو ما يجب أن تدور عليه جولاتُها هي)، والمراجعةُ تسأل عن المفتاح
+     كلِّه — فحوضُها الأشكالُ المُقدَّمة حتى تلك المحطة (والأضلاعُ ما يُعَدّ منها). */
+  const faces = (station.part === 'sides' ? polygonsOf(station.part) : shapesUpTo(station.part))
     .map((s) => s.id);
-  return faces.length ? build(widest, rnd, { face: pick(faces, rnd) }) : null;
+  return faces.length ? build(station, rnd, { face: pick(faces, rnd) }) : null;
 };
 
 registerExercise('name', { build: single(nameRound), view: viewOf });

@@ -32,8 +32,8 @@ import { registerScreen } from './registry.js';
 import { h, icon, pick, shuffle, seeded, shake, pop, arNum, NUMERAL_ACCENT } from './ui.js';
 import {
   BEAT, NUMBER_NAME, SAY, say, praiseThen, span, nearOptions, seeder, skillOf,
-  stationById, stationForSkill, figureBox, numeralCard, countAloud, clearCount,
-  countAlongLine, clearLine, slotLayer, usedOf, registerExercise, stationScreen,
+  stationById, stationForReview, figureBox, numeralCard, countAloud, clearCount,
+  countAlongLine, clearLine, slotLayer, probeOf, registerExercise, stationScreen,
   roundGate,
 } from './station.js';
 
@@ -562,9 +562,7 @@ export function buildStation(stationId, seed) {
 }
 
 export function probeRounds(stationId, seed) {
-  const plan = buildStation(stationId, seed);
-  if (!plan) return [];
-  return [plan.model, ...plan.guided, ...plan.solo].map(usedOf);
+  return probeOf(buildStation(stationId, seed));
 }
 
 // ————— تسجيلُ المحاولة (بابُ الشيفرة: مَن أعلن قياساً كتبه، ولكلِّ نوعٍ سطرُه) —————
@@ -611,7 +609,7 @@ registerScreen('neighbor', screen('neighbor'));
 
 /** جولةٌ واحدة لمهارةٍ مستحقّة — مادّةُ المراجعة والبوابات (`review.js`). */
 const single = (build) => (skill, rnd) => {
-  const station = stationForSkill(skill);
+  const station = stationForReview(skill, rnd, TYPES);
   return station && TYPES.has(station.type) ? build(station, rnd) : null;
 };
 

@@ -49,7 +49,7 @@ import { GEOM, OBJECTS, rangeOf, spanStyle } from './render.js';
 import { h, pick, shuffle, seeded, shake, pop, latinNum, PATTERN_ACCENT } from './ui.js';
 import {
   BEAT, NUMBER_NAME, SAY, say, praiseThen, span, nearOptions, seeder, skillOf, facesOf,
-  stationById, stationForSkill, figureBox, numeralCard, quantityCard, usedOf,
+  stationById, stationForReview, figureBox, numeralCard, quantityCard, probeOf,
   registerExercise, stationScreen, roundGate,
 } from './station.js';
 
@@ -286,7 +286,7 @@ function measureRound(station, rnd, { face, aided = false, nth = null } = {}) {
  * المصيِّرُ خاناتِ الشريط من اليمين أصلاً — فالموضعُ **مقروءٌ من الرسم** لا محسوبٌ هنا.
  */
 function rankRound(station, rnd, { len, at, aided = false } = {}) {
-  const skill = skillOf(station, 'order', 'rank');
+  const skill = skillOf(station, 'rank', 'rank');
   const next = seeder(rnd);
   const items = shuffle(OBJECTS.map((o) => o.glyph), rnd).slice(0, len);
   const strip = { display: 'pattern', count: len, seed: next(), items };
@@ -573,9 +573,7 @@ export function buildStation(stationId, seed) {
 
 /** جردُ الجولات للحارس — **النمذجةُ والعونُ و«وحدك» كلُّها**، فلا شكلَ يفلت. */
 export function probeRounds(stationId, seed) {
-  const plan = buildStation(stationId, seed);
-  if (!plan) return [];
-  return [plan.model, ...plan.guided, ...plan.solo].map(usedOf);
+  return probeOf(buildStation(stationId, seed));
 }
 
 // ————— تسجيلُ المحاولة (بابُ الشيفرة في `test_measure.mjs`: مَن أعلن قياساً كتبه) —————
@@ -907,7 +905,7 @@ registerScreen('rank', screen('rank'));
  * و`measure|weight|pick` تُبنى ثِقَلاً لا طولاً — ولو خُلطا لَراجع غيرَ ما ضعف فيه.
  */
 const single = (build, table) => (skill, rnd) => {
-  const station = stationForSkill(skill);
+  const station = stationForReview(skill, rnd, TYPES);
   if (!station || !TYPES.has(station.type)) return null;
   const faces = stationFaces(station);
   const face = table[skill.range] ? skill.range : faces[0];
@@ -917,11 +915,11 @@ const single = (build, table) => (skill, rnd) => {
 registerExercise('extend', { build: single(patternFor, FACES), view: viewOf });
 registerExercise('pick', { build: single(measureRound, MEASURE), view: viewOf });
 registerExercise('sort', { build: single(measureRound, MEASURE), view: viewOf });
-/* **والترتيبيّةُ تُراجَع بطولٍ وموضعٍ بالقرعة**: مفتاحُها واحد (`order|5|rank`)
+/* **والترتيبيّةُ تُراجَع بطولٍ وموضعٍ بالقرعة**: مفتاحُها واحد (`rank|5|rank`)
    ومادّتُه صفوفٌ ثلاثة، فلو بُني أولُها دائماً لَراجع الطفلُ صفَّ الثلاثة أبداً. */
 registerExercise('rank', {
   build: (skill, rnd) => {
-    const station = stationForSkill(skill);
+    const station = stationForReview(skill, rnd, TYPES);
     if (!station || station.type !== 'rank') return null;
     const len = pick(rankRows(), rnd);
     return rankRound(station, rnd, { len, at: Math.floor(rnd() * len) });

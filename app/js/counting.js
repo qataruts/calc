@@ -25,8 +25,8 @@ import { registerScreen } from './registry.js';
 import { h, icon, landmark, pick, shuffle, seeded, shake, pop, QUANTITY_ACCENT } from './ui.js';
 import {
   AFTER_RIGHT_MS, BEAT, FLASH_MS, NUMBER_NAME, SAY, say, praiseThen, span, nearOptions, seeder, skillOf,
-  stationById, stationForSkill, figureBox, quantityCard, markButton, touchLayer, countAloud,
-  clearCount, usedOf, registerExercise, stationScreen, roundGate,
+  stationById, stationForReview, figureBox, quantityCard, markButton, touchLayer, countAloud,
+  clearCount, probeOf, registerExercise, stationScreen, roundGate,
 } from './station.js';
 
 const OPTIONS = 3;
@@ -204,6 +204,7 @@ export function buildStation(stationId, seed) {
        الذي يُعلن به جوابه** مشاهدةً لا قراءةً، ولا نصَّ تعليماتٍ جديد. */
     return {
       model: {
+        kind: 'make',
         title: ASK.equal, hint: 'نَعُدُّ هَذِهِ وَهَذِهِ، ثُمَّ نُسَوِّي بَيْنَهُمَا',
         figures: [
           { display, count: f.max, seed: big, room: f.max },
@@ -236,24 +237,44 @@ export function buildStation(stationId, seed) {
   ];
   if (gives) solo.push(giveRound(station, rnd, true));
 
+  /* **و«أعطني ن» تُنمذَج قبل أن تُقاس** (الجلسة م٨، بند أ‑١ في المراجعة المستقلة):
+     كانت الجولتان تقعان في «وحدك» **وحدَها** — فيلقى الطفلُ شاشةً جديدة وقاعدةً جديدة
+     وزرَّ ختامٍ جديداً أوّلَ ما يلقاها **في الخطوة المقيسة**، فيُسجَّل خطآن على
+     `count|10|give` تتصدّر بهما مراجعةُ الغد وبوابةُ الكمّ ضعفاً **صنعناه**. فصارت
+     جولةً في «جرِّب معي» **بنموذجٍ ظاهرٍ غير مخطوف** (`flash: false`) — وهو الوجهُ
+     الموعودُ في تعليق `giveRound` أعلاه: «`flash` علامةُ الخطوة لا خاصّةَ الجولة».
+     **والبعثرةُ تُمرَّر إلى «جرِّب معي»** كما تُمرَّر إلى «وحدك»، فلا تقع أوّلُ بعثرةٍ
+     في حياة الطفل في جولةٍ مقيسة. */
+  const guided = gives
+    ? [touchRound(station, rnd, { wide: true, restage }), giveRound(station, rnd, false)]
+    : Array.from({ length: GUIDED },
+      (_, i) => touchRound(station, rnd, { wide: i === 0, restage }));
+
+  /* **ونمذجةُ البعثرة بعثرةٌ تُرى** (م٨): كان نصُّها يَعِد «نَعُدُّهَا، ثُمَّ نُبَعْثِرُهَا
+     وَنَعُدُّهَا» ويُعرَض **شكلٌ واحد يُعَدّ مرّةً واحدة** — فالوالدُ يقرأ أنّها نُمذِجت
+     ولم تُنمذَج. فصارا **شكلين ببذرتين وعدَّين** (`countAloud` تعدّهما بالتتابع كما
+     تفعل نمذجةُ «اجعلهما سواء»): هي نفسُها وقد بُعثِرت، والعددُ هو هو. */
   return {
     model: {
+      kind: 'touch',
       title: ASK.touch,
       hint: restage
         ? 'نَعُدُّهَا، ثُمَّ نُبَعْثِرُهَا وَنَعُدُّهَا — وَالعَدَدُ هُوَ هُوَ'
         : 'لَمْسَةٌ لِكُلِّ وَاحِد، وَآخِرُ مَا نَطَقْتُ هُوَ الجَوَاب',
-      figures: [{ display: touchDisplay(f, rnd), count: f.max, seed: next() }],
+      // **والصورةُ واحدةٌ والبذرتان اثنتان** — فهي هي وقد تبدّل مكانُها، لا شيئان
+      figures: (() => {
+        const show = touchDisplay(f, rnd);
+        const one = { display: show, count: f.max, seed: next() };
+        return restage ? [one, { ...one, seed: next() }] : [one];
+      })(),
     },
-    guided: Array.from({ length: GUIDED },
-      (_, i) => touchRound(station, rnd, { wide: i === 0 })),
+    guided,
     solo,
   };
 }
 
 export function probeRounds(stationId, seed) {
-  const plan = buildStation(stationId, seed);
-  if (!plan) return [];
-  return [plan.model, ...plan.guided, ...plan.solo].map(usedOf);
+  return probeOf(buildStation(stationId, seed));
 }
 
 // ————— تسجيلُ المحاولة (لكلِّ نوعٍ سطرُه باسمه — بابُ الشيفرة في `test_measure.mjs`) —————
@@ -449,13 +470,14 @@ function giveView(round, hooks) {
      الخطفة — وإلّا جرت فوق الكلام فاختلف زمنُ العرض بطول جملةٍ لا يملكها الطفل
      (درسُ «كم ترى؟»). **والاسمُ من المرسوم لا من المطلوب**: يُنطق `NUMBER_NAME`
      لِما رسمه المصيِّرُ فعلاً، فلا يسمع الطفلُ اسماً يخالف ما رأى. */
+  /* **والاسمُ يُنطَق في الوجهين** (م٨): جولةُ «جرِّب معي» تُنمذِج الجولةَ المقيسة
+     نفسَها — سؤالُها وطلبُها باسمه — **وعونُها أنّ النموذجَ لا يُغطّى**، لا أنّ
+     الطلبَ يتبدّل. فلا يلقى الطفلُ في «وحدك» طلباً لم يسمع مثلَه. */
   (async () => {
     await say(round.ask);
     if (!hooks.alive()) return;
-    if (round.flash) {
-      await say(NUMBER_NAME[model.drawn]);
-      if (!hooks.alive()) return;
-    }
+    await say(NUMBER_NAME[model.drawn]);
+    if (!hooks.alive()) return;
     flash();
   })();
 
@@ -616,7 +638,7 @@ registerScreen('count', screen('count'));
 registerScreen('equal', screen('equal'));
 
 const single = (build) => (skill, rnd) => {
-  const station = stationForSkill(skill);
+  const station = stationForReview(skill, rnd, TYPES);
   return station && TYPES.has(station.type) ? build(station, rnd) : null;
 };
 

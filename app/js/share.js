@@ -38,14 +38,14 @@
 // الرحلة (عددٌ عبر بواباته الثلاث قبل مراحل).
 
 import * as progress from './progress.js';
-import { shareAt, stations } from './curriculum.js';
+import { shareAt } from './curriculum.js';
 import { registerScreen } from './registry.js';
 import { OBJECTS } from './render.js';
 import { h, pick, shuffle, seeded, shake, pop, BOND_ACCENT } from './ui.js';
 import {
   BEAT, SAY, say, praiseThen, span, nearOptions, seeder, skillOf,
-  stationById, stationForSkill, figureBox, numeralCard, markButton, touchLayer, countMarks,
-  countAloud, clearCount, usedOf, registerExercise, stationScreen, roundGate,
+  stationById, stationForReview, figureBox, numeralCard, markButton, touchLayer, countMarks,
+  countAloud, clearCount, probeOf, registerExercise, stationScreen, roundGate,
 } from './station.js';
 
 const OPTIONS = 3;
@@ -253,9 +253,7 @@ export function buildStation(stationId, seed) {
 
 /** جردُ الجولات للحارس — **النمذجةُ والعونُ و«وحدك» كلُّها**، فلا عددٌ يفلت. */
 export function probeRounds(stationId, seed) {
-  const plan = buildStation(stationId, seed);
-  if (!plan) return [];
-  return [plan.model, ...plan.guided, ...plan.solo].map(usedOf);
+  return probeOf(buildStation(stationId, seed));
 }
 
 // ————— تسجيلُ المحاولة (بابُ الشيفرة في `test_measure.mjs`: مَن أعلن قياساً كتبه) —————
@@ -478,18 +476,17 @@ registerScreen('share', screen('share'));
 /**
  * جولةٌ واحدة لمهارةٍ مستحقّة — مادّةُ المراجعة والبوابات.
  *
- * **ومحطتُها آخرُ مَن يدرّس نوعَها لا أولُه** (سنّةُ `shapes.js`): `make` تدرّسه ثلاثُ
- * محطات — بين اثنين، وما لا ينقسم، وبين ثلاثة — و`stationForSkill` تردّ أولاها، فلو
- * بُنيت المراجعةُ منها **لما رُوجعت القسمةُ بين ثلاثةٍ ولا الباقي أبداً** وهما أصعبُ
- * ما في المرحلة. فتُبنى من **آخر** محطةٍ تدرّس النوعَ، ومجموعُها بالقرعة من مجاميعها.
+ * **ومحطتُها بالقرعة من كلِّ مَن يدرّس نوعَها** (م٨، ب‑٥ — `stationForReview`): `make`
+ * تدرّسه ثلاثُ محطات — بين اثنين، **وما لا ينقسم**، وبين ثلاثة. وكانت تُبنى من
+ * **آخرها** («بين ثلاثة») فرارَاً من أولاها — **فسقطت محطةُ الباقي من المراجعة أبداً،
+ * وهي الفكرةُ الجديدة الوحيدة في المرحلة**. فالقرعةُ تُدخل الثلاثةَ حوضاً واحداً،
+ * ومجموعُ كلٍّ بالقرعة من مجاميعها هي (`SHARE` — والباقي يوافق موضعَه).
  */
 const single = (build) => (skill, rnd) => {
-  const station = stationForSkill(skill);
+  const station = stationForReview(skill, rnd, TYPES);
   if (!station || !TYPES.has(station.type)) return null;
-  const widest = [...stations()].reverse().find((s) => TYPES.has(s.type)
-    && (s.skills || []).some((key) => key.split('|')[2] === skill.kind)) || station;
-  const totals = totalsOf(widest);
-  return totals.length ? build(widest, rnd, { total: pick(totals, rnd) }) : null;
+  const totals = totalsOf(station);
+  return totals.length ? build(station, rnd, { total: pick(totals, rnd) }) : null;
 };
 
 registerExercise('make', { build: single(dealRound), view: viewOf });
