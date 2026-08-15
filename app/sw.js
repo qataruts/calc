@@ -92,7 +92,12 @@
 // بوحدة) — وتحرّك معهما `curriculum.js` و`render.js` (صنفُ الوحدات) و`patterns.js`
 // (الترتيبيّة) و`station.js` و`ui.js` و`app.css`. وملفٌّ جديد في القشرة **يقتضي
 // رفعةً** وإلّا مضى جهازُ الطفل بقشرةٍ لا تعرفه فسقطت المرحلتان الجديدتان دون شبكة.
-const VERSION = 'v22';
+// **وإلى `v23` في الجلسة غ** («بلِّغنا» نمطُ عائلة): دخل **ملفٌّ جديد في القشرة** —
+// `js/feedback.js` (بابُ البلاغ في لوحة وليّ الأمر، وحدةً مستقلة) وتحرّك معه
+// `parent.js` بسطرَي استيرادٍ ونداء و`app.css` بسطرٍ واحد (`a.btn` — رابطٌ يلبس زيَّ
+// الزرّ). وملفٌّ جديد في القشرة **يقتضي رفعةً** وإلّا مضى
+// الجهازُ بقشرةٍ لا تعرفه، فسقطت اللوحةُ كلُّها عند فتحها دون شبكة.
+const VERSION = 'v23';
 const SHELL_CACHE = `ihsib-shell-${VERSION}`;
 const AUDIO_CACHE = 'ihsib-audio';        // ثابتٌ عمداً — لا يحمل VERSION
 const KEEP = [SHELL_CACHE, AUDIO_CACHE];
@@ -112,6 +117,7 @@ const SHELL = [
   'js/compare.js',
   'js/counting.js',
   'js/curriculum.js',
+  'js/feedback.js',
   'js/gate.js',
   'js/install.js',
   'js/intro.js',

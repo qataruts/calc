@@ -280,6 +280,10 @@ button {
 
 .btn:active { transform: scale(.96); }
 
+/* زرّا «بلِّغنا» رابطان لا زرّان (الجلسة غ): يُفتحان ولا يُجلَبان — فيلبسان زيَّ
+   الأزرار كاملاً، ولا يبقى فيهما حبرُ المتصفّح ولا خطُّه وسط لوحةٍ أزرارُها بلا ذلك. */
+a.btn { color: inherit; text-decoration: none; }
+
 .btn--primary {
   background: var(--star);
   border-color: transparent;

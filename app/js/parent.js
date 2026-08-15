@@ -17,6 +17,7 @@
 import * as progress from './progress.js';
 import { CONCEPT_SECTIONS, conceptOf, rangeText, journeyConcepts } from './curriculum.js';
 import { h, go, toast, arNum, arCount, topbar, shake, PAUSE_ACCENT } from './ui.js';
+import { feedbackSection } from './feedback.js';
 
 const ACCENT = PAUSE_ACCENT;
 const GOOD = 'var(--ok)';
@@ -648,6 +649,10 @@ function dashboard(rerender = () => {}) {
     ...section('تحكّم في الرحلة', journeySection(rerender)),
 
     ...section('معاينةُ التطبيق كلِّه', previewSection()),
+
+    // **«بلِّغنا» وحدةٌ مستقلة** (الجلسة غ): هذه اللوحةُ تعرض ما يخصّ الطفل، فالعنوانُ
+    // الخارجيُّ يسكن `feedback.js` ولا يُكتب هنا — تُنادى ولا تُشرَح. (العلّةُ في رأسها.)
+    ...section('بلِّغنا', feedbackSection()),
 
     // **حدودُ النطاق معلَنةٌ في اللوحة نفسِها** (`METHOD.md §١٣`): تدريسٌ وقياسٌ لا
     // تشخيص — والتعثّرُ المتكرر إشارةُ «راجِع مختصاً» لا حكماً.
