@@ -38,7 +38,7 @@ import { h, pick, shuffle, seeded, shake, pop, PATTERN_ACCENT } from './ui.js';
 import {
   BEAT, NUMBER_NAME, SAY, say, praiseThen, span, nearOptions, seeder, skillOf, countMarks,
   stationById, stationForSkill, figureBox, numeralCard, quantityCard, touchLayer, usedOf,
-  registerExercise, stationScreen,
+  registerExercise, stationScreen, roundGate,
 } from './station.js';
 
 const OPTIONS = 3;
@@ -333,18 +333,17 @@ function nameView(round, hooks) {
   board.dataset.mode = 'name';
   // **ما تُعلنه الشاشةُ جوابُها**: صنفُ الشكل المطلوب — يقابله الحارسُ بما لُمس
   board.dataset.answer = round.face;
-  let locked = false;
+  const gate = roundGate('أين هذا الشكل؟');
 
   const cards = round.options.map((spec) => {
     let cell = null;
-    const choose = async () => {
-      if (locked) return;
+    const choose = gate.guard(async () => {
       // **ما رسمته البطاقةُ لا ما طُلب منها**: صنفُ الشكل مقروءٌ من الـDOM
       const drawn = cell.btn.querySelector('[data-shape]');
       const correct = drawn?.dataset.shape === round.face;
       hooks.attempt(round, correct);
       if (correct) {
-        locked = true;
+        gate.end();
         cell.btn.classList.add('good');
         pop(cell.btn);
         await praiseThen(hooks);
@@ -352,19 +351,18 @@ function nameView(round, hooks) {
       }
       cell.btn.classList.add('bad');
       shake(cell.btn);
-      locked = true;
       /* **الخطأُ يُعَدّ أمامه**: يُضاء الشكلُ المطلوب على بطاقته وتُعَدّ أضلاعُه ثم
          يُسمّى — فيرى الصوابَ عدّاً لا تلقيناً، ويربط الاسمَ برسمه بيده لا بأذنه. */
       await say(SAY.together);
       if (!hooks.alive()) return;
       const want = cards.map((c) => c.btn.querySelector('[data-shape]'))
         .find((el) => el?.dataset.shape === round.face);
-      if (want && !(await showShape(want, hooks.alive))) return;
-      if (!hooks.alive()) return;
-      if (want) clearShape(want);
+      if (want) {
+        await showShape(want, hooks.alive);
+        clearShape(want);
+      }
       cell.btn.classList.remove('bad');
-      locked = false;
-    };
+    });
     cell = quantityCard(spec, { label: 'هَذَا', onclick: choose, className: 'qcard--shape' });
     choices.append(cell.btn);
     return cell;
@@ -399,7 +397,7 @@ function sidesView(round, hooks) {
   board.dataset.answer = String(want);
   let counted = 0;
   let asked = false;
-  let locked = false;
+  const gate = roundGate('كم ضلعاً؟');
 
   const sides = sidesIn(shapeEl);
   const { taps } = touchLayer(fig, async (index, btn) => {
@@ -424,13 +422,12 @@ function sidesView(round, hooks) {
     choices.replaceChildren(...round.options.map((spec) => {
       const { btn, drawn } = numeralCard(spec.count, spec.seed, {
         label: 'هَذَا الرَّمْز',
-        onclick: async () => {
-          if (locked) return;
+        onclick: gate.guard(async () => {
           // **ما رسمته البطاقةُ لا ما طُلب منها**
           const correct = drawn === want;
           hooks.attempt(round, correct);
           if (correct) {
-            locked = true;
+            gate.end();
             btn.classList.add('good');
             pop(btn);
             await praiseThen(hooks);
@@ -438,16 +435,13 @@ function sidesView(round, hooks) {
           }
           btn.classList.add('bad');
           shake(btn);
-          locked = true;
           // **الخطأُ يُعَدّ أمامه**: تُعَدّ الأضلاعُ ضلعاً ضلعاً ثم يُسمّى الشكل
           await say(SAY.together);
           if (!hooks.alive()) return;
           clearShape(shapeEl);
-          if (!(await showShape(shapeEl, hooks.alive))) return;
-          if (!hooks.alive()) return;
+          await showShape(shapeEl, hooks.alive);
           btn.classList.remove('bad');
-          locked = false;
-        },
+        }),
       });
       return btn;
     }));
@@ -473,7 +467,7 @@ function worldView(round, hooks) {
   board.dataset.mode = 'world';
   board.dataset.answer = round.face;
   board.dataset.thing = round.thing;
-  let locked = false;
+  const gate = roundGate('الأشكال حولنا');
 
   const taps = parts.map((el, i) => {
     const mark = fig.plan.marks[i];
@@ -494,13 +488,12 @@ function worldView(round, hooks) {
     return btn;
   });
 
-  async function choose(btn, el) {
-    if (locked) return;
+  const choose = gate.guard(async (btn, el) => {
     // **الجوابُ من المرسوم**: صنفُ الجزء الملموس كما أعلنه المصيِّر
     const correct = el.dataset.shape === round.face;
     hooks.attempt(round, correct);
     if (correct) {
-      locked = true;
+      gate.end();
       btn.classList.add('good');
       el.classList.add('is-counted');
       pop(btn);
@@ -509,17 +502,16 @@ function worldView(round, hooks) {
     }
     btn.classList.add('bad');
     shake(btn);
-    locked = true;
     // **الخطأُ يُرى ويُعَدّ**: يُضاء الجزءُ المطلوب وتُعَدّ أضلاعُه ثم يُسمّى
     await say(SAY.together);
     if (!hooks.alive()) return;
     const want = parts.find((p) => p.dataset.shape === round.face);
-    if (want && !(await showShape(want, hooks.alive))) return;
-    if (!hooks.alive()) return;
-    if (want) clearShape(want);
+    if (want) {
+      await showShape(want, hooks.alive);
+      clearShape(want);
+    }
     for (const tap of taps) tap.classList.remove('bad', 'good');
-    locked = false;
-  }
+  });
 
   say(round.ask);
 

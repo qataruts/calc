@@ -1884,6 +1884,111 @@ button {
   border-radius: 14px;
 }
 
+/* ————— الترتيبيّة (٨·٥ — الجلسة ث): موضعٌ يُلمَس لا عنصرٌ يُعَدّ —————
+
+   **وهدفُ اللمس خانةٌ لا قرص**: خانةُ الشريط مربّعةٌ بمقاس `CELL` من المصيِّر، فدائرةٌ
+   حولها تبتلع جارتَها (درسُ `q-pickspot--shape` نفسُه). */
+.q-solve--rank { display: flex; justify-content: center; margin: .5rem 0 1rem; }
+
+.fig-tap--cell,
+.fig-tap--unit {
+  width: var(--w);
+  height: var(--h);
+  aspect-ratio: auto;
+  border-radius: 12px;
+}
+
+/* ————— القِسمةُ بالعدل (المرحلة ١٠ — الجلسة ث): كومةٌ وأوعية —————
+
+   **واللوحُ لوحُ «اجعلهما سواء» نفسُه** (`q-board`): الفعلُ فيهما واحد — لمسةُ الفراغ
+   تأتي بواحد ولمسةُ العنصر تُبعده — فلا يتعلّم الطفلُ لوحين لفعلٍ واحد. والجديدُ هنا
+   **الكومةُ فوقها**: أرضٌ يُؤخذ منها، بحدٍّ متقطّعٍ يفرّقها عن الأوعية التي يُوضَع فيها.
+
+   **وحقُّ الإصبع محفوظ**: الرسمُ يأخذ أكبرَ ما يسعه العرض (`min()` بسقفٍ وحاشيةٍ
+   محسوبة)، ولزرّ العنصر أرضيّةٌ ٤٤بك كإخوته في لوح التسوية (`METHOD.md §١١` باستثنائه
+   المعتمد: فعلُ كلِّ عناصر اللوح واحد، فتلاصقُها لا يضرّ). */
+.q-share { display: flex; flex-direction: column; align-items: center; gap: .6rem; }
+
+.q-bowls {
+  display: flex;
+  flex-wrap: nowrap;
+  justify-content: center;
+  align-items: flex-start;
+  gap: .5rem;
+}
+
+.q-pile { border-style: dashed; box-shadow: inset 0 0 0 3px color-mix(in srgb, var(--accent) 28%, transparent); }
+
+.q-share .q-figure > .figure,
+.q-solve--share .q-figure > .figure {
+  --unit: min(.72px, (min(100vw, 60rem) - 9rem) / 1320);
+}
+
+.q-share .fig-tap,
+.q-solve--share .fig-tap { min-width: 44px; min-height: 44px; }
+
+/* عونُ «جرِّب معي»: حدٌّ متقطّعٌ يقول «هنا يُوضَع» بلا أن يُلقّن الجواب */
+.q-board.is-open { box-shadow: inset 0 0 0 3px var(--accent); border: 2px dashed var(--accent); }
+/* وأثرُ العدل حين يقع: الوعاءُ يُطوَّق بلون الصواب فيُرى استواؤهما */
+.q-board.is-fair { box-shadow: inset 0 0 0 4px var(--ok); }
+
+/* ————— القياسُ بوحدة (المرحلة ١١ — الجلسة ث): شريطٌ ووحداتٌ متلاصقة —————
+
+   **الوحدةُ كتلةٌ تُرى ولها حدٌّ**: بينها وبين جارتها خطٌّ لا فجوة — التلاصقُ هندسةٌ
+   في المصيِّر، والحدُّ هنا يجعله **مرئياً** فيُعَدّ بالإصبع. والشريطُ المقيسُ فوقها
+   بلونٍ هادئ: هو المقيسُ لا المقياس. */
+.q-solve--units { display: flex; flex-direction: column; align-items: center; margin: .5rem 0 1rem; }
+
+.q-rulers { display: flex; flex-direction: column; align-items: center; gap: .6rem; }
+
+.q-ruler > .figure { --unit: min(1.5px, (min(100vw, 46rem) - 3.5rem) / 472); }
+
+.fig-bar {
+  fill: color-mix(in srgb, var(--accent, var(--accent-pattern)) 22%, var(--card));
+  stroke: var(--ink-soft);
+  stroke-width: 3;
+}
+
+.fig-unit {
+  fill: color-mix(in srgb, var(--accent, var(--accent-pattern)) 55%, var(--card));
+  stroke: var(--ink-soft);
+  stroke-width: 3;
+}
+
+/* أثرُ العدّ على الوحدة — **لونٌ ومعه حدّ** (اللون لا يحمل معنىً وحدَه، `DESIGN.md §٢`) */
+.fig-unit.is-counted { fill: color-mix(in srgb, var(--ok) 46%, var(--card)); stroke: var(--ok); stroke-width: 6; }
+
+/* والشريطُ الذي يُقاس بيد الطفل: عونُ «جرِّب معي» حدٌّ متقطّعٌ على لوحه */
+.q-ruler-board.is-open .fig-bar { stroke-dasharray: 12 9; }
+
+/* **وشريطٌ يُنقَر كلُّه زرٌّ**: طرفا المقارنة في «أيُّهما أطول» — زرٌّ حقيقيّ يبلغ هدفَ
+   اللمس بارتفاعه وعرضه، ويجرده حارسُ المتصفّح من تلقائه. */
+.q-barpick {
+  display: block;
+  padding: .3rem;
+  border: 3px solid transparent;
+  border-radius: 18px;
+  background: none;
+  min-height: var(--tap);
+  transition: border-color .18s ease, transform .15s ease;
+}
+
+.q-barpick:active { transform: scale(.97); }
+.q-barpick.good { border-color: var(--ok); }
+.q-barpick.bad { border-color: var(--err); }
+
+/* لوحُ القسمة في مرجع المصيِّر (`?dev=1#/render/share`): **بأصناف الشاشة نفسِها**
+   — كومةٌ فوق وأوعيةٌ تحتها — فالمراجعةُ على ما يراه الطفل لا على صفٍّ يصفّه المعرض. */
+.gallery-share { margin-bottom: 1.75rem; }
+.gallery-share h3 { font-size: .95rem; margin: 0 0 .5rem; color: var(--ink-soft); }
+.gallery-share .q-board { --accent: var(--accent-bond); }
+/* **ومقاسُ لوح المعرض أصغرُ من لوح الشاشة**: هنا تُرى أربعةُ أوجهٍ في صفحةٍ
+   واحدة للمقابلة، وهناك لوحٌ واحدٌ يملأ يدَ الطفل — فيُقصَر بسبقٍ في التخصيص
+   على مقاس الشاشة، وإلّا فاض المعرضُ عرضاً فلا يُقرأ. */
+.gallery-share .q-share .q-figure > .figure { --unit: inherit; }
+.gallery-share .q-share { max-width: 100%; }
+.gallery-share .q-bowls { gap: .4rem; }
+
 /* محطةُ التعارف (٨·٥): صفٌّ لكل رقمٍ — مشرقيُّنا ورسمُه الآخر، **بلا قياس** */
 .intro-grid {
   display: grid;

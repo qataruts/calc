@@ -26,7 +26,7 @@ import { h, icon, landmark, pick, shuffle, seeded, shake, pop, QUANTITY_ACCENT }
 import {
   AFTER_RIGHT_MS, BEAT, FLASH_MS, NUMBER_NAME, SAY, say, praiseThen, span, nearOptions, seeder, skillOf,
   stationById, stationForSkill, figureBox, quantityCard, markButton, touchLayer, countAloud,
-  clearCount, usedOf, registerExercise, stationScreen,
+  clearCount, usedOf, registerExercise, stationScreen, roundGate,
 } from './station.js';
 
 const OPTIONS = 3;
@@ -305,7 +305,7 @@ function touchView(round, hooks) {
   const choices = h('div', { class: 'q-choices' });
   const foot = h('div', { class: 'row foot' });
   let board = null;
-  let locked = false;
+  const gate = roundGate('المس وعُدّ');
   let asked = false;
   let restaged = false;
 
@@ -318,13 +318,11 @@ function touchView(round, hooks) {
     choices.replaceChildren(...round.options.map((spec) => {
       const { btn, drawn } = quantityCard(spec, {
         label: 'هَذِهِ',
-        onclick: async () => {
-          if (locked) return;
+        onclick: gate.guard(async () => {
           // **الجوابُ ما رُسِم**: عددُ ما عَدَّه الطفلُ هو عددُ ما رسم المصيِّر
           const correct = drawn === board.fig.drawn;
           hooks.attempt(round, correct);
           if (correct) {
-            locked = true;
             btn.classList.add('good');
             pop(btn);
             /* **لا أهميةَ للترتيب** (٢·٦): تُبعثَر الكميةُ نفسُها وتُعَدُّ ثانيةً —
@@ -336,25 +334,23 @@ function touchView(round, hooks) {
             if (!hooks.alive()) return;
             if (round.shuffled && !restaged) {
               restaged = true;
-              locked = false;
+              // **والجولةُ لم تنتهِ**: تُبعثَر الكميةُ وتُسأل ثانيةً — فيُرَدّ القفل
               stageFigure(round.shuffled, ASK.again);
             } else {
+              gate.end();          // الجولةُ انتهت: لا نقرةَ فوق انتقال
               hooks.done();
             }
             return;
           }
           btn.classList.add('bad');
           shake(btn);
-          locked = true;
           await say(SAY.together);
           if (!hooks.alive()) return;
           await new Promise((r) => setTimeout(r, BEAT / 2));
           if (!hooks.alive()) return;
           await countAloud([board.fig], hooks.alive);
-          if (!hooks.alive()) return;
           btn.classList.remove('bad');
-          locked = false;
-        },
+        }),
       });
       return btn;
     }));
@@ -385,7 +381,7 @@ function giveView(round, hooks) {
   const model = figureBox(round.model, 'q-model');
   const field = figureBox(round.field, 'q-touch');
   const picked = new Set();
-  let locked = false;
+  const gate = roundGate('أعطني هذا العدد');
 
   /* **غطاءُ الخطف** — غطاءُ «كم ترى؟» نفسُه بعلّته نفسِها (`METHOD.md §٢.٧`): ورقةٌ
      هادئة تحلّ محلّ النموذج، **لا عدّادَ ولا شريطَ يفرغ**. وهو مرفوعٌ في «جرِّب معي»
@@ -406,14 +402,13 @@ function giveView(round, hooks) {
     hide();
   }
 
-  touchLayer(field, (index, btn) => {
-    if (locked) return;
+  touchLayer(field, gate.guard((index, btn) => {
     // **الالتقاطُ يُراجَع بالإصبع**: ما التُقط يُترَك بلمسةٍ ثانية — وهو غيرُ العدّ
     // (هناك لا يُحتسَب عنصرٌ مرتين، وهنا يبني الطفلُ كمّاً ويصحّحه قبل أن يقول «تمّ»).
     if (picked.has(index)) picked.delete(index); else picked.add(index);
     btn.classList.toggle('is-picked', picked.has(index));
     field.marks[index]?.classList.toggle('is-counted', picked.has(index));
-  });
+  }));
 
   /* **و«تَمَّ» يُرى بصورته** (جردُ الصنف — م٥): زرٌّ تتوقف عليه الجولةُ ووسيلتُه
      الوحيدة كلمةٌ حاجزٌ أمام قبل-قارئ. فصار صحّاً يُرى، والكلمةُ زينةُ الوالد.
@@ -422,30 +417,26 @@ function giveView(round, hooks) {
      تلقائيّ على كمٍّ في منتصف بنائه خطأٌ يُسجَّل على طفلٍ لم يفرغ بعد.) */
   const done = h('button', { class: 'btn btn--primary btn--wide next' },
     icon('check'), ' تَمَّ');
-  done.addEventListener('click', async () => {
-    if (locked) return;
+  done.addEventListener('click', gate.guard(async () => {
     const correct = picked.size === model.drawn;
     hooks.attempt(round, correct);
     if (correct) {
-      locked = true;
+      gate.end();
       done.classList.add('good');
       pop(done);
       await praiseThen(hooks);
       return;
     }
     shake(done);
-    locked = true;
     await say(SAY.together);
     if (!hooks.alive()) return;
     await new Promise((r) => setTimeout(r, BEAT / 2));
     if (!hooks.alive()) return;
     show();                                   // الغطاءُ يُرفع ليُعَدَّ المطلوبُ أمامه
     await countAloud([model], hooks.alive);   // يرى المطلوبَ عدّاً، ثم يُصحّح بيده
-    if (!hooks.alive()) return;
     clearCount(model);
     if (round.flash) hide();                  // ثم يعود الغطاءُ ويحاول ثانية
-    locked = false;
-  });
+  }));
 
   const foot = h('div', { class: 'row foot' });
   if (round.flash) {
@@ -505,8 +496,10 @@ function equalView(round, hooks) {
   const state = { left: round.left.count, right: round.right.count };
   const pair = h('div', { class: 'q-pair q-equal' });
   const figs = {};
-  let locked = false;
-  let judged = false;
+  /* **وقفلٌ واحد لِلَمسةٍ وكبسة** (بلاغ الميدان ٦): كان `locked` للتصحيح و`judged`
+     لانتهاء الجولة، وكلاهما يُرفَع بسطر. صارا حالَي بوابةٍ واحدة: مأخوذةٌ ما دام
+     الحكمُ يعمل (فلا لمسةَ تُغيّر اللوحَ تحت العدّ)، **ومنتهيةٌ** بالصواب (`end`). */
+  const gate = roundGate('اجعلهما سواء');
 
   const gap = () => Math.abs(figs.left.fig.drawn - figs.right.fig.drawn);
   /** الميزانُ المتوازن — معلمُ مرحلة المقارنة نفسُه (`ui.js`)، لا رسمٌ ثانٍ له. */
@@ -517,25 +510,23 @@ function equalView(round, hooks) {
    * — امتناعٌ في البنية كما في «اصنع العدد» (المرحلة ٥). **ولا حكمَ فيها**: تقريباً
    * كانت أو مباعدة، فهي بحثُ الطفل عن جوابه لا جوابُه.
    */
-  function tap(key, delta) {
-    if (locked || judged) return;
+  const tap = gate.guard((key, delta) => {
     const next = state[key] + delta;
     if (next < round.lo || next > round.hi) return;      // لا يخرج عن جبهة محطته
     state[key] = next;
     draw();
-  }
+  });
 
   /**
    * **الكبسة: الجوابُ يُعلَن** — والحكمُ **من المرسوم** (`drawn` لا `state`).
    * سواءٌ ⇒ ميزانٌ ولفظُه واحتفال؛ ومختلفان ⇒ تُعَدّ الكميتان أمامه ثم يعود يعدّل
    * ويُعلن ثانيةً **بلا حدٍّ** — لا شاشةَ خطأ ولا تراجعَ عن لمسته.
    */
-  async function judge() {
-    if (locked || judged) return;
+  const judge = gate.guard(async () => {
     const correct = gap() === 0;
     hooks.attempt(round, correct);
     if (correct) {
-      judged = true;
+      gate.end();
       sign.hidden = false;
       pop(sign);
       await say(SAY.revealSame);
@@ -544,17 +535,14 @@ function equalView(round, hooks) {
       return;
     }
     shake(scaleBtn);
-    locked = true;
     await say(SAY.together);
     if (!hooks.alive()) return;
     await new Promise((r) => setTimeout(r, BEAT / 2));
     if (!hooks.alive()) return;
     await countAloud([figs.left.fig, figs.right.fig], hooks.alive);
-    if (!hooks.alive()) return;
     clearCount(figs.left.fig);
     clearCount(figs.right.fig);
-    locked = false;
-  }
+  });
 
   /* **وزرُّ الحكم ميزانٌ بلا حرف** (م٦): صورتُه صورةُ الميزان الذي يظهر بين اللوحين
      عند التساوي وصورةُ زرّ «هما سواء» في محطة المقارنة — معلمٌ واحدٌ يُتعلَّم مرّةً.

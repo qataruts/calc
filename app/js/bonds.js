@@ -47,6 +47,7 @@ import {
   BEAT, SAY, say, praiseThen, span, nearOptions, seeder, skillOf, rangesOf,
   stationById, stationForSkill, figureBox, quantityCard, countAloud,
   countCells, clearCount, clearCells, usedOf, registerExercise, stationScreen,
+  roundGate,
 } from './station.js';
 
 const GUIDED = 2;          // «جرِّب معي» — جولتان بعونٍ مرئيّ، غيرُ مقيستين
@@ -377,7 +378,10 @@ function pairView(round, hooks) {
   const placed = [];                    // ما وُضع في الخانتين، بترتيبه
   const spent = new Set();              // قيمُ الطريقة الأولى — لا تُعاد في الثانية
   const cards = [];
-  let locked = false;
+  /* **وقفلٌ مالكُه واحد** (بلاغ الميدان ٦): يُؤخَذ بالكبسة ويُرَدّ في كل حال —
+     **ويُعاد رسمُ اللوح كلّما رُدّ** (`onFree` أدناه) فلا يبقى زرٌّ معطَّلاً لأنّ
+     آخرَ رسمةٍ وقعت والقفلُ مأخوذ. */
+  const gate = roundGate('اصنع العدد');
   let second = false;
 
   const head = h('h2', {}, round.ask);
@@ -398,22 +402,22 @@ function pairView(round, hooks) {
     for (const [i, slot] of slots.entries()) {
       slot.replaceChildren(...(placed[i] ? [placed[i].box] : []));
       slot.classList.toggle('is-full', Boolean(placed[i]));
-      slot.disabled = locked || !placed[i];       // لا ردَّ لخانةٍ فارغة
+      slot.disabled = gate.held || !placed[i];    // لا ردَّ لخانةٍ فارغة
     }
     tip.hidden = placed.length === 0;
     // **التجاوزُ امتناعٌ في البنية**: ما يزيد على ما بقي لا يُلمَس أصلاً
     for (const cell of cards) {
-      cell.btn.disabled = locked || placed.length >= slots.length
+      cell.btn.disabled = gate.held || placed.length >= slots.length
         || cell.drawn > need() || spent.has(cell.drawn);
     }
   }
+  gate.onFree = paint;
 
   /** ردُّ جزءٍ وُضع — **الالتقاطُ يُراجَع بالإصبع** (نظيرُ «أعطني ن»). */
-  function take(index) {
-    if (locked || !placed[index]) return;
+  const take = gate.guard((index) => {
+    if (!placed[index]) return;
     placed.splice(index, 1);
-    paint();
-  }
+  });
 
   for (const [i, slot] of slots.entries()) {
     slot.addEventListener('click', () => take(i));
@@ -430,26 +434,25 @@ function pairView(round, hooks) {
     await say(ASK.again);
   }
 
-  async function judge() {
+  const judge = gate.guard(async () => {
     const correct = need() === 0;
     hooks.attempt(round, correct);
     if (correct) {
-      locked = true;
       for (const slot of slots) slot.classList.add('good');
       pop(board);
+      paint();
       if (round.ways && !second) {
         await say(SAY.bravo);
         if (!hooks.alive()) return;
         for (const slot of slots) slot.classList.remove('good');
-        locked = false;
-        await anotherWay();
+        await anotherWay();      // والجولةُ لم تنتهِ: تُرَدّ الحريةُ عند الخروج
         return;
       }
+      gate.end();
       await praiseThen(hooks);
       return;
     }
     shake(board);
-    locked = true;
     paint();
     // **يُعَدُّ الكلُّ أمامه** — يرى كم كان يريد، ولا يُقال له أيَّ جزأين يختار
     await say(SAY.together);
@@ -457,18 +460,16 @@ function pairView(round, hooks) {
     checkBox.hidden = false;
     await new Promise((r) => setTimeout(r, BEAT / 2));
     if (!hooks.alive()) return;
-    if (!(await countAloud([check], hooks.alive))) return;
+    await countAloud([check], hooks.alive);
     checkBox.hidden = true;
     clearCount(check);
     placed.length = 0;
-    locked = false;
-    paint();
-  }
+  });
 
   for (const spec of round.options) {
     let cell = null;
     const choose = async () => {
-      if (locked || placed.length >= slots.length) return;
+      if (gate.held || placed.length >= slots.length) return;
       placed.push(figureBox(spec));
       paint();
       if (placed.length === slots.length) await judge();
@@ -502,16 +503,16 @@ function restView(round, hooks) {
   if (round.aided) for (const cell of frame.cells.slice(frame.drawn)) cell.classList.add('is-open');
 
   const choices = h('div', { class: 'q-choices' });
-  let locked = false;
+  const gate = roundGate('كم بقي للعشرة؟');
 
   for (const spec of round.options) {
     let cell = null;
-    const choose = async () => {
-      if (locked) return;
+    // ولا نقرةَ ثانيةً تفتح تصحيحاً فوق تصحيح — والقفلُ يُرَدّ في كل حال (البلاغ ٦)
+    const choose = gate.guard(async () => {
       const correct = cell.drawn === rest;
       hooks.attempt(round, correct);
       if (correct) {
-        locked = true;
+        gate.end();
         cell.btn.classList.add('good');
         pop(cell.btn);
         await praiseThen(hooks);
@@ -519,17 +520,15 @@ function restView(round, hooks) {
       }
       cell.btn.classList.add('bad');
       shake(cell.btn);
-      locked = true;                 // ولا نقرةَ ثانيةً تفتح تصحيحاً فوق تصحيح
       await say(SAY.together);
       if (!hooks.alive()) return;
       await new Promise((r) => setTimeout(r, BEAT / 2));
       if (!hooks.alive()) return;
       // **تُعَدُّ الخاناتُ الفارغة أمامه** — يرى ما بقي مكاناً مكاناً لا رقماً يُقال
-      if (!(await countCells(frame, hooks.alive))) return;
+      await countCells(frame, hooks.alive);
       clearCells(frame);
       cell.btn.classList.remove('bad');
-      locked = false;
-    };
+    });
     cell = quantityCard(spec, { label: 'هَذَا مَا بَقِي', onclick: choose });
     choices.append(cell.btn);
   }

@@ -69,6 +69,8 @@ const SAY_CATEGORY = {
   revealFirst: 'modeling',   // «…مِنَ الْأَوَّلِ إِلَى الْآخِرْ» — تسلسلُ الزمن يُشاهَد
   revealBoth: 'modeling',    // «هُمَا سَوَاءْ» — الميزانُ المتوازن يُكشَف في النمذجة
   revealSame: 'modeling',    // «صَارَا سَوَاءْ» — قولُ ما يُرى حين يستوي اللوحان
+  revealFair: 'modeling',    // «صَارَ لِكُلٍّ مِثْلُ الْآخَرْ» — قولُ ما يُرى حين يقع العدل
+  revealLeft: 'modeling',    // «وَبَقِيَ وَاحِدْ» — الباقي يُرى ويُسمّى ولا يُعَدّ خطأً
   bravo: 'celebration',
   great: 'celebration',
 };

@@ -35,7 +35,7 @@ import { h, pick, shuffle, seeded, shake, pop, PATTERN_ACCENT } from './ui.js';
 import {
   BEAT, NUMBER_NAME, SAY, say, praiseThen, span, nearOptions, seeder, skillOf,
   stationById, stationForSkill, figureBox, numeralCard, markButton, countMarks,
-  usedOf, registerExercise, stationScreen,
+  usedOf, registerExercise, stationScreen, roundGate,
 } from './station.js';
 
 const OPTIONS = 3;
@@ -269,17 +269,16 @@ function countView(round, hooks) {
   board.dataset.answer = String(want);
   board.dataset.span = String(spanIn(fig));
   const choices = h('div', { class: 'q-choices' });
-  let locked = false;
+  const gate = roundGate('كم وحدةً طولُه؟');
 
   for (const spec of round.options) {
     const { btn, drawn } = numeralCard(spec.count, spec.seed, {
       label: 'هَذَا الرَّمْز',
-      onclick: async () => {
-        if (locked) return;
+      onclick: gate.guard(async () => {
         const correct = drawn === want;
         hooks.attempt(round, correct);
         if (correct) {
-          locked = true;
+          gate.end();
           btn.classList.add('good');
           pop(btn);
           await praiseThen(hooks);
@@ -287,16 +286,13 @@ function countView(round, hooks) {
         }
         btn.classList.add('bad');
         shake(btn);
-        locked = true;
         // **الخطأُ يُعَدّ أمامه**: تُضاء الوحداتُ واحدةً واحدة بأسمائها
         await say(SAY.together);
         if (!hooks.alive()) return;
-        if (!(await walkUnits(fig, hooks.alive))) return;
-        if (!hooks.alive()) return;
+        await walkUnits(fig, hooks.alive);
         clearUnits(fig);
         btn.classList.remove('bad');
-        locked = false;
-      },
+      }),
     });
     choices.append(btn);
   }
@@ -316,7 +312,7 @@ function longerView(round, hooks) {
   const stage = h('div', { class: 'q-rulers' });
   const board = h('div', { class: 'q-solve q-solve--units' }, stage);
   board.dataset.mode = 'longer';
-  let locked = false;
+  const gate = roundGate('أيُّهما أطولُ بالوحدات؟');
 
   const bars = round.bars.map((spec) => {
     const fig = figureBox(spec, 'q-ruler');
@@ -330,12 +326,11 @@ function longerView(round, hooks) {
   const most = Math.max(...bars.map((b) => b.fig.drawn));
   board.dataset.answer = String(most);
 
-  async function choose(btn, fig) {
-    if (locked) return;
+  const choose = gate.guard(async (btn, fig) => {
     const correct = fig.drawn === most && bars.filter((b) => b.fig.drawn === most).length === 1;
     hooks.attempt(round, correct);
     if (correct) {
-      locked = true;
+      gate.end();
       btn.classList.add('good');
       pop(btn);
       await praiseThen(hooks);
@@ -343,15 +338,12 @@ function longerView(round, hooks) {
     }
     btn.classList.add('bad');
     shake(btn);
-    locked = true;
     // **الخطأُ يُعَدّ أمامه**: يُعَدّ الشريطان واحداً بعد الآخر فيُسمَع الفرق
     await say(SAY.together);
     if (!hooks.alive()) return;
-    if (!(await walkAll(bars.map((b) => b.fig), hooks.alive))) return;
-    if (!hooks.alive()) return;
+    await walkAll(bars.map((b) => b.fig), hooks.alive);
     for (const b of bars) { clearUnits(b.fig); b.btn.classList.remove('bad'); }
-    locked = false;
-  }
+  });
 
   say(round.ask);
 
@@ -373,8 +365,9 @@ function handView(round, hooks) {
   board.dataset.mode = 'hand';
   board.dataset.answer = String(round.len);
   let fig = null;
-  let locked = false;
-  let judged = false;
+  /* **قفلٌ مالكُه واحد** (بلاغ الميدان ٦): كان `locked` للتعليم و`judged` لانتهاء
+     الجولة — صارا حالَي بوابةٍ واحدة تُرَدّ في كل حال. */
+  const gate = roundGate('قِسْ بيدك');
 
   /**
    * لمسةٌ تضع وحدةً أو ترفعها — **ولا حكمَ فيها**: بحثُ الطفل لا جوابُه.
@@ -384,25 +377,23 @@ function handView(round, hooks) {
    * تقول «أريدها هكذا» — يبقى ما قبلها ويذهب ما بعدها، فتُقرأ اللمسةُ كما نُويت
    * ويبقى القياسُ صادقاً في كل لحظة.
    */
-  function setLaid(next) {
-    if (locked || judged) return;
+  const setLaid = gate.guard((next) => {
     // **والتجاوزُ ممتنعٌ في البنية**: المصيِّرُ لا يرسم وحدةً فوق طول شريطها
     if (next < 0 || next > round.len) return;
     state.laid = next;
     draw();
-  }
+  });
 
   /**
    * **الكبسة: القياسُ يُعلَن** — والحكمُ **من المرسوم**: عددُ الوحدات المرصوصة يبلغ
    * طولَ الشريط كما أعلنه رسمُه. فإن بلغه عُدَّت أمامه (العدديّةُ ختامُ القياس)،
    * وإلّا عُدَّ ما رصّ ثم يُكمل بيده **بلا حدٍّ ولا عقاب**.
    */
-  async function judge() {
-    if (locked || judged) return;
+  const judge = gate.guard(async () => {
     const correct = fig.drawn === spanIn(fig);
     hooks.attempt(round, correct);
     if (correct) {
-      judged = true;
+      gate.end();
       pop(judgeBtn);
       if (!(await walkUnits(fig, hooks.alive))) return;
       if (!hooks.alive()) return;
@@ -410,14 +401,11 @@ function handView(round, hooks) {
       return;
     }
     shake(judgeBtn);
-    locked = true;
     await say(SAY.together);
     if (!hooks.alive()) return;
-    if (!(await walkUnits(fig, hooks.alive))) return;
-    if (!hooks.alive()) return;
+    await walkUnits(fig, hooks.alive);
     clearUnits(fig);
-    locked = false;
-  }
+  });
 
   /* **زرُّ الحكم مسطرةٌ بلا حرف** (م٦): معلمُ مرحلة القياس نفسُه من `ui.js` — وأوّلُ
      لقاءٍ به في نمذجة محطته، تكبسه بنفسها. */
@@ -483,7 +471,7 @@ registerScreen('units', screen('units'));
  * جولةٌ واحدة لمهارةٍ مستحقّة — مادّةُ المراجعة والبوابات.
  *
  * **والوجهُ يدور على أوجه المفتاح الثلاثة**: المفتاحُ واحدٌ لثلاث محطات
- * (`measure|20|units`)، فالمراجعةُ تسأل عن أحدها بالقرعة لا عن الأولى أبداً — وإلّا
+ * (`measure|8|units`)، فالمراجعةُ تسأل عن أحدها بالقرعة لا عن الأولى أبداً — وإلّا
  * لم يُراجَع «قِسْ بيدك» ولا المقارنةُ بالوحدات قطّ، وهما ثمرةُ المرحلة.
  */
 const single = () => (skill, rnd) => {

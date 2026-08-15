@@ -267,7 +267,13 @@
      النطاقات: تقيس بها الخريطةُ أزرارَها، ويقيس بها جردُ الصنف نوبةَ الطفل. */
   const TOUCH_MIN = 64;
   const BOARD_MIN = 44;
-  const needOf = (el) => (el.classList.contains('fig-tap') && el.closest('.q-equal')
+  /* **واستثناءُ اللوح يسري على كلِّ لوحٍ يعدّله الإصبع** (الجلسة ث): علّتُه المكتوبة
+     في `METHOD.md §١١` أنّ **فعلَ كلِّ عناصر اللوح واحد**، فتلاصقُها لا يضرّ (خطأُ
+     اللمسة يقع على أخيها بالفعل نفسه). وذلك حالُ ثلاثة ألواح لا لوحٍ واحد: التسويةُ
+     (٢·٣) وأوعيةُ القسمة (١٠) ووحداتُ الشريط (١١) — وفي كلٍّ منها كلُّ زرٍّ يفعل ما
+     يفعله جارُه. **وأزرارُ القرارات على العتبة الكاملة** في الثلاثة (الحكمُ والانتقال). */
+  const BOARDS = '.q-equal, .q-solve--share, .q-ruler-board';
+  const needOf = (el) => (el.classList.contains('fig-tap') && el.closest(BOARDS)
     ? BOARD_MIN : TOUCH_MIN);
   const drawnOf = (el) => Number(el.querySelector('.figure')?.dataset.drawn);
   const beadNow = (doc) => [...doc.querySelectorAll('.bead')].findIndex((b) => b.classList.contains('bead--now'));
@@ -428,6 +434,9 @@
     // **واللوحُ تُعَدّ أشكالُه** (الجلسة ش): وأضلاعُ كلٍّ تُقاس في §١١ك بجدول حقيقةٍ
     // مستقلّ — فهنا عددُ الأشكال، وهناك عددُ أضلاعها.
     shape: (f) => f.querySelectorAll('[data-shape]').length,
+    // **والشريطُ المقيسُ تُعَدّ وحداتُه** (الجلسة ث): لا طولُه — الطولُ يُعلنه شريطُه
+    // (`data-span`)، والمقيسُ هنا **ما رُصّ تحته**؛ وتلاصقُها يُقاس بالبكسل في §١١ل.
+    units: (f) => f.querySelectorAll('[data-unit]').length,
   };
   const miscount = figures.filter((f) => {
     const want = Number(f.dataset.count);
@@ -834,6 +843,39 @@
       if (spots.length) return spots.find((s) => s.dataset.shape === want);
       return cardsOf(d).find((c) => c.querySelector('[data-shape]')?.dataset.shape === want);
     }
+    /* **ولوحُ القسمة يُصنَع ثم يُعلَن** (المرحلة ١٠ — الجلسة ث): لا بطاقةَ تُلمَس،
+       وإنما يُوضَع في الأوعية حتى تستوي على نصيبها المُعلَن ثم **تُكبَس صورةُ الحكم**.
+       فالسائقُ يردّ في كل نقرةٍ **زرَّ الوعاء الناقص**، فإذا استوت ردّ الحكمَ — وهو
+       عينُ ما يفعله الطفلُ المصيب. والعددُ في كلِّ وعاءٍ **مقروءٌ من المرسوم**. */
+    const share = d.querySelector('.q-solve--share');
+    if (share && share.dataset.mode === 'deal') {
+      const want = Number(share.dataset.answer);
+      const bowl = [...d.querySelectorAll('.q-bowls .q-side')]
+        .find((b) => b.querySelectorAll('[data-mark]').length < want);
+      return bowl ? bowl.querySelector('.q-add') : d.querySelector('.q-judge .btn--mark');
+    }
+    /* **وشريطُ القياس ثلاثةُ أوجه** (المرحلة ١١): بطاقةُ رمزٍ لعدد الوحدات، أو لمسةٌ
+       على الشريط الأطول **بعدد وحداته المرسومة**، أو رصٌّ باليد ثم كبسةُ إعلان. */
+    const measured = d.querySelector('.q-solve--units');
+    if (measured) {
+      const want = Number(measured.dataset.answer);
+      if (measured.dataset.mode === 'count') {
+        return cardsOf(d).find((c) => drawnOf(c) === want);
+      }
+      if (measured.dataset.mode === 'longer') {
+        return [...d.querySelectorAll('.q-barpick')].find((b) => drawnOf(b) === want);
+      }
+      const laid = d.querySelectorAll('[data-unit]').length;
+      return laid < want ? d.querySelector('.q-add') : d.querySelector('.q-judge .btn--mark');
+    }
+    /* **والترتيبيّةُ يُلمَس فيها موضع** (٨·٥): اللوحُ يعلن ما في الخانة المطلوبة
+       **مقروءاً من الشريط المرسوم**، وكلُّ زرِّ موضعٍ يحمل ما تحته — فيُلمَس الذي
+       يحمله. (ولا رقمَ يُقابَل: لغتُها أسماءُ الترتيب لا الأعداد.) */
+    const rank = d.querySelector('.q-solve--rank');
+    if (rank) {
+      const want = rank.dataset.answer;
+      return [...d.querySelectorAll('.fig-tap--cell')].find((s) => s.dataset.item === want);
+    }
     const scene = d.querySelector('.q-solve--measure');
     if (scene) {
       const want = scene.dataset.answer;
@@ -865,6 +907,15 @@
     const value = (c) => Number(c.querySelector('.figure')?.dataset.drawn);
     // **الترتيبُ أولاً**: نصُّه يذكر «الأصغر» و«الأكبر» معاً، فلو قُدِّمت المقارنةُ
     // عليه لأُخذ الأكبرُ في سؤالِ ترتيبٍ يبدأ من الأصغر — والخطأُ في الفحص أخطرُ.
+    /* **و«أيُّهما أكثر؟» تُقارَن كمّاً لا رمزاً** (المرحلة ١): جوابُها أكثرُهما
+       **مرسوماً** — **وقد يستويان** في المحطة الختامية، فالجوابُ حينئذٍ زرُّ التساوي
+       لا بطاقة. (وموضعُها قبل «أكبر» و«أصغر» لا يضرّ: لفظُها غيرُ لفظهما.) */
+    if (ask.includes('أَكْثَر')) {
+      const most = Math.max(...cards.map(value));
+      return cards.filter((c) => value(c) === most).length > 1
+        ? d.querySelector('.same-btn')
+        : cards.find((c) => value(c) === most);
+    }
     if (ask.includes('رَتِّبْ')) return cards.reduce((a, b) => (value(a) <= value(b) ? a : b));
     if (ask.includes('أَكْبَر')) return cards.reduce((a, b) => (value(a) >= value(b) ? a : b));
     if (ask.includes('أَصْغَر')) return cards.reduce((a, b) => (value(a) <= value(b) ? a : b));
@@ -2034,6 +2085,11 @@
     // شفّافة — فيُقاس فيها الصنفُ وهدفُ اللمس معاً يومَ دخلت الرحلة.
     ['#/shape/sides', '«كَمْ ضِلْعًا؟»'],
     ['#/shape/world', '«الأَشْكَالُ حَوْلَنَا» — وأجزاؤها أهدافُ لمس'],
+    // **وشاشاتُ حزمة الإثراء معها** (الجلسة ث): لوحان يعدّلهما الإصبعُ وزرّا حكمٍ
+    // بلا حرف، وشريطٌ يُلمَس فيه موضع — فيُقاس فيها الصنفُ وهدفُ اللمس يومَ دخلت.
+    ['#/share/two', '«بِالعَدْلِ بَيْنَ اثْنَيْن»'],
+    ['#/units/hand', '«قِسْ بِيَدِك» — ووحداتُه أهدافُ لمس'],
+    ['#/rank/five', '«الأَوَّلُ وَالثَّانِي وَالثَّالِث»'],
   ]) {
     const cdoc = await open(hash, hash ? '&dev=1' : '');
     await until(cdoc, (d) => d.querySelector('.station-body .next')
@@ -2046,7 +2102,9 @@
     cdoc.querySelector('.station-body .next')?.click();
     await until(cdoc, (d) => d.querySelector('.q-choices .qcard')
       || d.querySelector('.same-btn') || d.querySelector('.q-equal')
-      || d.querySelector('.q-solve--sides') || d.querySelector('.q-solve--thing'), 22000);
+      || d.querySelector('.q-solve--sides') || d.querySelector('.q-solve--thing')
+      || d.querySelector('.q-solve--share') || d.querySelector('.q-solve--units')
+      || d.querySelector('.q-solve--rank'), 22000);
     seenScreens++;
     textOnly.push(...bareButtons(cdoc).map((el) => `${what} (تمرين): ${bareNames([el])}`));
     for (const row of undersized(cdoc)) undersizedRows.push(`${what} (تمرين): ${tightNames([row])}`);
@@ -2062,7 +2120,7 @@
     `وكلُّ زرِّ طفلٍ على ${seenScreens} شاشةٍ يبلغ عتبةَ اللمس المعلَنة `
     + `(${TOUCH_MIN}بك، وعناصرُ اللوح ${BOARD_MIN} — استثناءُ \`METHOD.md §١١\`)`
     + (undersizedRows.length ? ` — **دون عتبته: ${undersizedRows.join(' | ')}**` : ''));
-  ok(textOnly.length === 0 && seenScreens === 16,
+  ok(textOnly.length === 0 && seenScreens === 25,
     `وكلُّ زرٍّ على ${seenScreens} شاشةِ طفلٍ فيه ما يُرى لا حروفٌ وحدَها `
     + `(${EXEMPT.length} معفىً بسببه: ${EXEMPT.map(([sel, why]) => `${sel} — ${why}`).join(' · ')})`
     + (textOnly.length ? ` — **نصٌّ بلا صورة: ${textOnly.join(' | ')}**` : ''));
@@ -2230,6 +2288,344 @@
   ok(eqMoved === 2,
     `**وكبسةٌ عند التساوي تحتفل**: الجولةُ تمضي بإعلان الطفل لا بوقوعه `
     + `(${eqMoved} من ٢)`);
+
+  /* ————— ١١ل) حزمةُ الإثراء: القسمةُ والقياسُ والترتيبيّة (الجلسة ث) —————
+
+     ثلاثُ محطاتٍ دخلت الذيلَ، ولكلٍّ حكمُها على الشاشة الحيّة:
+
+       • **القسمةُ تُصنَع باللمس والجوابُ يُعلَن كبساً** (عهدُ م٦ على مادّةٍ جديدة):
+         توزيعٌ عادلٌ يُترَك بلا كبسةٍ **فلا يقع حكم**، وكبسةٌ قبل العدل **تُعالَج ولا
+         تُحتسب**، وكبسةٌ عنده تحتفل. **ولا رمزَ عمليةٍ ولا علامة** في المعروض.
+       • **والباقي يُرى ويُسمّى ولا يُعَدّ خطأً**: في «ما ينقسم وما لا ينقسم» يبقى
+         في الكومة واحدٌ **والجولةُ تمضي** — وهو أدقُّ ما في المرحلة.
+       • **والوحداتُ متلاصقةٌ بالبكسل بعد التنسيق**: حارسُ المصيِّر يقيس الخطةَ
+         أعداداً، **وهذا يقيس المرسومَ على الشاشة** — فتنسيقٌ يفتح بينها فجوةً
+         (حاشيةٌ أو حدٌّ) يُمسَك هنا وحدَه. **وعرضُها واحد**: لا مسطرتان في سؤال.
+       • **ولا تجاوزَ للشريط**: نقرٌ فوق طوله لا يزيد وحدةً — امتناعٌ في البنية.
+       • **والترتيبيّةُ بلا رقمٍ واحد، وأوّلُها من اليمين**: جهةُ ملء الإطار نفسُها. */
+
+  const drawnIn = (el) => Number(el?.querySelector('.figure')?.dataset.drawn);
+
+  // ————— القسمة: توزيعٌ باللمس وحكمٌ يُكبَس —————
+  const shDoc = await open('#/share/rest', '&dev=1');
+  await until(shDoc, (d) => d.querySelector('.station-body .next'), 22000);
+  shDoc.querySelector('.station-body .next')?.click();
+  await until(shDoc, (d) => d.querySelector('.q-solve--share'), 22000);
+  const shBoard = () => shDoc.querySelector('.q-solve--share');
+  const shBowls = () => [...shDoc.querySelectorAll('.q-bowls .q-side')];
+  const shPile = () => shDoc.querySelector('.q-pile');
+  const shJudge = () => shDoc.querySelector('.q-judge .btn--mark');
+  const shHeld = (i) => shBowls()[i]?.querySelectorAll('[data-mark]').length ?? -1;
+  const shSigns = shownIn(shDoc.querySelector('.station-body'));
+
+  const shWant = Number(shBoard().dataset.answer);
+  const shLeft = Number(shBoard().dataset.left);
+  // **كبسةٌ قبل العدل**: الأوعيةُ فارغةٌ بعدُ — أتُعالَج ولا تُحتسب؟
+  const shBeadBefore = beadNow(shDoc);
+  shJudge()?.click();
+  const shEarlyCounted = (await until(shDoc,
+    () => (shDoc.querySelectorAll('.q-solve--share .is-counted').length || null), 12000)) || 0;
+  const shEarlyMoved = beadNow(shDoc) !== shBeadBefore || !!shDoc.querySelector('.celebrate');
+  await until(shDoc,
+    () => (shDoc.querySelectorAll('.q-solve--share .is-counted').length === 0 ? true : null), 22000);
+
+  // ثم يُوزَّع بالعدل لمسةً لمسة — والعددُ في كل وعاءٍ **مقروءٌ من المرسوم**
+  let shTaps = 0;
+  for (let guard = 0; guard < 30; guard++) {
+    const at = shBowls().findIndex((_, i) => shHeld(i) < shWant);
+    if (at < 0) break;
+    const was = shHeld(at);
+    shBowls()[at].querySelector('.q-add')?.click();
+    await until(shDoc, () => (shHeld(at) === was + 1 ? true : null), 4000);
+    if (shHeld(at) !== was + 1) break;
+    shTaps++;
+  }
+  const shFair = shBowls().every((_, i) => shHeld(i) === shWant);
+  const shRest = drawnIn(shPile());
+  // **واستوت الأوعيةُ — فلا شيء يقع حتى يُكبَس**
+  const shIdleBead = beadNow(shDoc);
+  await new Promise((r) => setTimeout(r, 2300));
+  const shIdleHeld = beadNow(shDoc) === shIdleBead && !shDoc.querySelector('.celebrate');
+  shJudge()?.click();
+  const shMoved = !!(await until(shDoc,
+    () => (beadNow(shDoc) !== shIdleBead || shDoc.querySelector('.celebrate') ? true : null), 20000));
+
+  ok(shFair && shTaps === shWant * shBowls().length,
+    `**القسمةُ تُصنَع باللمس**: ${shTaps} لمسةً وزّعت ${shWant} لكلِّ وعاءٍ من `
+    + `${shBowls().length} — والعددُ في كلٍّ مقروءٌ من المرسوم`
+    + (shFair ? '' : ' — **لم تستوِ الأوعية**'));
+  ok(shRest === shLeft && shLeft > 0,
+    `**والباقي يُرى في الكومة ولا يُخفى**: بقي ${shRest} والمنتظَر ${shLeft} `
+    + '(محطةُ «ما ينقسم وما لا ينقسم»)');
+  ok(shEarlyCounted > 0 && !shEarlyMoved,
+    `**وكبسةٌ قبل العدل تُعالَج ولا تُحتسب نجاحاً**: عُدَّ أمامه (${shEarlyCounted} `
+    + 'عنصراً مُعلَّماً) ولا انتقال'
+    + (shEarlyMoved ? ' — **مضت الجولةُ على خطأ**' : ''));
+  ok(shIdleHeld,
+    '**ولا حكمَ يقع من تلقائه**: استوت الأوعيةُ فمكثت ٢٫٣ ثانيةً بلا كبسةٍ فلا انتقال'
+    + (shIdleHeld ? '' : ' — **وقع الحكمُ صدفةً بلا كبسة**'));
+  ok(shMoved, '**وكبسةٌ عند العدل تمضي بالجولة** — بإعلان الطفل لا بوقوعه');
+  ok(!/[+−=×÷]/.test(shSigns),
+    'ولا رمزَ عمليةٍ ولا علامةَ مساواةٍ في شاشة القسمة (جبهتُها `ops: []`)'
+    + (/[+−=×÷]/.test(shSigns) ? ` — **معروض: ${shSigns.slice(0, 60)}**` : ''));
+
+  // ————— القياس بوحدة: تلاصقٌ بالبكسل، ولا تجاوز —————
+  const unDoc = await open('#/units/hand', '&dev=1');
+  await until(unDoc, (d) => d.querySelector('.station-body .next'), 22000);
+  unDoc.querySelector('.station-body .next')?.click();
+  await until(unDoc, (d) => d.querySelector('.q-solve--units'), 22000);
+  const unSpan = Number(unDoc.querySelector('.q-solve--units').dataset.answer);
+  const unLaid = () => unDoc.querySelectorAll('[data-unit]').length;
+  let unTaps = 0;
+  for (let guard = 0; guard < 20; guard++) {
+    const was = unLaid();
+    unDoc.querySelector('.q-add')?.click();
+    await until(unDoc, () => (unLaid() !== was ? true : null), 3000);
+    if (unLaid() === was) break;
+    unTaps++;
+  }
+  // **ولا تجاوز**: نقرتان زائدتان بعد الاستيفاء لا تزيدان وحدة
+  const unFull = unLaid();
+  unDoc.querySelector('.q-add')?.click();
+  unDoc.querySelector('.q-add')?.click();
+  await new Promise((r) => setTimeout(r, 400));
+  const unAfter = unLaid();
+
+  /* **والتلاصقُ يُقاس على المرسوم بالبكسل** (لا على الخطة): حافّةُ الوحدة اليسرى هي
+     حافّةُ التي تليها اليمنى — وسمكُ الحدّ يجعل الفرقَ كسراً، فالعتبةُ بكسلٌ واحد. */
+  const unRects = [...unDoc.querySelectorAll('[data-unit]')]
+    .map((u) => u.getBoundingClientRect())
+    .sort((a, b) => b.right - a.right);
+  let unGap = 0;
+  for (let i = 1; i < unRects.length; i++) {
+    unGap = Math.max(unGap, Math.abs(unRects[i].right - unRects[i - 1].left));
+  }
+  const unWidths = unRects.map((r) => r.width);
+  const unSpread = unWidths.length ? Math.max(...unWidths) - Math.min(...unWidths) : 0;
+  const unBar = unDoc.querySelector('[data-bar]')?.getBoundingClientRect();
+  const unFromEdge = unRects.length && unBar ? Math.abs(unRects[0].right - unBar.right) : 99;
+
+  ok(unTaps === unSpan && unFull === unSpan,
+    `**القياسُ يُصنَع باليد**: ${unTaps} لمسةً رصّت ${unFull} وحدةً على شريطٍ طولُه `
+    + `${unSpan} — معدودةً من المرسوم`);
+  ok(unAfter === unSpan,
+    `**ولا تجاوزَ للشريط**: نقرتان بعد الاستيفاء أبقتاه ${unAfter} — امتناعٌ في البنية`);
+  ok(unGap <= 1.5 && unRects.length > 1,
+    `**والوحداتُ متلاصقةٌ بالبكسل بعد التنسيق** (أقصى فرقٍ بين حافّتين `
+    + `${unGap.toFixed(2)}بك) — لا فجوةَ ولا تراكب`);
+  ok(unSpread <= 1.5,
+    `**والوحدةُ واحدةٌ في السؤال**: عروضُها سواءٌ (فرقُ ${unSpread.toFixed(2)}بك) `
+    + '— ولا يُقاس شريطٌ بمسطرتين');
+  ok(unFromEdge <= 1.5,
+    `وأوّلُ وحدةٍ عند طرف الشريط الأيمن (${unFromEdge.toFixed(2)}بك) — جهةُ ملء الإطار`);
+  // **والحكمُ كبسة**: تُكبَس المسطرةُ فتُعَدّ الوحداتُ أمامه وتمضي الجولة
+  const unBead = beadNow(unDoc);
+  unDoc.querySelector('.q-judge .btn--mark')?.click();
+  const unMoved = !!(await until(unDoc,
+    () => (beadNow(unDoc) !== unBead || unDoc.querySelector('.celebrate') ? true : null), 25000));
+  ok(unMoved, '**وقياسٌ يُعلَن كبساً يمضي بالجولة** (مسطرةٌ تُرى ولا تُقرأ)');
+
+  // ————— الترتيبيّة: لا رقمَ، والأوّلُ من اليمين —————
+  const rkDoc = await open('#/rank/five', '&dev=1');
+  await until(rkDoc, (d) => d.querySelector('.station-body .next'), 22000);
+  rkDoc.querySelector('.station-body .next')?.click();
+  await until(rkDoc, (d) => d.querySelector('.q-solve--rank'), 22000);
+  const rkSeen = shownIn(rkDoc.querySelector('.station-body'));
+  const rkTaps = [...rkDoc.querySelectorAll('.fig-tap--cell')]
+    .map((b) => b.getBoundingClientRect());
+  const rkCells = [...rkDoc.querySelectorAll('.q-solve--rank [data-cell]')]
+    .map((c) => c.getBoundingClientRect());
+  ok(!DIGITS.test(rkSeen),
+    'ولا رقمَ واحداً على شاشة الترتيبيّة — لغتُها أسماءُ الترتيب لا الأعداد'
+    + (DIGITS.test(rkSeen) ? ` — **معروض: ${rkSeen.slice(0, 60)}**` : ''));
+  ok(rkTaps.length >= 3 && rkTaps.length === rkCells.length
+    && rkTaps.every((r, i) => Math.abs(r.right - rkCells[i].right) < 6),
+  `**ولكلِّ خانةٍ زرُّ موضعها** (${rkTaps.length} خانةً و${rkTaps.length} زرّاً) — `
+  + 'من المصيِّر لا من حسابٍ ثانٍ');
+  ok(rkTaps.length > 1 && rkTaps[0].right > rkTaps[rkTaps.length - 1].right,
+    '**والأوّلُ من اليمين**: زرُّ الخانة الأولى أقصى اليمين — جهةُ ملء الإطار وبدءِ '
+    + 'خطّ الأعداد نفسُها (RTL)');
+  const rkRight = answerOf(rkDoc);
+  const rkBead = beadNow(rkDoc);
+  rkRight?.click();
+  ok(!!(await until(rkDoc,
+    () => (beadNow(rkDoc) !== rkBead || rkDoc.querySelector('.celebrate') ? true : null), 20000)),
+  'ولمسةُ الموضع المُعلَن (مقروءاً من الشريط المرسوم) تمضي بالجولة');
+
+  /* ————— ١١م) **الخطأُ لا يُغلق الجولة**: خطأٌ ثمّ صوابٌ يُقبَل (بلاغ الميدان ٦) —————
+
+     **نصُّ البلاغ بلفظ المالك**: «بعد اختيار الرمز الخطأ، لم يسمح بالعودة واختيار
+     الرمز الصحيح» — البطاقةُ الخطأ باقيةٌ محاطةً بالأحمر والشاشةُ صمّاء. والعهدُ في
+     `station.js` صريح: **«يُعَدُّ أمامه ثمّ يحاول ثانية»**.
+
+     **ولم يمسكه شيءٌ ممّا كان**: كان الفحصُ يقيس **أثرَ** الخطأ (أضاء عدٌّ؟ أبقيت
+     الخرزةُ؟) ولا يقيس **ما بعده** — فمرّت شاشةٌ يُعَدّ فيها ثم تموت. فهذا حارسُ
+     **ما رأى الطفل**: في كل شاشةِ اختيار يُنقَر جوابٌ خطأ، ثم يُنتظَر ذهابُ الأحمر
+     (وهو علامةُ تمام التصحيح)، **ثم يُنقَر الصواب** — فإن لم تمضِ الجولةُ فالشاشةُ
+     مقفولة، ويُسمّى من أقفلها باسمه.
+
+     **وشاشتان تُقاسان مرّتين**: «أين هذا العدد؟» و«أيُّ رمزٍ لها؟» وجها المحطة
+     نفسِها، **وبينهما وقع البلاغ** (يُعَدّ في الأولى ما لُمس وفي الثانية ما عُرِض) —
+     فتُمشى محطةُ الرموز حتى يقع الخطأُ في **الوجهين معاً**.
+
+     (وألواحُ الإعلان بالكبس — «اجعلهما سواء» والقسمةُ و«قِسْ بيدك» — خطؤها كبسةٌ قبل
+      تمام الصنع، وقد قِيست في §١١ي‌ج و§١١ل: تُعالَج ثم **تمضي الجولةُ بكبسةٍ بعدها**.) */
+
+  /** ما يُنقَر جواباً في شاشات الاختيار — بطاقةٌ أو خانةٌ أو موضعٌ مرسوم. */
+  const PICKABLE = '.q-choices .qcard, .q-rack .qcard, .q-pair .qcard, .fig-slot,'
+    + ' .q-pickspot, .fig-tap--cell, .q-barpick';
+  /** لوحُ الأجزاء (المرحلتان ٥ و٧) — يُصنَع ولا يُختار، فخطؤه ملءُ خاناته بما لا يُتمّ. */
+  const PARTS_BOARD = '.q-bond:not(.q-bond--frame)';
+  const goodCount = (d) => d.querySelectorAll('.good').length;
+
+  /** جوابٌ **غيرُ** الصحيح: أوّلُ ما يُنقَر ممّا ليس هو — والخطأُ خطأٌ أيّاً كان. */
+  const wrongOf = (d, right) => [...d.querySelectorAll(PICKABLE)]
+    .filter((el) => el !== right && !el.disabled && el.offsetParent !== null)[0] || null;
+
+  /* **وشاشاتُ اللمس تُعَدّ أولاً ثم تُسأل**: «المس وعُدّ» و«كم ضلعاً؟» لا بطاقةَ فيهما
+     حتى يمشي الطفلُ على المرسوم — فالحارسُ يمشيه كما يمشيه هو. */
+  const reachChoice = async (d) => {
+    if (await until(d, (x) => x.querySelector(PICKABLE), 2500)) return true;
+    for (let k = 0; k < 25; k++) {
+      const tap = [...d.querySelectorAll('.fig-tap')].filter((b) => !b.disabled)[0];
+      if (!tap) break;
+      tap.click();
+      await new Promise((r) => setTimeout(r, 220));
+    }
+    return Boolean(await until(d, (x) => x.querySelector(PICKABLE), 22000));
+  };
+
+  /** ردُّ ما وُضع في خانات اللوح — فيعود كما كان (لا يُترَك أثرُ فحصٍ في شاشة). */
+  const emptyBoard = async (d) => {
+    for (let k = 0; k < 4; k++) {
+      const full = [...d.querySelectorAll(`${PARTS_BOARD} .q-slot`)].filter((s) => !s.disabled)[0];
+      if (!full) break;
+      full.click();
+      await new Promise((r) => setTimeout(r, 200));
+    }
+  };
+
+  /**
+   * يملأ خانات لوح الأجزاء **بما لا يُتمّ الكلّ** — فيقع الحكمُ على خطأ.
+   *
+   * **والأجزاءُ الأولى أصغرُ ما في الحوض** عمداً: التجاوزُ ممتنعٌ في البنية (بطاقةٌ
+   * تزيد على ما بقي تُعطَّل)، فلو وُضع الأكبرُ أولاً لَما بقي للخانة الأخيرة إلا
+   * البطاقةُ الصحيحةُ وحدَها **فلا سبيلَ إلى خطأ أصلاً**. (وهو ما أحمر هذا البابَ
+   * يومَ كُتب — عيبٌ في الحارس لا في الشاشة.)
+   */
+  const fillWrong = async (d) => {
+    const board = d.querySelector(PARTS_BOARD);
+    for (let k = 0; k < 5 && Number(board.dataset.slots) > 0; k++) {
+      const need = Number(board.dataset.need);
+      const last = Number(board.dataset.slots) <= 1;
+      const free = [...d.querySelectorAll('.q-choices .qcard')].filter((c) => !c.disabled);
+      const pick = last
+        ? free.find((c) => drawnOf(c) !== need)
+        : free.reduce((a, b) => (drawnOf(a) <= drawnOf(b) ? a : b), free[0]);
+      if (!pick) { await emptyBoard(d); return false; }   // لا سبيلَ إلى خطأ: يُرَدّ اللوح
+      pick.click();
+      await new Promise((r) => setTimeout(r, 320));
+    }
+    return true;
+  };
+
+  /**
+   * جولةٌ واحدة: خطأٌ ← يُنتظَر تمامُ التصحيح ← صوابٌ **يجب أن يُقبَل**.
+   * @returns {Promise<string|null>} علّةُ الإخفاق باسمها، أو `null` إن مضت الجولة.
+   */
+  const errThenRight = async (d, what) => {
+    const bead = beadNow(d);
+    const goods = goodCount(d);
+    const parts = d.querySelector(PARTS_BOARD);
+    let cleared = null;
+    if (parts) {
+      const slots0 = Number(parts.dataset.slots);
+      if (!(await fillWrong(d))) return null;   // لا سبيلَ إلى خطأ في هذه الجولة
+      // **علامةُ تمام التصحيح**: يُفرَّغ اللوحُ فيعود إلى يد الطفل كما بدأ
+      cleared = await until(d,
+        (x) => (Number(x.querySelector(PARTS_BOARD)?.dataset.slots) === slots0 ? true : null), 25000);
+    } else {
+      const right = answerOf(d);
+      if (!right) return `${what}: لا جوابَ يُلمَس على الشاشة`;
+      const wrong = wrongOf(d, right);
+      if (!wrong) return null;                  // لوحٌ يُصنَع لا يُختار — قِيس في موضعه
+      wrong.click();
+      // **علامةُ تمام التصحيح ذهابُ الأحمر** — وهي آخرُ سطرٍ في مسار الخطأ كلِّه
+      cleared = await until(d, (x) => (x.querySelector('.bad') ? null : true), 25000);
+    }
+    if (!cleared) return `${what}: بقي أثرُ الخطأ ولم تُرَدَّ الشاشةُ — الجولةُ أُغلقت`;
+    if (beadNow(d) !== bead || d.querySelector('.celebrate')) {
+      return `${what}: مضت الجولةُ على خطأ`;
+    }
+    // **ثمّ يحاول ثانية**: تُساق الجولةُ صواباً، فإن لم تمضِ فالشاشةُ مقفولة
+    for (let k = 0; k < 6; k++) {
+      const right = answerOf(d);
+      if (!right) break;
+      right.click();
+      if (await until(d, (x) => (beadNow(x) !== bead || x.querySelector('.celebrate')
+        || goodCount(x) > goods ? true : null), 3000)) return null;
+    }
+    return `${what}: نقرةُ الصواب **لم تُقبَل** بعد الخطأ`;
+  };
+
+  /* **والجردُ بنوع الشاشة لا بمحطةٍ بعينها**: لكلِّ مُصيِّرِ جولةٍ في الرحلة شاشتُه —
+     فوجهٌ جديد يدخل غداً يدخل هذا الحارسَ بسطرٍ واحد، ويُطبَع عددُ ما قِيس. */
+  /* **وشاشةٌ لكلِّ مُصيِّرِ جولة**: عشرُ شاشاتٍ تغطّي مُصيِّرات الاختيار كلَّها في
+     الرحلة (وما تكرّر منها مُصيِّرُه واحد) — **وألواحُ الإعلان بالكبس** («اجعلهما
+     سواء» والقسمةُ و«قِسْ بيدك») **قِيست في §١١ي‌ج و§١١ل**: كبسةٌ قبل تمام الصنع
+     تُعالَج ثمّ تمضي الجولةُ بكبسةٍ بعدها. **والحدُّ مُعلَنٌ لا صامت**: كلُّ جولةٍ
+     هنا ثوانٍ بحسابها (نمذجةٌ تُعَدّ ثم تصحيحٌ يُعَدّ)، فالجردُ **بالمُصيِّر لا
+     بالمحطة** كي تبقى البطاريةُ في مهلتها. */
+  const RETRY_SCREENS = [
+    ['#/subitize/two', '«كم ترى؟»'],
+    ['#/more/three', '«أيُّهما أكثر؟»'],
+    ['#/count/three', '«المس وعُدّ»'],
+    ['#/compare/ten', '«أيُّهما أكبر؟»'],
+    ['#/line/ten', '«أين يقع؟»'],
+    ['#/bond/four', '«اصنع العدد» (لوحُ الأجزاء)'],
+    ['#/add/machine', '«آلة الجمع»'],
+    ['#/pattern/abab', '«أكمل النمط»'],
+    ['#/shape/pair', '«أين هذا الشكل؟»'],
+    ['#/units/count', '«كم وحدةً طولُه؟»'],
+  ];
+  const shut = [];
+  let retried = 0;
+  for (const [hash, what] of RETRY_SCREENS) {
+    const rdoc = await open(hash);
+    (await onward(rdoc))?.click();
+    if (!(await reachChoice(rdoc))) {
+      shut.push(`${what}: لم تبلغ جولةً تُلمَس`);
+      continue;
+    }
+    retried++;
+    const why = await errThenRight(rdoc, what);
+    if (why) shut.push(why);
+  }
+
+  /* **ووجها محطة الرموز كلاهما** — وهو موضعُ البلاغ نفسِه: يُمشى حتى يقع الخطأُ
+     في «أيُّ رمزٍ لها؟» و«أين هذا العدد؟» معاً، فلا ينجو وجهٌ بقرعةِ أوّلِ جولة. */
+  const bothFaces = new Set();
+  const faceShut = [];
+  const faceDoc = await open('#/numeral/four-five');
+  (await onward(faceDoc))?.click();
+  for (let i = 0; i < 8 && bothFaces.size < 2 && !faceDoc.querySelector('.celebrate'); i++) {
+    if (!(await reachChoice(faceDoc))) break;
+    const face = askOf(faceDoc);
+    const why = await errThenRight(faceDoc, `محطةُ الرموز — «${face}»`);
+    if (why) faceShut.push(why);
+    else bothFaces.add(face);
+    await new Promise((r) => setTimeout(r, 300));
+  }
+
+  ok(shut.length === 0 && retried === RETRY_SCREENS.length,
+    `**والخطأُ لا يُغلق الجولة**: على ${retried} شاشةِ اختيارٍ نُقِر جوابٌ خطأ ثم `
+    + `**قُبِل الصوابُ بعده** (عهدُ «يُعَدُّ أمامه ثمّ يحاول ثانية»)`
+    + (shut.length ? ` — **مُغلَقة: ${shut.join(' | ')}**` : ''));
+  ok(bothFaces.size === 2 && faceShut.length === 0,
+    `**ووجها محطة الرموز كلاهما** — وهو موضعُ البلاغ ٦: أُخطئ ثمّ أُصيب في `
+    + `${[...bothFaces].join(' وفي ') || 'لا وجه'}`
+    + (faceShut.length ? ` — **${faceShut.join(' | ')}**` : '')
+    + (bothFaces.size < 2 ? ' — **لم يُقَس الوجهان**' : ''));
 
   }   // ————— ختامُ نطاق `screens` (صدرُه: المصيِّر والشاشاتُ والبوابات) —————
 

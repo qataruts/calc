@@ -67,6 +67,7 @@ def load_curriculum() -> dict:
     console.log(JSON.stringify({{
       ops: m.OPS, signs: m.SIGNS, displays: m.DISPLAYS, scenes: m.SCENES,
       skipSteps: m.SKIP_STEPS, shapes: m.SHAPES, world: m.SHAPES_WORLD, partMin: m.PART_MIN,
+      share: m.SHARE, unitSpan: m.UNIT_SPAN, ordinals: m.ORDINALS, rankMin: m.RANK_MIN,
       levelMax: m.LEVEL_MAX, subitizeMax: m.SUBITIZE_MAX, countMax: m.COUNT_MAX,
       stages: m.STAGES.map((s) => ({{ id: s.id, count: s.stations.length }})),
       gates: m.GATES,
@@ -382,6 +383,92 @@ def shape_usage_errors(label: str, used: dict, shapes: list, station: dict) -> l
         elif kind not in allowed:
             errors.append(f"{label}: يرسم «{kind}» ولم يُقدَّم بعد (موضعُه "
                           f"«{known[kind]['at']}») — ولا شكلَ قبل موضعه")
+    return errors
+
+
+# ————— ١هـ) حزمةُ الإثراء: القسمةُ والقياسُ بوحدةٍ والترتيبيّة (الجلسة ث) —————
+#
+# ثلاثةُ جداولَ دخلت المنهجَ، ولكلٍّ **حقيقةٌ تُقاس لا تُوعَد**:
+#
+#   • **مجاميعُ القسمة** (`SHARE`): لكلِّ موضعٍ **أوعيتُه ومجاميعُه**، **وباقي القسمة
+#     يوافق موضعَه** — محطةُ «ما ينقسم وما لا ينقسم» كلُّ مجاميعها تُبقي بقيّة،
+#     وأخواتُها لا تُبقي شيئاً. ولولا هذا الشرط لَجاز أن يلقى الطفلُ الباقيَ **قبل
+#     درسه** في محطةٍ لم تُبنَ له، أو تخلو محطتُه منه فتُدرَّس البقيّةُ بلا بقيّة —
+#     وكلاهما **يمرّ صامتاً**: الشاشةُ تعمل والجولةُ تُبنى ولا حارسَ يشتكي.
+#     **وموضعُ كلِّ مجموعةٍ محطةٌ قائمة**، **ولا مجموعَ فوق جبهتها**.
+#
+#   • **طولُ الشريط المقيس** (`UNIT_SPAN`): **دونَ الاثنين لا قياس** (وحدةٌ واحدة لا
+#     تُري تكراراً)، ولا يجاوز جبهةَ محطته — فلا يخرج القياسُ عن ق٣ بخانةٍ واحدة.
+#
+#   • **أسماءُ الترتيب** (`ORDINALS`): **لكلِّ موضعٍ في أطول صفٍّ اسمُه** — فصفٌّ يبلغ
+#     الخامس وأسماؤه أربعةٌ يسأل عن موضعٍ **لا لفظَ له**، فتصمت الشاشةُ أو تنطق فراغاً.
+#     وأقصرُ صفٍّ ثلاثةٌ (`RANK_MIN`): اثنان لا ترتيبَ فيهما وإنما أوّلٌ وآخِر.
+
+
+def enrich_errors(share: list, unit_span: dict, ordinals: list, rank_min: int,
+                  stations: list) -> list:
+    errors = []
+    by_part = {s["part"]: s for s in stations}
+
+    seen = set()
+    for row in share or []:
+        at = row.get("at")
+        label = f"[قسمة:{at}]"
+        if at in seen:
+            errors.append(f"{label}: موضعٌ مكرَّر في جدول القسمة")
+        seen.add(at)
+        station = by_part.get(at)
+        if not station or station["type"] != "share":
+            errors.append(f"{label}: قسمةٌ لموضعٍ ليس محطةَ قسمةٍ في الرحلة — بيانٌ ميّت")
+            continue
+        bowls = row.get("bowls")
+        if not isinstance(bowls, int) or bowls < 2:
+            errors.append(f"{label}: الأوعيةُ {bowls} — ولا قسمةَ على أقلَّ من وعاءين")
+            continue
+        totals = row.get("totals") or []
+        if not totals:
+            errors.append(f"{label}: بلا مجموعٍ واحد — محطةٌ لا مادّةَ لها")
+        for total in totals:
+            if not isinstance(total, int) or total < bowls:
+                errors.append(f"{label}: المجموع {total} دون أوعيته ({bowls}) "
+                              "— لا يُقسَم ما لا يبلغ عددَ آخذيه")
+                continue
+            if total > station["frontier"]["max"]:
+                errors.append(f"{label}: المجموع {total} فوق جبهة محطته "
+                              f"({station['frontier']['max']})")
+            if bool(total % bowls) != bool(row.get("rest")):
+                errors.append(
+                    f"{label}: المجموع {total} على {bowls} يبقى منه {total % bowls} "
+                    f"والمحطةُ تُعلن `rest: {bool(row.get('rest'))}` — **والباقي يوافق "
+                    "موضعَه**: لا بقيّةَ قبل درسها، ولا محطةَ بقيّةٍ بلا بقيّة")
+
+    for station in stations:
+        if station["type"] == "share" and station["part"] not in seen:
+            errors.append(f"{label_of(station)}: محطةُ قسمةٍ بلا مجاميعَ في `SHARE` "
+                          "— شاشةٌ لا مادّةَ لها")
+
+    units = [s for s in stations if s["type"] == "units"]
+    lo, hi = (unit_span or {}).get("min"), (unit_span or {}).get("max")
+    if units:
+        if not isinstance(lo, int) or lo < 2:
+            errors.append(f"[قياس] أقصرُ شريطٍ {lo} — ووحدةٌ واحدة لا تُري تكراراً")
+        if not isinstance(hi, int) or (isinstance(lo, int) and hi < lo):
+            errors.append(f"[قياس] أطولُ شريطٍ {hi} دون أقصره {lo}")
+        elif any(hi > s["frontier"]["max"] for s in units):
+            errors.append(f"[قياس] أطولُ شريطٍ {hi} فوق جبهة محطته "
+                          f"({min(s['frontier']['max'] for s in units)})")
+
+    ranks = [s for s in stations if s["type"] == "rank"]
+    if ranks:
+        names = len(ordinals or [])
+        if not isinstance(rank_min, int) or rank_min < 3:
+            errors.append(f"[ترتيبيّة] أقصرُ صفٍّ {rank_min} — واثنان أوّلٌ وآخِرٌ لا ترتيب")
+        longest = max(s["frontier"]["max"] for s in ranks)
+        if names < longest:
+            errors.append(f"[ترتيبيّة] أسماءُ الترتيب {names} وأطولُ صفٍّ {longest} "
+                          "— **موضعٌ يُسأل عنه ولا اسمَ له**")
+        if isinstance(rank_min, int) and names < rank_min:
+            errors.append(f"[ترتيبيّة] أسماءُ الترتيب {names} دون أقصر صفٍّ ({rank_min})")
     return errors
 
 
@@ -741,6 +828,14 @@ def check(data: dict) -> int:
          f"({'، '.join(s['name'] + ': ' + str(s['sides']) for s in data['shapes'])}) "
          f"و{len(data['world'])} أشياءَ من عالم الطفل مبنيّةٍ منها "
          f"({'، '.join(t['name'] for t in data['world'])})")
+    door("١هـ) حزمةُ الإثراء: القسمةُ والقياسُ بوحدةٍ والترتيبيّة",
+         enrich_errors(data["share"], data["unitSpan"], data["ordinals"],
+                       data["rankMin"], stations),
+         f"{len(data['share'])} مواضعِ قسمةٍ بأوعيتها ومجاميعها "
+         f"({'، '.join(f'{r['at']}: {r['bowls']}×{r['totals']}' for r in data['share'])}) "
+         f"— وباقي كلٍّ يوافق موضعَه؛ والشريطُ يُقاس بـ{data['unitSpan']['min']}–"
+         f"{data['unitSpan']['max']} وحدة؛ ولكلِّ موضعٍ في الصفّ اسمُ ترتيبه "
+         f"({len(data['ordinals'])} اسماً)")
     door("١ج) قفزاتُ العدّ: كلُّ قفزةٍ تنتهي عند سقف المستوى",
          skip_errors(data["skipSteps"], data["levelMax"]),
          f"{len(data['skipSteps'])} قفزات ({'، '.join(str(s) for s in data['skipSteps'])}) "
@@ -1008,6 +1103,49 @@ def self_test(data: dict) -> int:
     ok(find(skip_errors([2, 2], top), "مكرَّرة"), "وقفزةٌ مكرَّرة تُمسَك")
     ok(find(skip_errors([], top), "لا قفزةَ عدٍّ واحدة"),
        "وخلوُّ المنهج من القفزات يُمسَك (ومحطتا القفز تقرآن منها)")
+
+    print("\n— ١هـ) حزمةُ الإثراء: القسمةُ والقياسُ والترتيبيّة تُمسك مخالفاتها —")
+    share, unit_span, ordinals = data["share"], data["unitSpan"], data["ordinals"]
+    rank_min = data["rankMin"]
+
+    def enrich(share_=None, span_=None, ords_=None, min_=None):
+        return enrich_errors(share_ if share_ is not None else share,
+                             span_ if span_ is not None else unit_span,
+                             ords_ if ords_ is not None else ordinals,
+                             min_ if min_ is not None else rank_min, stations)
+
+    ok(not enrich(), "جداولُ الإثراء الحيّة نظيفة (قسمةٌ وقياسٌ وترتيبيّة)")
+
+    def tweak(at, **fields):
+        rows = copy.deepcopy(share)
+        for row in rows:
+            if row["at"] == at:
+                row.update(fields)
+        return rows
+
+    # **أشدُّ ما في الباب**: مجموعٌ لا يوافق موضعَه — بقيّةٌ قبل درسها أو محطةٌ بلا بقيّة
+    ok(find(enrich(share_=tweak("two", totals=[5])), "والباقي يوافق موضعَه"),
+       "**ومجموعٌ يُبقي بقيّةً في محطةٍ لا تدرّسها يُمسَك** (٥ على اثنين في «بين اثنين»)")
+    ok(find(enrich(share_=tweak("rest", totals=[6])), "والباقي يوافق موضعَه"),
+       "ومحطةُ الباقي بمجموعٍ ينقسم تماماً تُمسَك (٦ على اثنين في «ما لا ينقسم»)")
+    ok(find(enrich(share_=tweak("two", totals=[12])), "فوق جبهة محطته"),
+       "ومجموعٌ فوق جبهة محطته يُمسَك")
+    ok(find(enrich(share_=tweak("three", bowls=1)), "أقلَّ من وعاءين"),
+       "وقسمةٌ على وعاءٍ واحد تُمسَك (لا قسمةَ بلا آخذين)")
+    ok(find(enrich(share_=tweak("two", totals=[])), "بلا مجموعٍ واحد"),
+       "وموضعُ قسمةٍ بلا مجموعٍ يُمسَك — محطةٌ لا مادّةَ لها")
+    ok(find(enrich(share_=[r for r in share if r["at"] != "three"]), "بلا مجاميعَ في `SHARE`"),
+       "ومحطةُ قسمةٍ سقطت من الجدول تُمسَك (شاشةٌ لا مادّةَ لها)")
+
+    ok(find(enrich(span_={"min": 1, "max": 8}), "وحدةٌ واحدة لا تُري تكراراً"),
+       "وشريطٌ يُقاس بوحدةٍ واحدة يُمسَك (لا تكرارَ فلا قياس)")
+    ok(find(enrich(span_={"min": 2, "max": 40}), "فوق جبهة محطته"),
+       "وطولٌ فوق جبهة محطته يُمسَك (فلا يخرج القياسُ عن ق٣)")
+
+    ok(find(enrich(ords_=ordinals[:-1]), "موضعٌ يُسأل عنه ولا اسمَ له"),
+       "**واسمُ ترتيبٍ ناقصٌ عن أطول صفٍّ يُمسَك** (يُسأل عن الخامس ولا لفظَ له)")
+    ok(find(enrich(min_=2), "أوّلٌ وآخِرٌ لا ترتيب"),
+       "وصفٌّ من اثنين يُمسَك (أوّلٌ وآخِرٌ لا ترتيبَ بينهما)")
 
     print("\n— ٤ب) رقمُ خانة الشريط رمزٌ معروض (الجلسة ك) —")
     strip = probe_strip()

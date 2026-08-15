@@ -63,7 +63,7 @@ import { h, icon, pick, shuffle, seeded, shake, pop, arNum, BOND_ACCENT } from '
 import {
   BEAT, NUMBER_NAME, SAY, say, praiseThen, span, nearOptions, seeder, skillOf,
   stationById, stationForSkill, figureBox, numeralCard, countAloud, countMarks,
-  clearCount, usedOf, registerExercise, stationScreen,
+  clearCount, usedOf, registerExercise, stationScreen, roundGate,
 } from './station.js';
 
 const OPTIONS = 3;         // ثلاثُ بطاقات: الجوابُ ومجاوراه (`METHOD.md §٣`)
@@ -768,16 +768,16 @@ function solveView(round, hooks) {
   peek.addEventListener('click', reveal);
 
   const choices = h('div', { class: 'q-choices' });
-  let locked = false;
+  const gate = roundGate('لوحُ العملية');
 
   for (const spec of round.options) {
     let cell = null;
-    const choose = async () => {
-      if (locked) return;
+    // ولا نقرةَ ثانيةً تفتح تصحيحاً فوق تصحيح — **والقفلُ يُرَدّ في كل حال** (البلاغ ٦)
+    const choose = gate.guard(async () => {
       const correct = cell.drawn === fact.answer();
       hooks.attempt(round, correct);
       if (correct) {
-        locked = true;
+        gate.end();
         cell.btn.classList.add('good');
         pop(cell.btn);
         slot.textContent = arNum(cell.drawn);      // تتمّ الجملةُ بما رُسِم على البطاقة
@@ -787,18 +787,16 @@ function solveView(round, hooks) {
       }
       cell.btn.classList.add('bad');
       shake(cell.btn);
-      locked = true;                 // ولا نقرةَ ثانيةً تفتح تصحيحاً فوق تصحيح
       // **الخطأُ يُعَدّ أمامه ولا يُلقَّن**: تُكشَف كمّيةُ الحقيقة فتُمشى بعدّ درسِها
       await say(SAY.together);
       if (!hooks.alive()) return;
       reveal();
       await new Promise((r) => setTimeout(r, BEAT / 2));
       if (!hooks.alive()) return;
-      if (!(await fact.walk(hooks.alive))) return;
+      await fact.walk(hooks.alive);
       for (const fig of fact.figs) clearCount(fig);
       cell.btn.classList.remove('bad');
-      locked = false;
-    };
+    });
     cell = numeralCard(spec.count, spec.seed, { label: 'هَذَا الرَّمْز', onclick: choose });
     choices.append(cell.btn);
   }

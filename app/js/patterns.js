@@ -43,14 +43,14 @@
 // ٣) **لا مؤقّتَ ولا عقاب**، والخيارُ الخاطئ لا ينقل.
 
 import * as progress from './progress.js';
-import { SCENES, sceneRank, SKIP_STEPS } from './curriculum.js';
+import { SCENES, sceneRank, SKIP_STEPS, ORDINALS, RANK_MIN } from './curriculum.js';
 import { registerScreen } from './registry.js';
-import { OBJECTS, rangeOf } from './render.js';
+import { GEOM, OBJECTS, rangeOf, spanStyle } from './render.js';
 import { h, pick, shuffle, seeded, shake, pop, latinNum, PATTERN_ACCENT } from './ui.js';
 import {
   BEAT, NUMBER_NAME, SAY, say, praiseThen, span, nearOptions, seeder, skillOf, facesOf,
   stationById, stationForSkill, figureBox, numeralCard, quantityCard, usedOf,
-  registerExercise, stationScreen,
+  registerExercise, stationScreen, roundGate,
 } from './station.js';
 
 const OPTIONS = 3;
@@ -58,7 +58,7 @@ const GUIDED = 2;
 const SOLO = 5;
 
 /** أنواعُ الشاشات التي تملكها هذه الوحدة (يقابلها `STATIONS` في `test_measure.mjs`). */
-const TYPES = new Set(['pattern', 'measure']);
+const TYPES = new Set(['pattern', 'measure', 'rank']);
 
 /**
  * **وحداتُ النمط**: حروفُها هي مفاتيحُ ليتنر نفسُها (`pattern|abab|extend`) — فالوجهُ
@@ -99,7 +99,19 @@ const ASK = {
   order: 'رَتِّبْ مِنَ الْأَوَّلِ إِلَى الْآخِرْ',
 };
 
-export const SPOKEN = Object.values(ASK);
+/**
+ * **سؤالُ كلِّ موضعٍ جملةٌ واحدة** (سنّةُ أسئلة الأشكال): «أَيْنَ الثَّالِثْ؟» تُصرَّف
+ * مرّةً فتُسمَع جملةً عربيةً تامّة — ولو رُكِّبت من «أين» واسمِ الترتيب لَسُمعت مقطوعةً
+ * في أذن طفل. **وترتيبُها ترتيبُ `ORDINALS` في المنهج** فلا جدولان يفترقان.
+ */
+const RANK_ASK = [
+  'أَيْنَ الْأَوَّلْ؟', 'أَيْنَ الثَّانِي؟', 'أَيْنَ الثَّالِثْ؟',
+  'أَيْنَ الرَّابِعْ؟', 'أَيْنَ الْخَامِسْ؟',
+];
+
+// **وأسماءُ الترتيب من المنهج** (`ORDINALS`) لا مكتوبةً هنا: مَن كتب المفتاحَ يسمّي
+// مواضعَه — كما تفعل `SHAPES` بأسماء الأشكال و`CONCEPTS` بمفاتيح ليتنر.
+export const SPOKEN = [...Object.values(ASK), ...RANK_ASK, ...ORDINALS];
 
 // ————— ما تستهلكه هذه الوحدة (الباب ٤ في `check_range.py`) —————
 //
@@ -117,6 +129,12 @@ export const CONSUMES = {
   measure: {
     numbers: [2, 3], numerals: [], ops: [], signs: [],
     displays: ['objects', 'scene'],
+  },
+  // **والترتيبيّةُ شريطٌ بلا رمز**: أقصرُ صفٍّ ثلاثةٌ، ولا رقمَ يُعرَض فيها البتّة
+  // — لغتُها أسماءُ الترتيب لا الأعداد (`METHOD.md §٣`).
+  rank: {
+    numbers: [RANK_MIN], numerals: [], ops: [], signs: [],
+    displays: ['pattern'],
   },
 };
 
@@ -252,6 +270,42 @@ function measureRound(station, rnd, { face, aided = false, nth = null } = {}) {
   };
 }
 
+// ————— بناءُ جولة الترتيبيّة (٨·٥ — الجلسة ث) —————
+
+/**
+ * جولةُ «أَيْنَ الثَّالِث؟»: صفٌّ من ثلاثةٍ إلى خمسة، والمطلوبُ **موضعٌ يُسمّى بترتيبه**.
+ *
+ * **ولغتُها أسماءُ الترتيب لا الأعداد** (`METHOD.md §٣`): الجوابُ «الثَّالِثْ» لا
+ * «ثَلَاثَةْ» — والفرقُ درسٌ لا لفظ: العددُ يُخبر **كم** والترتيبيُّ يُخبر **أين**.
+ * ولذلك لا رقمَ على هذه الشاشة ولا بطاقةَ رمز.
+ *
+ * **وأشياءُ الصفّ مختلفةٌ عمداً**: صفٌّ من شيءٍ واحدٍ مكرَّر يُقرأ نمطاً (وذاك درسُ
+ * ٨·١)، والمقصودُ هنا **الموضعُ** — فيميّزه الطفلُ بمكانه لا بصورته.
+ *
+ * **والأولُ من اليمين**: جهةُ ملء الإطار وبدءِ خطّ الأعداد نفسُها (RTL)، ويرسم
+ * المصيِّرُ خاناتِ الشريط من اليمين أصلاً — فالموضعُ **مقروءٌ من الرسم** لا محسوبٌ هنا.
+ */
+function rankRound(station, rnd, { len, at, aided = false } = {}) {
+  const skill = skillOf(station, 'order', 'rank');
+  const next = seeder(rnd);
+  const items = shuffle(OBJECTS.map((o) => o.glyph), rnd).slice(0, len);
+  const strip = { display: 'pattern', count: len, seed: next(), items };
+
+  return {
+    kind: 'rank', concept: skill.concept, range: skill.range, mode: 'rank', aided,
+    ask: RANK_ASK[at],
+    hint: 'العَدُّ يَبْدَأُ مِنَ اليَمِين — فَأَيْنَ يَقَعُ هَذَا المَوْضِع؟',
+    len,
+    at,
+    strip,
+    figures: [strip],
+    sig: `${station.id}|${len}|${at}|${strip.seed}`,
+  };
+}
+
+/** أطوالُ صفوف الترتيبيّة: من ثلاثةٍ إلى ما تبلغه أسماءُ الترتيب (خمسة). */
+const rankRows = () => span(RANK_MIN, ORDINALS.length);
+
 /** أوجهُ المحطة **من مفاتيحها في المنهج** — لا قائمةَ أوجهٍ مكتوبةٌ في شاشة. */
 function stationFaces(station) {
   return station.type === 'pattern'
@@ -279,6 +333,22 @@ const roundFor = (station, rnd, face, aided, nth) => (station.type === 'pattern'
  */
 function modelOf(station, rnd) {
   const next = seeder(rnd);
+
+  /* **ونمذجةُ الترتيبيّة تسمية المواضع**: يُضاء موضعٌ بعد موضعٍ ويُقال اسمُ ترتيبه من
+     اليمين — بلا عدٍّ ولا رقم، فالدرسُ **أين** لا **كم**. ولا كشفَ بعدها: ما يُكشَف
+     في أخواتها جوابٌ يُرى (النمطُ تامّاً · المشهدُ مرتَّباً)، وجوابُ هذه **موضعٌ سُمّي
+     لتوّه** — فالكشفُ إعادةٌ لا زيادة. */
+  if (station.type === 'rank') {
+    const len = RANK_MIN;
+    const items = shuffle(OBJECTS.map((o) => o.glyph), rnd).slice(0, len);
+    return {
+      title: RANK_ASK[0],
+      hint: 'نَبْدَأُ مِنَ اليَمِين: هَذَا الأَوَّل، وَهَذَا الَّذِي يَلِيه',
+      figures: [{ display: 'pattern', count: len, seed: next(), items }],
+      count: (figs, alive) => walkRanks(figs[0], len - 1, alive),
+    };
+  }
+
   const face = stationFaces(station)[0];
 
   /* **ونمذجةُ النمط العدديّ قراءتُه قفزاً**: يُضاء رقمُ الخانة بعد الرقم **باسم عدده**
@@ -443,12 +513,46 @@ const clearScene = (fig) => {
   for (const { el } of sceneItems(fig)) el.classList.remove('is-counted');
 };
 
+/**
+ * **يمشي على الصفّ مسمّياً مواضعَه** — نمذجةُ الترتيبيّة ومعالجةُ خطئها معاً.
+ *
+ * **ولا `countMarks` هنا وهي واحدةُ الرحلة**: تلك تنطق `NUMBER_NAME` بحكم بنائها —
+ * وهو **عينُ ما تنفيه هذه المحطة** (`METHOD.md §٣`: «لغتُها أسماءُ الترتيب لا
+ * الأعداد»). فمن عدَّ الصفَّ بالأعداد علّم درساً آخر: «كم» بدل «أين». والمشيُ نفسُه
+ * واحد — تُعلَّم الخانةُ ويُنتظَر اسمُها ثم الفاصل — والمختلفُ **ما يُنطَق**.
+ */
+async function walkRanks(fig, upTo, alive = () => true) {
+  for (const cell of fig.cells) cell.classList.remove('is-counted');
+  for (const [i, cell] of fig.cells.entries()) {
+    if (i > upTo) break;
+    if (!alive()) return false;
+    cell.classList.add('is-counted');
+    await say(ORDINALS[i]);
+    if (!alive()) return false;
+    await new Promise((r) => setTimeout(r, BEAT));
+  }
+  return alive();
+}
+
 // ————— خطةُ المحطة —————
 
 export function buildStation(stationId, seed) {
   const station = stationById(stationId);
   if (!station || !TYPES.has(station.type)) return null;
   const rnd = seeded(seed >>> 0);
+
+  /* **وجولاتُ الترتيبيّة تدور على الأطوال وعلى المواضع معاً**: طولٌ بعد طول (٣ ثم ٤
+     ثم ٥)، والمطلوبُ **موضعٌ من داخل الصفّ** بالقرعة — فلا يُسأل عن الأول دائماً ولا
+     عن الأخير، وكلاهما يُعرَف بلا عدٍّ فيُفوَّت الدرس. */
+  if (station.type === 'rank') {
+    const rows = rankRows();
+    const step = (count, aided) => Array.from({ length: count }, (_, i) => {
+      const len = rows[i % rows.length];
+      return rankRound(station, rnd, { len, at: Math.floor(rnd() * len), aided });
+    });
+    return { model: modelOf(station, rnd), guided: step(GUIDED, true), solo: step(SOLO, false) };
+  }
+
   const faces = stationFaces(station);
   if (!faces.length) return null;
 
@@ -480,6 +584,7 @@ const SCORE = {
   extend: (r, ok) => progress.recordAttempt(r.concept, r.range, 'extend', ok),
   pick: (r, ok) => progress.recordAttempt(r.concept, r.range, 'pick', ok),
   sort: (r, ok) => progress.recordAttempt(r.concept, r.range, 'sort', ok),
+  rank: (r, ok) => progress.recordAttempt(r.concept, r.range, 'rank', ok),
 };
 
 const score = (round, correct) => SCORE[round.kind]?.(round, correct);
@@ -497,7 +602,7 @@ function extendView(round, hooks) {
   board.dataset.mode = 'extend';
   // **ما تُعلنه الشاشةُ جوابُها المقروءُ من الشريط** — لا نيّةُ المولّد
   board.dataset.answer = String(want);
-  let locked = false;
+  const gate = roundGate('أكمل النمط');
 
   // **العونُ المرئيّ في «جرِّب معي»**: الدورةُ الأولى مُعلَّمةٌ من أول لحظة
   if (round.aided) {
@@ -506,14 +611,13 @@ function extendView(round, hooks) {
 
   for (const spec of round.options) {
     let cell = null;
-    const choose = async () => {
-      if (locked) return;
+    const choose = gate.guard(async () => {
       // **ما رسمته البطاقةُ لا ما طُلب منها**: الرمزُ مقروءٌ من صورتها في الـDOM
       const drawn = cell.btn.querySelector('[data-emoji]')?.dataset.emoji;
       const correct = drawn === want;
       hooks.attempt(round, correct);
       if (correct) {
-        locked = true;
+        gate.end();
         cell.btn.classList.add('good');
         pop(cell.btn);
         // تتمّ الخانةُ **بما رُسِم على البطاقة** — فيُرى النمطُ تامّاً
@@ -526,17 +630,15 @@ function extendView(round, hooks) {
       }
       cell.btn.classList.add('bad');
       shake(cell.btn);
-      locked = true;
       // **الخطأُ يُرى ولا يُلقَّن**: يُضاء الشريطُ دورةً دورة فيُدرَك الإيقاع بنفسه
       await say(SAY.together);
       if (!hooks.alive()) return;
       await new Promise((r) => setTimeout(r, BEAT / 2));
       if (!hooks.alive()) return;
-      if (!(await walkStrip(strip, round.period, hooks.alive))) return;
+      await walkStrip(strip, round.period, hooks.alive);
       clearStrip(strip);
       cell.btn.classList.remove('bad');
-      locked = false;
-    };
+    });
     cell = quantityCard(spec, { label: 'هَذَا', onclick: choose });
     choices.append(cell.btn);
   }
@@ -568,7 +670,7 @@ function numberView(round, hooks) {
   board.dataset.answer = String(want);
   board.dataset.step = String(step);
   const choices = h('div', { class: 'q-choices' });
-  let locked = false;
+  const gate = roundGate('النمط العدديّ');
 
   // **العونُ المرئيّ في «جرِّب معي»**: خانتان أُوليان مُعلَّمتان فتُرى القفزةُ ابتداءً
   if (round.aided) {
@@ -577,13 +679,12 @@ function numberView(round, hooks) {
 
   for (const spec of round.options) {
     let cell = null;
-    const choose = async () => {
-      if (locked) return;
+    const choose = gate.guard(async () => {
       // **ما رسمته البطاقةُ لا ما طُلب منها**: الرقمُ مقروءٌ من نصّها في الـDOM
       const correct = cell.drawn === want;
       hooks.attempt(round, correct);
       if (correct) {
-        locked = true;
+        gate.end();
         cell.btn.classList.add('good');
         pop(cell.btn);
         // تتمّ الخانةُ **بما رُسِم على البطاقة** — فيُرى الشريطُ تامّاً
@@ -600,17 +701,15 @@ function numberView(round, hooks) {
       }
       cell.btn.classList.add('bad');
       shake(cell.btn);
-      locked = true;
       // **الخطأُ يُقرأ ولا يُلقَّن**: يُقرأ الشريطُ قفزةً قفزة فيُدرَك الإيقاعُ عدداً
       await say(SAY.together);
       if (!hooks.alive()) return;
       await new Promise((r) => setTimeout(r, BEAT / 2));
       if (!hooks.alive()) return;
-      if (!(await walkNumbers(strip, hooks.alive))) return;
+      await walkNumbers(strip, hooks.alive);
       clearStrip(strip);
       cell.btn.classList.remove('bad');
-      locked = false;
-    };
+    });
     cell = numeralCard(spec.count, spec.seed, { label: 'هَذَا الرَّمْز', onclick: choose });
     choices.append(cell.btn);
   }
@@ -640,7 +739,7 @@ function measureView(round, hooks) {
   const want = round.mode === 'sort' ? order : [round.big ? order[order.length - 1] : order[0]];
   board.dataset.answer = nameOf(want[0]);
   let placed = 0;
-  let locked = false;
+  const gate = roundGate('مشهدُ القياس');
 
   const taps = items.map((item) => {
     const btn = h('button', {
@@ -659,8 +758,8 @@ function measureView(round, hooks) {
     return btn;
   });
 
-  async function choose(btn, item) {
-    if (locked || btn.disabled) return;
+  const choose = gate.guard(async (btn, item) => {
+    if (btn.disabled) return;
     const correct = worth(item) === worth(want[placed]);
     hooks.attempt(round, correct);
     if (correct) {
@@ -674,19 +773,18 @@ function measureView(round, hooks) {
         say(SAY.bravo);
         return;
       }
-      locked = true;
+      gate.end();
       await praiseThen(hooks);
       return;
     }
     btn.classList.add('bad');
     shake(btn);
-    locked = true;
     // **الخطأُ يُرى**: يُضاء المشهدُ بترتيب قيمته فيُدرَك التدرّجُ أو التعاقبُ بالعين
     await say(SAY.together);
     if (!hooks.alive()) return;
     await new Promise((r) => setTimeout(r, BEAT / 2));
     if (!hooks.alive()) return;
-    if (!(await walkScene(scene, worth, hooks.alive))) return;
+    await walkScene(scene, worth, hooks.alive);
     clearScene(scene);
     for (const tap of taps) {
       tap.classList.remove('bad', 'good');
@@ -695,8 +793,74 @@ function measureView(round, hooks) {
     for (const item of items) item.el.classList.remove('is-counted');
     placed = 0;
     board.dataset.answer = nameOf(want[0]);
-    locked = false;
-  }
+  });
+
+  say(round.ask);
+
+  return h('div', {},
+    h('h2', {}, round.ask),
+    h('p', { class: 'hint' }, round.hint),
+    board);
+}
+
+// ————— شاشةُ «أَيْنَ الثَّالِث؟» (٨·٥ — الترتيبيّة) —————
+//
+// **لا رمزَ ولا بطاقةَ جواب**: الصفُّ مرسوم، والجوابُ **لمسةٌ على موضعه** — فالمقيسُ
+// أين لا كم. **والجوابُ من المرسوم**: يُقرأ رمزُ الخانة التي تقع في الموضع المطلوب
+// من الـDOM (`data-item`)، فلو رسم المصيِّرُ صفّاً بترتيبٍ آخر لَتبع الجوابُ رسمَه
+// ولم تكذب الشاشةُ على الطفل.
+
+function rankView(round, hooks) {
+  const strip = figureBox(round.strip, 'q-strip');
+  const board = h('div', { class: 'q-solve q-solve--rank' }, strip.box);
+  board.dataset.mode = 'rank';
+  const drawn = stripItems(strip);
+  // **ما في الخانة المطلوبة كما رُسِمت** — لا ما نوى المولّد أن يضع فيها
+  const want = drawn[round.at];
+  board.dataset.answer = String(want);
+  const gate = roundGate('أين الثالث؟');
+
+  // **العونُ المرئيّ في «جرِّب معي»**: الخانةُ الأولى مُعلَّمةٌ فيُرى من أين يبدأ العدّ
+  if (round.aided) strip.cells[0].classList.add('is-open');
+
+  const layer = h('div', { class: 'fig-taps' });
+  const taps = strip.plan.cells.map((cell, i) => {
+    const btn = h('button', {
+      class: 'fig-tap fig-tap--cell',
+      css: spanStyle({
+        x: cell.x - GEOM.CELL / 2, y: cell.y - GEOM.CELL / 2, w: GEOM.CELL, h: GEOM.CELL,
+      }, strip.plan.view),
+      'aria-label': 'هَذَا المَوْضِع',
+      onclick: () => choose(btn, i),
+    });
+    // الزرُّ يحمل ما تُعلنه الخانةُ تحته — فيُقرأ لا يُصدَّق (سنّةُ `q-pickspot--shape`)
+    if (drawn[i]) btn.dataset.item = drawn[i];
+    layer.append(btn);
+    return btn;
+  });
+  strip.box.append(layer);
+
+  const choose = gate.guard(async (btn, i) => {
+    const correct = drawn[i] === want;
+    hooks.attempt(round, correct);
+    if (correct) {
+      gate.end();
+      btn.classList.add('good');
+      strip.cells[i].classList.add('is-counted');
+      pop(btn);
+      await praiseThen(hooks);
+      return;
+    }
+    btn.classList.add('bad');
+    shake(btn);
+    /* **الخطأُ يُسمَّى أمامه ولا يُلقَّن**: يُمشى على الصفّ من اليمين فيُسمّى كلُّ موضعٍ
+       باسم ترتيبه حتى المطلوب — فيرى الطفلُ **من أين يُعَدّ الموضع** لا الجوابَ وحدَه. */
+    await say(SAY.together);
+    if (!hooks.alive()) return;
+    await walkRanks(strip, round.at, hooks.alive);
+    clearStrip(strip);
+    for (const tap of taps) tap.classList.remove('bad');
+  });
 
   say(round.ask);
 
@@ -710,6 +874,7 @@ function measureView(round, hooks) {
    بـ`extend` كأخيه — المهارةُ واحدة — ولوحُه غيرُ لوحه: شريطُ أرقامٍ وبطاقاتُ رمز. */
 const VIEWS = {
   extend: extendView, number: numberView, pick: measureView, sort: measureView,
+  rank: rankView,
 };
 const viewOf = (round, hooks) => VIEWS[round.mode](round, hooks);
 
@@ -734,6 +899,7 @@ function screen(type) {
 /* **وكلُّ سابقةٍ تُسجَّل باسمها صريحاً** لا بحلقةٍ على `TYPES` (`test_nodes.mjs`). */
 registerScreen('pattern', screen('pattern'));
 registerScreen('measure', screen('measure'));
+registerScreen('rank', screen('rank'));
 
 /**
  * جولةٌ واحدة لمهارةٍ مستحقّة — مادّةُ المراجعة والبوابات.
@@ -751,3 +917,14 @@ const single = (build, table) => (skill, rnd) => {
 registerExercise('extend', { build: single(patternFor, FACES), view: viewOf });
 registerExercise('pick', { build: single(measureRound, MEASURE), view: viewOf });
 registerExercise('sort', { build: single(measureRound, MEASURE), view: viewOf });
+/* **والترتيبيّةُ تُراجَع بطولٍ وموضعٍ بالقرعة**: مفتاحُها واحد (`order|5|rank`)
+   ومادّتُه صفوفٌ ثلاثة، فلو بُني أولُها دائماً لَراجع الطفلُ صفَّ الثلاثة أبداً. */
+registerExercise('rank', {
+  build: (skill, rnd) => {
+    const station = stationForSkill(skill);
+    if (!station || station.type !== 'rank') return null;
+    const len = pick(rankRows(), rnd);
+    return rankRound(station, rnd, { len, at: Math.floor(rnd() * len) });
+  },
+  view: viewOf,
+});

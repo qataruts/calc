@@ -828,5 +828,133 @@
     "style_hint": "اقرأ هذه التعليمة بتأنٍّ ووضوحٍ وودّ لطفلٍ في الخامسة، وابدأ أولَ كلمةٍ بكسرةٍ مسموعة، مرة واحدة: ",
     "requeueWhy": "حكمُ أذن المالك (١٣ أغسطس ٢٠٢٦)",
     "doneAt": "2026-08-13"
+  },
+  {
+    "text": "صَارَ لِكُلٍّ مِثْلُ الْآخَرْ",
+    "category": "modeling",
+    "requestedBy": "session-audio",
+    "priority": 30,
+    "status": "pending",
+    "model": "gemini-3.1-flash-tts-preview"
+  },
+  {
+    "text": "وَبَقِيَ وَاحِدْ",
+    "category": "modeling",
+    "requestedBy": "session-audio",
+    "priority": 30,
+    "status": "pending",
+    "model": "gemini-3.1-flash-tts-preview"
+  },
+  {
+    "text": "أَيْنَ الْأَوَّلْ؟",
+    "category": "instruction",
+    "requestedBy": "session-audio",
+    "priority": 20,
+    "status": "pending",
+    "model": "gemini-3.1-flash-tts-preview"
+  },
+  {
+    "text": "أَيْنَ الثَّانِي؟",
+    "category": "instruction",
+    "requestedBy": "session-audio",
+    "priority": 20,
+    "status": "pending",
+    "model": "gemini-3.1-flash-tts-preview"
+  },
+  {
+    "text": "أَيْنَ الثَّالِثْ؟",
+    "category": "instruction",
+    "requestedBy": "session-audio",
+    "priority": 20,
+    "status": "pending",
+    "model": "gemini-3.1-flash-tts-preview"
+  },
+  {
+    "text": "أَيْنَ الرَّابِعْ؟",
+    "category": "instruction",
+    "requestedBy": "session-audio",
+    "priority": 20,
+    "status": "pending",
+    "model": "gemini-3.1-flash-tts-preview"
+  },
+  {
+    "text": "أَيْنَ الْخَامِسْ؟",
+    "category": "instruction",
+    "requestedBy": "session-audio",
+    "priority": 20,
+    "status": "pending",
+    "model": "gemini-3.1-flash-tts-preview"
+  },
+  {
+    "text": "الْأَوَّلْ",
+    "category": "instruction",
+    "requestedBy": "session-audio",
+    "priority": 20,
+    "status": "pending",
+    "model": "gemini-3.1-flash-tts-preview"
+  },
+  {
+    "text": "الثَّانِي",
+    "category": "instruction",
+    "requestedBy": "session-audio",
+    "priority": 20,
+    "status": "pending",
+    "model": "gemini-3.1-flash-tts-preview"
+  },
+  {
+    "text": "الثَّالِثْ",
+    "category": "instruction",
+    "requestedBy": "session-audio",
+    "priority": 20,
+    "status": "pending",
+    "model": "gemini-3.1-flash-tts-preview"
+  },
+  {
+    "text": "الرَّابِعْ",
+    "category": "instruction",
+    "requestedBy": "session-audio",
+    "priority": 20,
+    "status": "pending",
+    "model": "gemini-3.1-flash-tts-preview"
+  },
+  {
+    "text": "الْخَامِسْ",
+    "category": "instruction",
+    "requestedBy": "session-audio",
+    "priority": 20,
+    "status": "pending",
+    "model": "gemini-3.1-flash-tts-preview"
+  },
+  {
+    "text": "وَزِّعْ بِالْعَدْلْ",
+    "category": "instruction",
+    "requestedBy": "session-audio",
+    "priority": 20,
+    "status": "pending",
+    "model": "gemini-3.1-flash-tts-preview"
+  },
+  {
+    "text": "كَمْ لِكُلِّ وَاحِدْ؟",
+    "category": "instruction",
+    "requestedBy": "session-audio",
+    "priority": 20,
+    "status": "pending",
+    "model": "gemini-3.1-flash-tts-preview"
+  },
+  {
+    "text": "كَمْ وَحْدَةً طُولُهْ؟",
+    "category": "instruction",
+    "requestedBy": "session-audio",
+    "priority": 20,
+    "status": "pending",
+    "model": "gemini-3.1-flash-tts-preview"
+  },
+  {
+    "text": "قِسْ بِيَدِكْ",
+    "category": "instruction",
+    "requestedBy": "session-audio",
+    "priority": 20,
+    "status": "pending",
+    "model": "gemini-3.1-flash-tts-preview"
   }
 ]

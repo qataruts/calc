@@ -21,7 +21,7 @@ import { h, icon, landmark, pick, shuffle, seeded, shake, pop, QUANTITY_ACCENT }
 import {
   BEAT, FLASH_MS, SAY, say, praiseThen, span, nearOptions, seeder, skillOf,
   stationById, stationForSkill, figureBox, quantityCard, countAloud, clearCount,
-  usedOf, registerExercise, stationScreen,
+  usedOf, registerExercise, stationScreen, roundGate,
 } from './station.js';
 
 const OPTIONS = 3;         // ثلاثُ بطاقاتٍ: هدفٌ ومجاوران
@@ -276,7 +276,7 @@ function chooseView(round, hooks) {
 
   const choices = h('div', { class: 'q-choices' });
   const foot = h('div', { class: 'row foot' });
-  let locked = false;
+  const gate = roundGate('كم ترى؟');
 
   // الغطاءُ مرفوعٌ في «جرِّب معي» (الكميةُ حاضرةٌ عوناً) ومسدولٌ في «وحدك» بعد الخطفة
   const show = () => { cover.hidden = true; };
@@ -293,25 +293,24 @@ function chooseView(round, hooks) {
   }
 
   async function correction(card) {
-    locked = true;
     show();
     await countAloud([target], hooks.alive);
     if (!hooks.alive()) return;
     card.classList.remove('bad');
     if (round.flash) { hide(); clearCount(target); }
-    locked = false;
   }
 
   for (const spec of round.options) {
     const { btn, drawn } = quantityCard(spec, {
       label: 'هَذِهِ',
-      onclick: async () => {
-        if (locked) return;
+      // **ولا نقرةَ ثانيةً تفتح تصحيحاً ثانياً** فوق الأول: القفلُ من لحظة الحكم،
+      // **ويُرَدّ في كل حال** (بلاغُ الميدان ٦) — فالخطأُ لا يُغلق الجولة.
+      onclick: gate.guard(async () => {
         // **الجوابُ من المصيِّر لا من الطلب**: يُقابَل ما رُسِم بما رُسِم (`drawn`)
         const correct = drawn === target.drawn;
         hooks.attempt(round, correct);
         if (correct) {
-          locked = true;
+          gate.end();
           btn.classList.add('good');
           pop(btn);
           // **يُرفَع الغطاءُ عند الصواب**: يرى الكميةَ التي قدّرها فيصدّق تقديرَه —
@@ -322,13 +321,12 @@ function chooseView(round, hooks) {
         }
         btn.classList.add('bad');
         shake(btn);
-        // **ولا نقرةَ ثانيةً تفتح تصحيحاً ثانياً** فوق الأول: القفلُ من لحظة الحكم
-        locked = true;
         await say(SAY.together);
         if (!hooks.alive()) return;
         await new Promise((r) => setTimeout(r, BEAT / 2));
         if (hooks.alive()) await correction(btn);
-      },
+        btn.classList.remove('bad');
+      }),
     });
     choices.append(btn);
   }
@@ -368,7 +366,7 @@ function chooseView(round, hooks) {
 function moreView(round, hooks) {
   const pair = h('div', { class: 'q-pair' });
   const foot = h('div', { class: 'row foot' });
-  let locked = false;
+  const gate = roundGate('أيُّهما أكثر؟');
 
   const sides = [round.left, round.right].map((spec) => {
     const fig = figureBox(spec);
@@ -382,12 +380,11 @@ function moreView(round, hooks) {
   const [a, b] = sides;
   const answer = a.drawn === b.drawn ? 'same' : (a.drawn > b.drawn ? a : b);
 
-  async function judge(choice, el) {
-    if (locked) return;
+  const judge = gate.guard(async (choice, el) => {
     const correct = choice === answer;
     hooks.attempt(round, correct);
     if (correct) {
-      locked = true;
+      gate.end();
       el.classList.add('good');
       pop(el);
       await praiseThen(hooks);
@@ -395,16 +392,13 @@ function moreView(round, hooks) {
     }
     el.classList.add('bad');
     shake(el);
-    locked = true;
     await say(SAY.together);
     if (!hooks.alive()) return;
     await new Promise((r) => setTimeout(r, BEAT / 2));
     if (!hooks.alive()) return;
     await countAloud(sides.map((s) => s.fig), hooks.alive);
-    if (!hooks.alive()) return;
     el.classList.remove('bad');
-    locked = false;
-  }
+  });
 
   for (const side of sides) side.btn.addEventListener('click', () => judge(side, side.btn));
 

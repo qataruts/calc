@@ -589,6 +589,71 @@ function shapeErrors(name, figure, want) {
   return errors;
 }
 
+// ————— ٣ط) القياسُ بوحدة: **متلاصقةٌ من الطرف، ولا فجوةَ ولا تراكب** (الجلسة ث) —————
+//
+// نصُّ `METHOD.md §٣` (المرحلة ١١): «الوحداتُ تُرصّ متلاصقةً من طرف الشريط (يفرضه
+// المصيِّر **وحارسُه**) — فالقياسُ الصادق **شرطُ بنيةٍ لا وعدُ رسم**. والوحدةُ
+// **واحدةٌ في السؤال**».
+//
+// **وهذا البابُ هو ذلك الشرط مقيساً**: خمسُ حقائقَ تُقاس أعداداً —
+//
+//   • **العددُ المرسوم هو المقصود**: وحداتٌ ناقصةٌ تُري قياساً غيرَ الذي وُلِّد.
+//   • **والوحدةُ واحدة**: عرضٌ واحدٌ لكلِّهنّ — فلو تبدّل لَقِيس الشريطُ بمسطرتين،
+//     وذلك **كذبُ قياسٍ** لا خطأُ رسم: العددُ يصير بلا معنى.
+//   • **ولا فجوةَ ولا تراكب**: حافّةُ الوحدة اليسرى هي حافّةُ التي تليها اليمنى
+//     **تماماً** — لا `GAP` بينهما كسائر الأنماط (وهو وحدَه ما يجعل العدَّ قياساً).
+//   • **وأوّلُها عند طرف الشريط الأيمن**: جهةُ ملء الإطار نفسُها (RTL) — ولو بدأت
+//     من حيث اتّفق لَقِيس طولٌ غيرُ الذي يُرى.
+//   • **ولا تجاوزُ الشريط**: آخرُ وحدةٍ لا تخرج عن طرفه الأيسر، فلا يُقال «قِيس»
+//     لِما فاض عنه.
+
+function unitsErrors(name, figure, want) {
+  const errors = [];
+  const units = figure.units || [];
+  const bar = figure.bar;
+  if (!bar || !(bar.w > 0)) {
+    errors.push(`${name}: شريطٌ بلا طول — لا يُقاس ما لا امتدادَ له`);
+    return errors;
+  }
+  if (units.length !== want) {
+    errors.push(`${name}: رصّ ${units.length} وحدةً والمقصود ${want} `
+      + '— **المرسومُ ليس هو المقصود**');
+    return errors;
+  }
+  if (!units.length) return errors;               // شريطٌ لم يُقَس بعد: حالٌ لا خطأ
+
+  const widths = units.map((u) => u.w);
+  if (Math.max(...widths) - Math.min(...widths) > EPS) {
+    errors.push(`${name}: **وحدتان مختلفتا العرض** `
+      + `(${Math.min(...widths).toFixed(1)}..${Math.max(...widths).toFixed(1)}) — `
+      + 'ولا يُقاس شريطٌ بوحدتين (`METHOD.md §٣` المرحلة ١١)');
+  }
+  const right = bar.x + bar.w;
+  if (Math.abs(units[0].x + units[0].w - right) > EPS) {
+    errors.push(`${name}: أوّلُ وحدةٍ ليست عند طرف الشريط الأيمن `
+      + `(${(units[0].x + units[0].w).toFixed(1)} ≠ ${right.toFixed(1)}) — `
+      + 'والرصُّ من الطرف كما يُملأ الإطارُ من اليمين');
+  }
+  for (let i = 1; i < units.length; i++) {
+    const gap = units[i - 1].x - (units[i].x + units[i].w);
+    if (Math.abs(gap) > EPS) {
+      errors.push(`${name}: بين الوحدتين ${i - 1} و${i} `
+        + `${gap > 0 ? `فجوةٌ ${gap.toFixed(2)}` : `تراكبٌ ${(-gap).toFixed(2)}`} — `
+        + '**والقياسُ الصادق تلاصقٌ بنيويّ**');
+      break;
+    }
+  }
+  const last = units[units.length - 1];
+  if (last.x < bar.x - EPS) {
+    errors.push(`${name}: الوحداتُ تجاوزت طرفَ الشريط الأيسر `
+      + `(${last.x.toFixed(1)} < ${bar.x.toFixed(1)}) — ولا يُقاس بما فاض عنه`);
+  }
+  if (units.some((u) => Math.abs(u.y - units[0].y) > EPS)) {
+    errors.push(`${name}: الوحداتُ ليست على صفٍّ واحد — فالتلاصقُ يُرى ولا يُقرأ`);
+  }
+  return errors;
+}
+
 /** أشياءُ عالم الطفل كما يعلنها المنهج — مادّةُ كنسِ وجه «الأشكال حولنا». */
 const worldMaterial = () => SHAPES_WORLD.map((t) => ({ id: t.id, count: t.parts.length }));
 
@@ -716,6 +781,7 @@ function sweep() {
         if (kind === 'pattern') errors.push(...patternErrors(name, figure, n));
         if (kind === 'scene') errors.push(...sceneErrors(name, figure, n));
         if (kind === 'shape') errors.push(...shapeErrors(name, figure, n));
+        if (kind === 'units') errors.push(...unitsErrors(name, figure, n));
         if (figure.frames.length) errors.push(...frameErrors(name, figure, n));
         if (display === 'dice') errors.push(...diceErrors(name, figure, n));
         if (display === 'objects' && !render.OBJECTS.some((o) => o.glyph === figure.glyph)) {
@@ -769,6 +835,34 @@ function sweep() {
       }
     }
   }
+  /* **والشريطُ المقيسُ يُكنَس بكلِّ طولٍ وبكلِّ ما رُصّ تحته** (الجلسة ث): الكنسُ العامّ
+     يرسمه **مقيساً تامّاً** (`span = count`)، ومحطةُ «قِسْ بيدك» تبدأ من صفرٍ وترتفع
+     بيد الطفل — **وموضعُ الغلط في نصف الطريق لا في تمامه**: فجوةٌ أو تراكبٌ يقع بين
+     وحدتين لا يظهر في شريطٍ استوفى طولَه. فيُقاس كلُّ (طول × عدد). */
+  let bars = 0;
+  for (let length = 1; length <= render.rangeOf('units').max; length++) {
+    for (let laid = 0; laid <= length; laid++) {
+      const figure = render.plan('units', laid, { seed: length * 7 + laid, span: length });
+      bars++;
+      errors.push(...unitsErrors(`[units · ${laid}/${length}]`, figure, laid));
+      if (figure.span !== length) {
+        errors.push(`[units · ${laid}/${length}]: أعلن طولاً ${figure.span} والمقصود ${length}`);
+      }
+    }
+  }
+
+  // **والطولُ يُرمى حيث لا معنى له أو حيث يضيق عمّا رُصّ فيه** — ولا يُبتلَع صامتاً
+  for (const [call, why] of [
+    [() => render.plan('units', 5, { span: 3 }), 'وحداتٌ تجاوز شريطَها'],
+    [() => render.plan('units', 2, { span: 0 }), 'شريطٌ بلا طول'],
+    [() => render.plan('units', 2, { span: 99 }), 'طولٌ فوق مدى النمط'],
+    [() => render.plan('dice', 3, { span: 3 }), 'نمطٌ ليس شريطاً يُقاس'],
+  ]) {
+    let threw = false;
+    try { call(); } catch { threw = true; }
+    if (!threw) errors.push(`[قياس] مرّ بلا اعتراض: ${why}`);
+  }
+
   // **والسَّعةُ تُرمى حيث لا معنى لها أو حيث تضيق** — ولا تُبتلَع صامتة
   for (const [call, why] of [
     [() => render.plan('ten-frame', 3, { room: 10 }), 'نمطٌ مواضعُه ثابتة'],
@@ -897,7 +991,7 @@ function sweep() {
       errors.push(`[${display}] قَبِل شقّاً وهو لا يُعَدّ عناصرَ — لا يُقسَم ما ليس كمّاً`);
     }
   }
-  return { errors, figures, splits, scenes, strips, rooms, shapes };
+  return { errors, figures, splits, scenes, strips, rooms, bars, shapes };
 }
 
 const throws = (fn) => { try { fn(); return false; } catch { return true; } };
@@ -916,7 +1010,7 @@ function check() {
   const dormant = (msg) => { asleep++; console.log('  ⏸', `${msg} — نائم، يستيقظ ذاتياً`); };
 
   const painted = render.displays();
-  const { errors, figures, splits, scenes, strips, rooms, shapes } = sweep();
+  const { errors, figures, splits, scenes, strips, rooms, bars, shapes } = sweep();
   const covered = painted.map((d) => render.rangeOf(d));
 
   const byKind = (kind) => painted.filter((d) => render.kindOf(d) === kind);
@@ -934,6 +1028,7 @@ function check() {
     + `و${byKind('scene').length} مشهدَ قياسٍ مقاديرُه تتبع رتبَها على خطٍّ واحد، `
     + '**وأشياءُ المشاهد الحقيقية سواءٌ في الحجم** فلا حكمَ فيه، '
     + `و${rooms} لوحاً ذا سَعةٍ **ينمو وينقص في مكانه** فلا يزحزح ما زاد ما بقي، `
+    + `و${bars} شريطاً مقيساً **وحداتُه متلاصقةٌ من طرفه** بلا فجوةٍ ولا تراكب، `
     + `و${shapes} لوحَ أشكالٍ **أضلاعُها المرسومة هي التي يعلنها المنهج** `
     + `(${SHAPES.map((s) => `${s.name}: ${s.sides}`).join(' · ')})`);
 
@@ -1281,6 +1376,34 @@ function selfTest() {
     && throws(() => render.plan('shape', 2, { thing: SHAPES_WORLD[0].id }))
     && throws(() => render.plan('scene', 2, { shapes: ['circle', 'square'] })),
   'وصنفٌ أو شيءٌ خارج جدول المنهج، أو عددٌ ليس عددَ أجزائه، أو أشكالٌ لنمطٍ لا يرسمها — كلُّه يُرمى');
+
+  console.log('\n— ٣ط) القياسُ بوحدة: يُمسَك ما فيه فجوةٌ أو تراكبٌ أو مسطرتان (الجلسة ث) —');
+  const full = render.plan('units', 5, { seed: 3, span: 5 });
+  const half = render.plan('units', 2, { seed: 8, span: 6 });
+  ok(!unitsErrors('ق', full, 5).length && !unitsErrors('ق', half, 2).length,
+    'شريطٌ مقيسٌ تامّاً وآخرُ نصفِ مقيسٍ نظيفان — وحداتُهما متلاصقةٌ من الطرف');
+  ok(found(unitsErrors('ق', broke(full, (f) => { f.units[2].x -= 9; }), 5), 'فجوةٌ'),
+    '**وفجوةٌ بين وحدتين تُمسَك** — والقياسُ بفجوةٍ عددٌ لا معنى له');
+  ok(found(unitsErrors('ق', broke(full, (f) => { f.units[2].x += 9; }), 5), 'تراكبٌ'),
+    '**وتراكبُ وحدتين يُمسَك** — يُعَدّ ما لا مكانَ له في الشريط');
+  ok(found(unitsErrors('ق', broke(full, (f) => { f.units[3].w += 14; }), 5),
+    'مختلفتا العرض'),
+  '**ووحدتان مختلفتا العرض تُمسَكان** — ولا يُقاس شريطٌ بمسطرتين (`METHOD.md §٣`)');
+  ok(found(unitsErrors('ق', broke(full, (f) => { f.units.shift(); }), 5),
+    'المرسومُ ليس هو المقصود'),
+  'ووحدةٌ سقطت تُمسَك (يُقرأ قياسٌ غيرُ الذي وُلِّد)');
+  ok(found(unitsErrors('ق', broke(full, (f) => {
+    for (const u of f.units) u.x -= 20;
+  }), 5), 'طرف الشريط الأيمن'),
+  'ورصٌّ لا يبدأ من طرف الشريط يُمسَك (جهةُ ملء الإطار نفسُها)');
+  ok(found(unitsErrors('ق', broke(full, (f) => { f.units[4].y += 7; }), 5), 'صفٍّ واحد'),
+    'ووحدةٌ زاحت عن صفّها تُمسَك (فالتلاصقُ يُرى ولا يُقرأ)');
+  ok(!unitsErrors('ق', render.plan('units', 0, { seed: 1, span: 4 }), 0).length,
+    '**وشريطٌ لم تُرَصّ تحته وحدةٌ بعد يمرّ** — حالٌ تبدأ بها «قِسْ بيدك» لا خطأ');
+  ok(throws(() => render.plan('units', 5, { span: 3 }))
+    && throws(() => render.plan('units', 2, { span: 0 }))
+    && throws(() => render.plan('dice', 3, { span: 3 })),
+  'ووحداتٌ تجاوز شريطَها، أو شريطٌ بلا طول، أو طولٌ لنمطٍ لا يُقاس — كلُّه يُرمى');
 
   console.log('\n— ٤) صدق الصورة والمعجم: يُمسَك ما لا صورةَ له —');
   ok(found(vocabErrors(['dice', 'hologram'], DISPLAYS), 'ولا يعرفه المنهج'),

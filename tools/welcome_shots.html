@@ -75,6 +75,11 @@ const SCENES = {
   numeral: 'model', compare: 'model', teen: 'model', skip: 'model',
   // الأشكال: تكتمل النمذجةُ فتُرى الأضلاعُ معدودةً ورمزُ عددها فوقها
   shape: 'model',
+  // القسمة: لوحُ **جولتها** لا نمذجتها — كومةٌ وأوعيةٌ فارغةٌ وزرُّ الحكم،
+  // وهو ما يقف عنده الطفلُ ويعمل بيده (نمذجتُها أوعيةٌ مقسومةٌ سلفاً)
+  share: 'guided',
+  // والقياس: تكتمل نمذجتُه فتُرى الوحداتُ معدودةً ورمزُ عددها فوق الشريط
+  units: 'model',
   // لوحُ الآلة (مجموعتان فوق وحصيلتُهما تحتهما) لوحُ **جولتها** — نمذجتُها كمٌّ واحد
   machine: 'guided',
   add: 'guided', sub: 'guided', diff: 'guided',
@@ -125,6 +130,8 @@ const ROUTES = {
   pattern: '#/pattern/abab',
   measure: '#/measure/size',
   shape: '#/shape/sides',
+  share: '#/share/two',
+  units: '#/units/count',
   gate: '#/gate/quantity',
   parent: '#/parent',
   // ميداليةُ الختام: محطةُ أصدقاء العشرة تُنهى (بأداة التجربة) فتُرى ميداليةُ معلمِ

@@ -33,6 +33,8 @@ import './ops.js';
 import './teens.js';
 import './patterns.js';
 import './shapes.js';
+import './share.js';
+import './units.js';
 import './intro.js';
 import * as install from './install.js';
 import {

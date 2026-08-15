@@ -87,7 +87,12 @@
 // و`app.css` (هدفُ اللمس ٦٠←٦٤ حيث كان دون العهد، وكنسُ `vchip` الميتة). **والرفعةُ
 // هنا شرطُ عمل الإشعار نفسِه**: جهازٌ يحمل `v19` لا يعرف الإشعار، فأوّلُ ما يُعلَنه
 // **هو وصولُ هذه القشرة** — ولا يقع ذلك إلا برفعةٍ يراها الجهاز.
-const VERSION = 'v21';
+// **وإلى `v22` في الجلسة ث** (حزمةُ الإثراء): دخل **ملفّان جديدان في القشرة** —
+// `js/share.js` (المرحلة ١٠: القسمةُ بالعدل) و`js/units.js` (المرحلة ١١: القياسُ
+// بوحدة) — وتحرّك معهما `curriculum.js` و`render.js` (صنفُ الوحدات) و`patterns.js`
+// (الترتيبيّة) و`station.js` و`ui.js` و`app.css`. وملفٌّ جديد في القشرة **يقتضي
+// رفعةً** وإلّا مضى جهازُ الطفل بقشرةٍ لا تعرفه فسقطت المرحلتان الجديدتان دون شبكة.
+const VERSION = 'v22';
 const SHELL_CACHE = `ihsib-shell-${VERSION}`;
 const AUDIO_CACHE = 'ihsib-audio';        // ثابتٌ عمداً — لا يحمل VERSION
 const KEEP = [SHELL_CACHE, AUDIO_CACHE];
@@ -121,9 +126,11 @@ const SHELL = [
   'js/render.js',
   'js/review.js',
   'js/shapes.js',
+  'js/share.js',
   'js/station.js',
   'js/teens.js',
   'js/ui.js',
+  'js/units.js',
   // فهرسُ رموز عالم الطفل — **ومنه** تُخزَّن ملفاتُها (`precacheEmoji`)، فلا يُكتب
   // ملفُّ رمزٍ في هذه القائمة بيد: رمزٌ جديد يدخل المخزون بجرد `fetch_twemoji.py`.
   'emoji/index.json',

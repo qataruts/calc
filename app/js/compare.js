@@ -34,6 +34,7 @@ import {
   BEAT, NUMBER_NAME, SAY, say, praiseThen, span, nearOptions, seeder, skillOf,
   stationById, stationForSkill, figureBox, numeralCard, countAloud, clearCount,
   countAlongLine, clearLine, slotLayer, usedOf, registerExercise, stationScreen,
+  roundGate,
 } from './station.js';
 
 const OPTIONS = 3;
@@ -133,7 +134,7 @@ function compareRound(station, rnd, { aided = false, close = false } = {}) {
 function compareView(round, hooks) {
   const pair = h('div', { class: 'q-pair' });
   const check = h('div', { class: 'q-check q-rows', hidden: !round.aided });
-  let locked = false;
+  const gate = roundGate('أيُّهما أكبر؟');
 
   const sides = [round.left, round.right].map((spec) => {
     const cell = numeralCard(spec.count, spec.seed, {
@@ -151,12 +152,11 @@ function compareView(round, hooks) {
     ? (a.drawn > b.drawn ? a : b)
     : (a.drawn < b.drawn ? a : b);
 
-  async function judge(choice) {
-    if (locked) return;
+  const judge = gate.guard(async (choice) => {
     const correct = choice === answer;
     hooks.attempt(round, correct);
     if (correct) {
-      locked = true;
+      gate.end();
       choice.btn.classList.add('good');
       pop(choice.btn);
       await praiseThen(hooks);
@@ -164,7 +164,6 @@ function compareView(round, hooks) {
     }
     choice.btn.classList.add('bad');
     shake(choice.btn);
-    locked = true;
     /* **الرجوعُ إلى الكمّ**: يُكشَف الإطاران متحاذيين صفّاً تحت صفّ — فيُرى الفارقُ
        خانةً بخانة — ثم يُعَدّان أمامه. وهو تعديلُ `METHOD.md §٤` المعتمد. */
     check.hidden = false;
@@ -172,11 +171,10 @@ function compareView(round, hooks) {
     if (!hooks.alive()) return;
     await new Promise((r) => setTimeout(r, BEAT / 2));
     if (!hooks.alive()) return;
-    if (!(await countAloud(frames, hooks.alive))) return;
+    await countAloud(frames, hooks.alive);
     choice.btn.classList.remove('bad');
     for (const fig of frames) clearCount(fig);
-    locked = false;
-  }
+  });
 
   say(round.ask);
 
@@ -217,15 +215,14 @@ export function lineRound(station, rnd, { aided = false } = {}) {
 export function lineView(round, hooks) {
   const card = figureBox(round.card, 'q-model');
   const rail = figureBox(round.rail, 'q-rail');
-  let locked = false;
+  const gate = roundGate('أين يقع؟');
 
-  const { slots } = slotLayer(rail, round.spots, async (value, btn) => {
-    if (locked) return;
+  const { slots } = slotLayer(rail, round.spots, gate.guard(async (value, btn) => {
     // **الجوابُ من المرسوم**: قيمةُ الخانة من الزرّ، ورقمُ البطاقة من نصّها
     const correct = value === card.drawn;
     hooks.attempt(round, correct);
     if (correct) {
-      locked = true;
+      gate.end();
       btn.classList.add('good');
       pop(btn);
       await praiseThen(hooks);
@@ -233,19 +230,17 @@ export function lineView(round, hooks) {
     }
     btn.classList.add('bad');
     shake(btn);
-    locked = true;
     await say(SAY.together);
     if (!hooks.alive()) return;
     await new Promise((r) => setTimeout(r, BEAT / 2));
     if (!hooks.alive()) return;
     // **يُعَدّ على الخطّ نفسِه** من الصفر إلى موضعه — يرى الصوابَ عدّاً لا تلقيناً
-    if (!(await countAlongLine(rail, card.drawn, hooks.alive))) return;
-    await new Promise((r) => setTimeout(r, BEAT));
-    if (!hooks.alive()) return;
+    if (await countAlongLine(rail, card.drawn, hooks.alive)) {
+      await new Promise((r) => setTimeout(r, BEAT));
+    }
     btn.classList.remove('bad');
     clearLine(rail);
-    locked = false;
-  });
+  }));
 
   /* **العونُ المرئيّ في «جرِّب معي»** (`METHOD.md §٤`): يُعَدّ على الخطّ من الصفر
      مرّةً واحدة **بعد أن يتمّ السؤال** — نمذجةٌ بعونٍ، وهي **غيرُ مقيسة** في ليتنر.
@@ -293,12 +288,12 @@ function orderView(round, hooks) {
   const tray = h('ol', { class: 'q-tray' });
   const rack = h('div', { class: 'q-rack' });
   const check = h('div', { class: 'q-check q-rows', hidden: !round.aided });
-  let locked = false;
+  const gate = roundGate('رتِّبها');
   let placed = 0;
 
-  const cells = round.cards.map((spec, i) => {
+  const cells = round.cards.map((spec) => {
     const cell = numeralCard(spec.count, spec.seed, {
-      label: 'هَذَا', onclick: () => choose(cell, i),
+      label: 'هَذَا', onclick: () => choose(cell),
     });
     rack.append(cell.btn);
     return cell;
@@ -313,8 +308,8 @@ function orderView(round, hooks) {
   const remaining = () => cells.filter((c) => !c.btn.disabled);
   const nextRight = () => Math.min(...remaining().map((c) => c.drawn));
 
-  async function choose(cell, index) {
-    if (locked || cell.btn.disabled) return;
+  const choose = gate.guard(async (cell) => {
+    if (cell.btn.disabled) return;
     const correct = cell.drawn === nextRight();
     hooks.attempt(round, correct);
     if (correct) {
@@ -325,7 +320,7 @@ function orderView(round, hooks) {
       tray.append(h('li', { class: 'q-slot num' }, arNum(cell.drawn)));
       // بطاقةٌ في موضعها: كلمةُ صوابٍ تُصَفّ — وآخرُها **تُنتظَر** ثم يُنتقَل
       if (placed === cells.length) {
-        locked = true;
+        gate.end();
         await praiseThen(hooks);
       } else {
         say(SAY.bravo);
@@ -334,7 +329,6 @@ function orderView(round, hooks) {
     }
     cell.btn.classList.add('bad');
     shake(cell.btn);
-    locked = true;
     /* **تُرى الكمياتُ الباقيةُ متحاذية** (صفٌّ تحت صفّ) فيُقارِن بنفسه، **وتُعَدّ التي
        لمس** وحدَها — فلا تلقينَ للصواب، وإنما رجوعٌ من الرمز إلى ما يعنيه. */
     const left = new Set(remaining().map((c) => c.drawn));
@@ -345,12 +339,12 @@ function orderView(round, hooks) {
     await new Promise((r) => setTimeout(r, BEAT / 2));
     if (!hooks.alive()) return;
     const mine = frames.find((f) => f.value === cell.drawn);
-    if (mine && !(await countAloud([mine.fig], hooks.alive))) return;
-    if (!hooks.alive()) return;
+    if (mine) {
+      await countAloud([mine.fig], hooks.alive);
+      clearCount(mine.fig);
+    }
     cell.btn.classList.remove('bad');
-    if (mine) clearCount(mine.fig);
-    locked = false;
-  }
+  });
 
   say(round.ask);
 
@@ -411,7 +405,7 @@ function neighborView(round, hooks) {
   if (rail) railBox.append(rail.box);
   const frames = round.checks.map((spec) => figureBox(spec, 'q-row'));
   if (round.aided && frames.length) check.replaceChildren(...frames.map((fig) => fig.box));
-  let locked = false;
+  const gate = roundGate('السابق والتالي');
 
   const cells = round.options.map((spec) => {
     const cell = numeralCard(spec.count, spec.seed, {
@@ -421,15 +415,14 @@ function neighborView(round, hooks) {
     return cell;
   });
 
-  async function choose(cell) {
-    if (locked) return;
+  const choose = gate.guard(async (cell) => {
     // **الحكمُ من المرسوم**: جارُ الرقم المقروء على البطاقة المعروضة
     const want = round.mode === 'after' ? card.drawn + 1
       : round.mode === 'before' ? card.drawn - 1 : card.drawn;
     const correct = cell.drawn === want;
     hooks.attempt(round, correct);
     if (correct) {
-      locked = true;
+      gate.end();
       cell.btn.classList.add('good');
       pop(cell.btn);
       await praiseThen(hooks);
@@ -437,7 +430,6 @@ function neighborView(round, hooks) {
     }
     cell.btn.classList.add('bad');
     shake(cell.btn);
-    locked = true;
     await say(SAY.together);
     if (!hooks.alive()) return;
     await new Promise((r) => setTimeout(r, BEAT / 2));
@@ -446,19 +438,19 @@ function neighborView(round, hooks) {
       /* **يُعَدّ على الخطّ حتى العدد المعروض** — فيرى أين يقف، وجاراه إلى جانبه
          يراهما بنفسه. عدٌّ لا تلقين: الخطُّ لا يقول أيُّ البطاقات صحيحة. */
       railBox.hidden = false;
-      if (!(await countAlongLine(rail, card.drawn, hooks.alive))) return;
+      await countAlongLine(rail, card.drawn, hooks.alive);
       clearLine(rail);
     } else {
       check.replaceChildren(...frames.map((fig) => fig.box));
       check.hidden = false;
       const mine = frames[cells.indexOf(cell)];
-      if (mine && !(await countAloud([mine.fig], hooks.alive))) return;
-      if (mine) clearCount(mine.fig);
+      if (mine) {
+        await countAloud([mine.fig], hooks.alive);
+        clearCount(mine.fig);
+      }
     }
-    if (!hooks.alive()) return;
     cell.btn.classList.remove('bad');
-    locked = false;
-  }
+  });
 
   say(round.ask);
 

@@ -53,7 +53,7 @@ import {
   BEAT, NUMBER_NAME, SAY, say, praiseThen, span, nearOptions, seeder, skillOf,
   stationById, stationForSkill, figureBox, numeralCard, quantityCard, countAloud,
   countCells, clearCount, clearCells, clearLine, countMarks, slotLayer,
-  usedOf, registerExercise, stationScreen,
+  usedOf, registerExercise, stationScreen, roundGate,
 } from './station.js';
 import { lineRound, lineView } from './compare.js';
 
@@ -466,7 +466,9 @@ function buildView(round, hooks) {
   }));
   const placed = [];
   const cards = [];
-  let locked = false;
+  /* **قفلٌ مالكُه واحد** (بلاغ الميدان ٦)، **واللوحُ يُعاد رسمُه كلّما رُدَّت الحرية**
+     (`onFree`) فلا يبقى زرٌّ معطَّلاً لأنّ آخرَ رسمةٍ وقعت والقفلُ مأخوذ. */
+  const gate = roundGate('ابنِ العدد');
 
   const board = h('div', { class: 'q-bond' }, symbol.box, h('div', { class: 'q-parts' }, ...slots));
   const checkBox = h('div', { class: 'q-check' }, check.box);
@@ -484,35 +486,35 @@ function buildView(round, hooks) {
     for (const [i, slot] of slots.entries()) {
       slot.replaceChildren(...(placed[i] ? [placed[i].box] : []));
       slot.classList.toggle('is-full', Boolean(placed[i]));
-      slot.disabled = locked || !placed[i];
+      slot.disabled = gate.held || !placed[i];
     }
     tip.hidden = placed.length === 0;
     // **التجاوزُ امتناعٌ في البنية**: ما يزيد على ما بقي لا يُلمَس أصلاً
     for (const cell of cards) {
-      cell.btn.disabled = locked || placed.length >= slots.length || cell.drawn > need();
+      cell.btn.disabled = gate.held || placed.length >= slots.length || cell.drawn > need();
     }
   }
+  gate.onFree = paint;
 
   for (const [i, slot] of slots.entries()) {
-    slot.addEventListener('click', () => {
-      if (locked || !placed[i]) return;
+    slot.addEventListener('click', gate.guard(() => {
+      if (!placed[i]) return;
       placed.splice(i, 1);
-      paint();
-    });
+    }));
   }
 
-  async function judge() {
+  const judge = gate.guard(async () => {
     const correct = need() === 0;
     hooks.attempt(round, correct);
     if (correct) {
-      locked = true;
+      gate.end();
       for (const slot of slots) slot.classList.add('good');
       pop(board);
+      paint();
       await praiseThen(hooks);
       return;
     }
     shake(board);
-    locked = true;
     paint();
     // **يُبنى أمامه ولا يُلقَّن**: تُكشَف الكمّيةُ فتُسمّى حزمتُها وتُعَدّ آحادُها
     await say(SAY.together);
@@ -520,18 +522,16 @@ function buildView(round, hooks) {
     checkBox.hidden = false;
     await new Promise((r) => setTimeout(r, BEAT / 2));
     if (!hooks.alive()) return;
-    if (!(await countUp(check, hooks.alive))) return;
+    await countUp(check, hooks.alive);
     checkBox.hidden = true;
     clearCount(check);
     placed.length = 0;
-    locked = false;
-    paint();
-  }
+  });
 
   for (const spec of round.options) {
     let cell = null;
     const choose = async () => {
-      if (locked || placed.length >= slots.length) return;
+      if (gate.held || placed.length >= slots.length) return;
       placed.push(figureBox(spec));
       paint();
       if (placed.length === slots.length) await judge();
@@ -562,16 +562,15 @@ function readView(round, hooks) {
   board.dataset.mode = 'read';
   board.dataset.answer = String(fact.drawn);      // **الجوابُ من المرسوم**
   const choices = h('div', { class: 'q-choices' });
-  let locked = false;
+  const gate = roundGate('كم هذا؟');
 
   for (const spec of round.options) {
     let cell = null;
-    const choose = async () => {
-      if (locked) return;
+    const choose = gate.guard(async () => {
       const correct = cell.drawn === fact.drawn;
       hooks.attempt(round, correct);
       if (correct) {
-        locked = true;
+        gate.end();
         cell.btn.classList.add('good');
         pop(cell.btn);
         await praiseThen(hooks);
@@ -579,16 +578,14 @@ function readView(round, hooks) {
       }
       cell.btn.classList.add('bad');
       shake(cell.btn);
-      locked = true;
       await say(SAY.together);
       if (!hooks.alive()) return;
       await new Promise((r) => setTimeout(r, BEAT / 2));
       if (!hooks.alive()) return;
-      if (!(await countUp(fact, hooks.alive))) return;
+      await countUp(fact, hooks.alive);
       clearCount(fact);
       cell.btn.classList.remove('bad');
-      locked = false;
-    };
+    });
     cell = numeralCard(spec.count, spec.seed, { label: 'هَذَا الرَّمْز', onclick: choose });
     choices.append(cell.btn);
   }
@@ -611,7 +608,7 @@ function bridgeView(round, hooks) {
   const head = h('h2', {}, round.ask);
   const hint = h('p', { class: 'hint' }, round.hint);
   const choices = h('div', { class: 'q-choices' });
-  let locked = false;
+  const gate = roundGate('اصنع عشرةً أولاً');
   let second = false;
 
   const slot = h('span', { class: 'q-ask num' }, '؟');
@@ -645,8 +642,7 @@ function bridgeView(round, hooks) {
 
   function cardFor(spec) {
     let cell = null;
-    const choose = async () => {
-      if (locked) return;
+    const choose = gate.guard(async () => {
       const want = Number(board.dataset.answer);
       const correct = cell.drawn === want;
       hooks.attempt(round, correct);
@@ -654,14 +650,13 @@ function bridgeView(round, hooks) {
         cell.btn.classList.add('good');
         pop(cell.btn);
         if (!second) {
-          locked = true;
+          // **والجولةُ لم تنتهِ**: سؤالٌ ثانٍ يليه، فتُرَدّ الحريةُ عند الخروج
           await say(ASK.ten);
           if (!hooks.alive()) return;
-          locked = false;
           await toTotal();
           return;
         }
-        locked = true;
+        gate.end();
         slot.textContent = arNum(whole.drawn);   // تتمّ الجملةُ بما رُسِم في الإطارين
         slot.classList.add('is-full');
         await praiseThen(hooks);
@@ -669,21 +664,20 @@ function bridgeView(round, hooks) {
       }
       cell.btn.classList.add('bad');
       shake(cell.btn);
-      locked = true;
       await say(SAY.together);
       if (!hooks.alive()) return;
       await new Promise((r) => setTimeout(r, BEAT / 2));
       if (!hooks.alive()) return;
       // **الخطأُ يُعَدّ أمامه بعدِّ درسِه**: الخاناتُ الفارغة أوّلاً، ثم الحزمةُ وآحادُها
-      const shown = second
-        ? await countUp(whole, hooks.alive)
-        : await countCells(frame, hooks.alive);
-      if (!shown) return;
-      if (second) clearCount(whole);
-      else clearCells(frame);
+      if (second) {
+        await countUp(whole, hooks.alive);
+        clearCount(whole);
+      } else {
+        await countCells(frame, hooks.alive);
+        clearCells(frame);
+      }
       cell.btn.classList.remove('bad');
-      locked = false;
-    };
+    });
     cell = numeralCard(spec.count, spec.seed, { label: 'هَذَا الرَّمْز', onclick: choose });
     return cell.btn;
   }
@@ -701,7 +695,7 @@ function skipView(round, hooks) {
   const board = h('div', { class: 'q-solve q-solve--skip' },
     h('div', { class: 'q-linebox' }, rail.box));
   board.dataset.mode = 'skip';
-  let locked = false;
+  const gate = roundGate('اعدُدْ قفزاً');
 
   /* **ما أُضيء يُقرأ من الخطّ نفسِه**: تُعلَّم مواقعُ القفزات المعروضة، ثم **تُقرأ من
      الـDOM** فتُشتقّ منها القفزةُ وموضعُ التالية — فالجوابُ ما رُسِم لا ما نُوي. ولو
@@ -717,12 +711,11 @@ function skipView(round, hooks) {
   board.dataset.answer = String(want);
   board.dataset.step = String(step);
 
-  slotLayer(rail, round.spots, async (value, btn) => {
-    if (locked) return;
+  slotLayer(rail, round.spots, gate.guard(async (value, btn) => {
     const correct = value === want;
     hooks.attempt(round, correct);
     if (correct) {
-      locked = true;
+      gate.end();
       btn.classList.add('good');
       pop(btn);
       // **ويتمّ الإيقاعُ أمامه**: يُضاء الموضعُ الذي أصاب فتصير القفزاتُ متّصلة
@@ -733,17 +726,15 @@ function skipView(round, hooks) {
     }
     btn.classList.add('bad');
     shake(btn);
-    locked = true;
     // **الخطأُ يُعَدّ أمامه بعدِّ درسِه**: يُقفَز على الخطّ من الصفر حتى الموضع الصحيح
     await say(SAY.together);
     if (!hooks.alive()) return;
     await new Promise((r) => setTimeout(r, BEAT / 2));
     if (!hooks.alive()) return;
-    if (!(await countJumps(rail, step, want, hooks.alive))) return;
+    await countJumps(rail, step, want, hooks.alive);
     clearLine(rail);            // (وأثرُ «ما قُفِز إليه» باقٍ: `is-open` لا يُمحى)
     btn.classList.remove('bad');
-    locked = false;
-  });
+  }));
 
   /* **والعونُ المرئيّ في «جرِّب معي»**: يُقفَز على الخطّ مرّةً واحدة **بعد تمام
      السؤال** — نمذجةٌ بعون، وهي غيرُ مقيسةٍ في ليتنر (نظيرُ «أين يقع؟»). */

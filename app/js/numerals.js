@@ -36,7 +36,7 @@ import { h, pick, shuffle, seeded, shake, pop, NUMERAL_ACCENT } from './ui.js';
 import {
   BEAT, NUMBER_NAME, SAY, say, praiseThen, span, nearOptions, seeder, rangesOf,
   stationById, stationForSkill, figureBox, quantityCard, numeralCard, countAloud,
-  clearCount, usedOf, registerExercise, stationScreen,
+  clearCount, usedOf, registerExercise, stationScreen, roundGate,
 } from './station.js';
 
 const OPTIONS = 3;         // ثلاثُ بطاقات: هدفٌ ومجاوران (`METHOD.md §٣`)
@@ -236,11 +236,12 @@ function matchView(round, hooks) {
   if (round.aid) aidBox.append(figureBox(round.aid).box);
 
   const choices = h('div', { class: 'q-choices' });
-  let locked = false;
+  /* **والقفلُ مالكُه واحد** (بلاغ الميدان ٦): يُؤخَذ بالنقرة ويُرَدّ في كل حال —
+     ولا يُرفَع بسطرٍ في نهاية مسارٍ له مخارجُ مبكرة. */
+  const gate = roundGate('مطابقةُ الرمز');
 
   /** **الخطأ يُعَدّ ولا يُلقَّن** — والمعدودُ كمّيةٌ حاضرة: المعروضةُ ذهاباً، والمَلْموسةُ إياباً. */
   async function correction(card, chosen) {
-    locked = true;
     // الرمزُ المعروض سؤالٌ لا جواب — فلا يُسمّى إلا حين تكون الكميّةُ هي المعروضة
     if (!round.toNumeral) await say(NUMBER_NAME[round.range]);
     if (!hooks.alive()) return;
@@ -250,17 +251,15 @@ function matchView(round, hooks) {
     if (!(await countAloud([counted], hooks.alive))) return;
     card.classList.remove('bad');
     clearCount(counted);
-    locked = false;
   }
 
   for (const spec of round.options) {
     let cell = null;
-    const choose = async () => {
-      if (locked) return;
+    const choose = gate.guard(async () => {
       const correct = cell.drawn === subject.drawn;
       hooks.attempt(round, correct);
       if (correct) {
-        locked = true;
+        gate.end();
         cell.btn.classList.add('good');
         pop(cell.btn);
         await praiseThen(hooks);
@@ -268,12 +267,13 @@ function matchView(round, hooks) {
       }
       cell.btn.classList.add('bad');
       shake(cell.btn);
-      locked = true;                 // ولا نقرةَ ثانيةً تفتح تصحيحاً فوق تصحيح
       await say(SAY.together);
       if (!hooks.alive()) return;
       await new Promise((r) => setTimeout(r, BEAT / 2));
       if (hooks.alive()) await correction(cell.btn, cell);
-    };
+      // **وأثرُ الأحمر لا يبقى** ولو انقطع التصحيحُ بمخرجٍ مبكر
+      cell.btn.classList.remove('bad');
+    });
     cell = spec.display === 'numeral'
       ? numeralCard(spec.count, spec.seed, { label: 'هَذَا الرَّمْز', onclick: choose })
       : quantityCard(spec, { label: 'هَذِهِ', onclick: choose });

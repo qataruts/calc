@@ -237,9 +237,12 @@ def render_displays(strict: bool = True) -> list:
     (نظيرُ `load_curriculum` في `check_range.py`: تُشغَّل الوحدةُ ولا يُخمَّن نصُّها،
     فنمطٌ جديد يدخل اللقطاتِ يومَ يُكتب رسّامُه بلا سطرٍ يُضاف هنا.)
     """
+    # **والألواحُ التي ليست نمطاً تُجرَد معها** (الجلسة ث): مراجعةُ العين على ما يراه
+    # الطفلُ مركَّباً (أشياءُ عالمه · لوحُ القسمة · شريطٌ يُقاس نصفَ منتهٍ)، وأسماؤها
+    # مُعلَنةٌ في `render.js` نفسِه — فلوحٌ جديد يدخل اللقطاتِ يومَ يُكتب.
     module = (APP / "js" / "render.js").as_uri()
     js = (f'const m = await import("{module}");'
-          ' console.log(JSON.stringify(m.displays()));')
+          ' console.log(JSON.stringify([...m.displays(), ...m.boards()]));')
     run = subprocess.run(["node", "--input-type=module", "-e", js],
                          capture_output=True, text=True)
     if run.returncode != 0:

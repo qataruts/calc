@@ -487,21 +487,32 @@ export function conceptLine(stat, today = progress.dayNumber()) {
   const weakest = parts[0];                       // `conceptStats` رتّبها بالضعف
   const done = parts.filter((s) => s.box >= progress.MASTERED_BOX);
   /** أقصى ما أتقن: أكبرُ مدىً عدديّ، أو أسماءُ الأوجه الوصفية مجموعةً. */
+  /* **والمدى يُسمّى بلسان مفهومه** (الجلسة ث): مفتاحُ القياس وجهٌ يُسمّى في المرحلة ٨
+     (`measure|length|pick`) **وعددُ وحداتٍ في المرحلة ١١** (`measure|8|units`) —
+     فلو قُرئ العددُ خاماً لَقال السطرُ «يقارن ويقيس ٨» وهو كلامٌ لا يفهمه والد.
+     فمن أعلن `numeric` في بياناته سُمّي مدَاه العدديُّ بعبارته هو، ومن لم يُعلنه بقي
+     العددُ رقماً كما كان (وذلك حالُ المفاهيم العددية كلِّها). */
+  const word = (range) => (Number.isFinite(Number(range)) && spec.numeric
+    ? spec.numeric.replace('{ما}', rangeText(range))
+    : rangeText(range));
+  /* **وما أتقنه يُقال كلُّه**: مفهومٌ اجتمع فيه مدىً وصفيٌّ وعدديّ يُقرآن معاً — فلو
+     رجّح العدديُّ وحدَه لَسقط من سطر الوالد ما أتقنه طفلُه بالعين. */
   const numeric = done.map((s) => Number(s.range)).filter(Number.isFinite);
-  const reached = numeric.length
-    ? rangeText(Math.max(...numeric))
-    : done.map((s) => rangeText(s.range)).filter(Boolean).join(' و');
+  const words = done.filter((s) => !Number.isFinite(Number(s.range)))
+    .map((s) => rangeText(s.range)).filter(Boolean);
+  const reached = [...words, ...(numeric.length ? [word(Math.max(...numeric))] : [])]
+    .join(' و');
   const fill = (text, what) => text.replace('{ما}', what);
 
   // ثلاثُ حالات: أتقن كلَّ تمارينه · تعثّر · بينهما — ولكلٍّ عبارتُها من بيانات المنهج
   const state = stat.mastered ? 'mastered' : stat.struggling ? 'struggling' : 'learning';
   const stuck = Boolean(stat.struggling && weakest
     && today - (weakest.since ?? weakest.seen ?? today) >= STUCK_DAYS);
-  const learning = weakest ? `يتدرّب على ${rangeText(weakest.range)}` : '';
+  const learning = weakest ? `يتدرّب على ${word(weakest.range)}` : '';
   const line = state === 'mastered'
     ? fill(spec.does, reached)
     : state === 'struggling'
-      ? fill(spec.needs, rangeText(weakest.range))
+      ? fill(spec.needs, word(weakest.range))
       // **وما أتقنه يُقال قبل ما يتدرّب عليه**: الوالدُ يقرأ تقدّمَ طفله لا نقصَه
       : [reached && fill(spec.does, reached), learning].filter(Boolean).join('، و');
 

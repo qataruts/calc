@@ -45,7 +45,7 @@ import { h, pick, shuffle, seeded, shake, pop, BOND_ACCENT } from './ui.js';
 import {
   BEAT, SAY, say, praiseThen, span, nearOptions, seeder, skillOf,
   stationById, stationForSkill, figureBox, numeralCard, markButton, touchLayer, countMarks,
-  countAloud, clearCount, usedOf, registerExercise, stationScreen,
+  countAloud, clearCount, usedOf, registerExercise, stationScreen, roundGate,
 } from './station.js';
 
 const OPTIONS = 3;
@@ -272,8 +272,10 @@ const score = (round, correct) => SCORE[round.kind]?.(round, correct);
 function dealView(round, hooks) {
   const state = { bowls: round.boards.map(() => 0) };
   const figs = { bowls: [] };
-  let locked = false;
-  let judged = false;
+  /* **قفلٌ مالكُه واحد** (بلاغ الميدان ٦): كان `locked` للتعليم و`judged` لانتهاء
+     الجولة، وكلاهما يُرفَع بسطرٍ في نهاية مسار. صارا حالَي بوابةٍ واحدة تُرَدّ
+     في كل حال — فلا يبقى لوحٌ صامتاً بعد كبسةٍ عثرت. */
+  const gate = roundGate('وزِّعْ بالعدل');
 
   const stage = h('div', { class: 'q-share' });
   const pileStage = h('div', { class: 'q-stage q-board q-pile' });
@@ -288,28 +290,26 @@ function dealView(round, hooks) {
   const taken = () => state.bowls.reduce((a, b) => a + b, 0);
 
   /** لمسةٌ تنقل واحداً بين الكومة والوعاء — **ولا حكمَ فيها**: بحثُ الطفل لا جوابُه. */
-  function move(at, delta) {
-    if (locked || judged) return;
+  const move = gate.guard((at, delta) => {
     const next = state.bowls[at] + delta;
     if (next < 0 || next > round.total) return;
     if (delta > 0 && taken() >= round.total) return;      // لا يُؤخَذ من كومةٍ فرغت
     state.bowls[at] = next;
     draw();
-  }
+  });
 
   /**
    * **الكبسة: الجوابُ يُعلَن** — والحكمُ **من المرسوم** (`drawn` لا `state`):
    * تستوي الأوعيةُ **ولا يبقى في الكومة ما يُقسَم** (أقلُّ من عددها). فما بقي دونها
    * **باقٍ يُرى ويُسمّى** لا نقصٌ يُعاقَب عليه.
    */
-  async function judge() {
-    if (locked || judged) return;
+  const judge = gate.guard(async () => {
     const counts = figs.bowls.map((b) => b.fig.drawn);
     const rest = figs.pile.drawn;
     const correct = counts.every((n) => n === counts[0]) && rest < round.bowls;
     hooks.attempt(round, correct);
     if (correct) {
-      judged = true;
+      gate.end();
       pop(judgeBtn);
       for (const b of figs.bowls) b.stage.classList.add('is-fair');
       await say(SAY.revealFair);
@@ -325,20 +325,17 @@ function dealView(round, hooks) {
       return;
     }
     shake(judgeBtn);
-    locked = true;
     // **الخطأُ يُوزَّع أمامه بالتناوب** — يرى الطريقةَ لا الجوابَ وحدَه
     await say(SAY.together);
     if (!hooks.alive()) return;
     await new Promise((r) => setTimeout(r, BEAT / 2));
     if (!hooks.alive()) return;
     const shown = showFair();
-    if (!(await dealAloud(shown, round.bowls, hooks.alive))) return;
-    if (!hooks.alive()) return;
-    await new Promise((r) => setTimeout(r, BEAT));
-    if (!hooks.alive()) return;
+    if (await dealAloud(shown, round.bowls, hooks.alive)) {
+      await new Promise((r) => setTimeout(r, BEAT));
+    }
     draw();                                   // ثم يعود لوحُه كما تركه فيُكمِل بيده
-    locked = false;
-  }
+  });
 
   /* **زرُّ الحكم صورةٌ بلا حرف** (م٦): معلمُ مرحلة القسمة نفسُه من `ui.js` — وأوّلُ
      لقاءٍ به في نمذجة محطته، تكبسه بنفسها. */
@@ -405,7 +402,7 @@ function eachView(round, hooks) {
   const board = h('div', { class: 'q-solve q-solve--share' }, stage);
   board.dataset.mode = 'each';
   const choices = h('div', { class: 'q-choices' });
-  let locked = false;
+  const gate = roundGate('كم لكلِّ واحد؟');
 
   const bowls = round.boards.map((spec, i) => {
     const fig = figureBox(spec);
@@ -421,12 +418,11 @@ function eachView(round, hooks) {
   for (const spec of round.options) {
     const { btn, drawn } = numeralCard(spec.count, spec.seed, {
       label: 'هَذَا الرَّمْز',
-      onclick: async () => {
-        if (locked) return;
+      onclick: gate.guard(async () => {
         const correct = drawn === want;
         hooks.attempt(round, correct);
         if (correct) {
-          locked = true;
+          gate.end();
           btn.classList.add('good');
           pop(btn);
           await praiseThen(hooks);
@@ -434,18 +430,15 @@ function eachView(round, hooks) {
         }
         btn.classList.add('bad');
         shake(btn);
-        locked = true;
         // **الخطأُ يُعَدّ أمامه**: يُعَدّ **وعاءٌ واحد** — فالمقيسُ نصيبُه لا مجموعُها
         await say(SAY.together);
         if (!hooks.alive()) return;
         await new Promise((r) => setTimeout(r, BEAT / 2));
         if (!hooks.alive()) return;
-        if (!(await countAloud([bowls[0]], hooks.alive))) return;
-        if (!hooks.alive()) return;
+        await countAloud([bowls[0]], hooks.alive);
         clearCount(bowls[0]);
         btn.classList.remove('bad');
-        locked = false;
-      },
+      }),
     });
     choices.append(btn);
   }

@@ -472,6 +472,65 @@ function shapePlan(count, rnd, view, opts) {
   };
 }
 
+// ————— القياسُ بوحدة: **وحداتٌ تُرصّ متلاصقةً من طرف الشريط** (المرحلة ١١) —————
+//
+// نصُّ `METHOD.md §٣` (المرحلة ١١): «**ولا فجوةَ ولا تراكب**: الوحداتُ تُرصّ متلاصقةً
+// من طرف الشريط (يفرضه المصيِّر وحارسُه) — فالقياسُ الصادق **شرطُ بنيةٍ لا وعدُ رسم**.
+// والوحدةُ **واحدةٌ في السؤال** (لا يُقاس شريطٌ بوحدتين مختلفتين)».
+//
+// **وبرهانُ التلاصق بنيويٌّ لا رسميّ**: موضعُ الوحدة `i` **مشتقٌّ من دليلها** — حافّةُ
+// الشريط اليمنى ناقصَ `(i+1)` وحدة — وعرضُها واحدٌ لا يتبدّل. فحافّةُ الوحدة اليسرى
+// هي حافّةُ التي تليها اليمنى **بالحساب لا بالتوفيق**: لا فجوةَ تقع ولو أُسقطت وحدة،
+// ولا تراكبَ يقع ولو زِيدت. وما يقيسه الحارسُ من الـDOM هو هذا العهدُ نفسُه.
+//
+// **والملءُ من اليمين** كالإطار والشريط وخطّ الأعداد سواءً بسواء (واجهةٌ RTL): أوّلُ
+// وحدةٍ تُرصّ عند طرف الشريط الأيمن، فلا يقلب الطفلُ جهتَه بين شاشتين.
+//
+// **و`count` هنا عددُ الوحدات المرصوصة، و`span` طولُ الشريط بها**: في «كم وحدةً
+// طولُه؟» يكونان سواءً (شريطٌ مقيسٌ تامّاً)، وفي «قِسْ بيدك» يبدأ العددُ صفراً ويرتفع
+// بيد الطفل حتى يبلغ الطول. **والصفرُ شريطٌ لم يُقَس بعد** لا خطأ.
+
+/** عرضُ الوحدة: خليةُ الكمّية نفسُها — فتُلمَس بإصبع طفلٍ كما يُلمَس عنصرُ العدّ. */
+const UNIT_W = CELL;
+/** ارتفاعُ الشريط المقيس، وارتفاعُ الوحدة تحته — والفصلُ بينهما `GAP`. */
+const BAR_H = 34;
+/** أطولُ شريطٍ يُرسَم بالوحدات — وما فوقه صار العدُّ همَّ الشاشة لا القياسُ درسَها. */
+const UNITS_MAX = 8;
+
+function unitsPlan(count, rnd, view, opts) {
+  // **وشريطٌ بلا طولٍ ليس شريطاً**: من لم يُعلن طولاً فطولُه ما رُصّ تحته — وأدناه
+  // وحدةٌ واحدة، فالصفرُ **شريطٌ لم يُقَس بعد** لا شريطٌ معدوم.
+  const span = opts.span ?? Math.max(count, 1);
+  const box = { w: 2 * PAD + span * UNIT_W, h: 2 * PAD + BAR_H + GAP + BAR_H };
+  const right = PAD + span * UNIT_W;             // طرفُ الشريط الأيمن
+  const top = PAD + BAR_H + GAP;
+  return {
+    view: box,
+    span,
+    bar: { x: PAD, y: PAD, w: span * UNIT_W, h: BAR_H },
+    // **موضعُ الوحدة من دليلها**: تلاصقُها حسابٌ لا توفيق (أعلاه)
+    units: Array.from({ length: count }, (_, i) => ({
+      i, x: right - (i + 1) * UNIT_W, y: top, w: UNIT_W, h: BAR_H,
+    })),
+    marks: [],
+  };
+}
+
+/**
+ * **الشريطُ المقيسُ ووحداتُه**: الشريطُ يُعلن طولَه بالوحدات (`data-span`) **محسوباً
+ * من عرضه المرسوم** لا من نيّة المولّد، وكلُّ وحدةٍ تُعلن نفسَها (`data-unit`) فتُعَدّ
+ * من الـDOM — وهو عينُ عقد `drawn` على ما ليس كمّاً.
+ */
+function paintUnits(figure) {
+  const { bar } = figure;
+  const span = Math.round(bar.w / UNIT_W);
+  const rail = `<rect data-bar data-span="${span}" class="fig-bar" x="${bar.x}" y="${bar.y}"`
+    + ` width="${bar.w}" height="${bar.h}" rx="6"/>`;
+  const tiles = figure.units.map((u) => `<rect data-unit="${u.i}" class="fig-unit"`
+    + ` x="${u.x.toFixed(2)}" y="${u.y}" width="${u.w}" height="${u.h}" rx="4"/>`).join('');
+  return svgFigure(figure, rail + tiles);
+}
+
 // ————— سِجلُّ الأنماط —————
 //
 // **المعجمُ يملكه المنهج** (`DISPLAYS` في `curriculum.js`)، وهذا الملفُّ يُنفِّذ منه ما
@@ -493,6 +552,8 @@ const VIEWS = {
   scene: { w: 2 * PAD + SCENE_MAX * SCENE_SLOT, h: 2 * PAD + 2 * SCENE_R },
   // **وصندوقُ الأشكال أوسعُ ما تبلغه**: صفُّ ستةٍ عرضاً، وصندوقُ شيءِ العالم ارتفاعاً
   shape: { w: 2 * PAD + SHAPE_MAX * SHAPE_SLOT, h: 2 * PAD + THING_BOX },
+  // وصندوقُ القياس أوسعُ شريطٍ تُرصّ تحته وحداتُه (والفعليُّ بمقاس شريطه)
+  units: { w: 2 * PAD + UNITS_MAX * UNIT_W, h: 2 * PAD + BAR_H + GAP + BAR_H },
 };
 
 /**
@@ -519,6 +580,9 @@ const PAINTERS = {
   scene: { kind: 'scene', min: 2, max: SCENE_MAX, plan: scenePlan, paint: paintScene },
   // **والشكلُ من واحدٍ فصاعداً**: بطاقةُ جوابٍ شكلٌ واحد، ولوحُ عدّ الأضلاع كذلك.
   shape: { kind: 'shape', min: 1, max: SHAPE_MAX, plan: shapePlan, paint: paintShape },
+  // **والقياسُ من صفرٍ فصاعداً**: شريطٌ لم تُرَصّ تحته وحدةٌ بعد **حالٌ لا خطأ** —
+  // بها تبدأ «قِسْ بيدك» (المرحلة ١١)، والسقفُ سقفُ الشريط لا سقفُ المستوى.
+  units: { kind: 'units', min: 0, max: UNITS_MAX, plan: unitsPlan, paint: paintUnits },
 };
 
 /**
@@ -536,6 +600,8 @@ const READERS = {
   scene: (el) => el.querySelectorAll('[data-item]').length,
   // **واللوحُ تُعَدّ أشكالُه** — ولكلِّ شكلٍ أضلاعُه معدودةً من قِطَعه هو (`data-sides`)
   shape: (el) => el.querySelectorAll('[data-shape]').length,
+  // **والشريطُ المقيسُ تُعَدّ وحداتُه** — لا طولُه: الطولُ يُقرأ من `data-span` على شريطه
+  units: (el) => el.querySelectorAll('[data-unit]').length,
 };
 
 /** أنماطُ العرض التي يرسمها المصيِّر اليوم، بترتيب الرحلة. */
@@ -681,6 +747,21 @@ export function plan(display, count, opts = {}) {
         `سَعةُ اللوح ${opts.room} خارج [${count}..${painter.max}] — واللوحُ لا يضيق عمّا رُسم فيه`);
     }
   }
+  // **وطولُ الشريط المقيس لِمَن يقيس وحدَه** (`span` — المرحلة ١١): ما سواه لا شريطَ
+  // له يُقاس، **والوحداتُ لا تجاوز طولَه** (وإلّا تراكبتا خارجه أو ادّعى القياسُ ما
+  // ليس فيه) — **ولا شريطَ بلا طول**.
+  if (opts.span !== undefined) {
+    if (painter.kind !== 'units') {
+      throw new RangeError(`«${display}» ليس شريطاً يُقاس — ولا طولَ بالوحدات لِما لا وحدةَ له`);
+    }
+    if (!Number.isInteger(opts.span) || opts.span < 1 || opts.span > painter.max) {
+      throw new RangeError(`طولُ الشريط ${opts.span} خارج [1..${painter.max}]`);
+    }
+    if (opts.span < count) {
+      throw new RangeError(
+        `${count} وحدةً على شريطٍ طولُه ${opts.span} — والوحداتُ لا تجاوز ما تقيسه`);
+    }
+  }
   const split = opts.split ?? null;
   if (split !== null) {
     if (painter.kind !== 'quantity') {
@@ -704,7 +785,7 @@ export function plan(display, count, opts = {}) {
     display, count, view, r: R, glyph, kind: painter.kind, split,
     seed: (opts.seed ?? 0) >>> 0,
     cells: [], frames: [], ticks: [], slots: [], labels: [], items: [], ranks: [],
-    shapes: [], thing: null, text: null,
+    shapes: [], thing: null, text: null, span: null, bar: null, units: [],
     ...painter.plan(count, rnd, view, opts),
   };
   if (split !== null) figure.marks = splitMarks(figure.marks, split);
@@ -940,7 +1021,84 @@ const TITLES = {
   pattern: 'شَرِيطُ النَّمَط — خَانَاتٌ مِنَ اليَمِين وَآخِرُهَا سُؤَال',
   scene: 'مَشْهَدُ القِيَاس — الشَّيْءُ نَفْسُهُ بِمَقَادِير',
   shape: 'الأَشْكَالُ الأُولَى — رَسْمٌ هَنْدَسِيٌّ تُعَدُّ أَضْلَاعُه',
+  units: 'القِيَاسُ بِوَحْدَة — وَحَدَاتٌ مُتَلَاصِقَةٌ مِنْ طَرَفِ الشَّرِيط',
 };
+
+/**
+ * **لوحُ القياس بيدٍ نصفِ منتهية** (المرحلة ١١): الشريطُ نفسُه وقد رُصّت تحته وحداتٌ
+ * دون تمامه — وهو ما يراه الطفلُ في «قِسْ بيدك» قبل أن يُعلن قياسَه. ولا يُرى ذلك في
+ * اللوح العامّ (يعرض الشريطَ مقيساً تامّاً بكل طول)، **وموضعُ الغلط هنا**: فجوةٌ أو
+ * تراكبٌ يقع في نصف الطريق لا في تمامه.
+ */
+function laySheet() {
+  const span = 6;
+  const items = [0, 2, 4, 6].map((n) => {
+    const { el } = paint('units', n, { seed: n * 13 + 5, span });
+    return h('div', { class: 'gallery-item' },
+      el, h('span', { class: 'gallery-num num' }, arNum(n)));
+  });
+  return h('section', { class: 'gallery-sheet' },
+    h('h2', {}, 'قِسْ بِيَدِكْ — شَرِيطٌ وَاحِدٌ تُرَصُّ وَحَدَاتُهُ وَاحِدَةً وَاحِدَة'),
+    h('div', { class: 'gallery-row' }, items));
+}
+
+/**
+ * **لوحُ القسمة بالعدل** (المرحلة ١٠) — **وبوابةُ عينِ المالك عليه** (شرطُ الجلسة ث):
+ * الكومةُ وأوعيتُها كما يراها الطفل، بأوجهها الثلاثة: ما ينقسم بين اثنين، وما يبقى
+ * منه واحد، وما ينقسم بين ثلاثة. فتُرى مجتمعةً بدل أن تُلتقَط جولةً جولة من شاشته.
+ *
+ * وأوعيتُها لوحُ «اجعلهما سواء» نفسُه (`q-board`): الفعلُ فيهما واحدٌ — لمسةٌ تأتي
+ * بواحد ولمسةٌ تُبعده — فلا يتعلّم الطفلُ لوحين لفعلٍ واحد.
+ */
+function shareSheet() {
+  const cases = [
+    {
+      title: 'البِدَايَة: ثَمَانِيَةٌ فِي الكَوْمَةِ وَالأَوْعِيَةُ فَارِغَة',
+      total: 8, bowls: 2, given: [0, 0], glyph: '🍎',
+    },
+    {
+      title: 'وَالخِتَام: بِالعَدْلِ بَيْنَ اثْنَيْنِ — أَرْبَعَةٌ لِكُلٍّ وَالكَوْمَةُ خَالِيَة',
+      total: 8, bowls: 2, given: [4, 4], glyph: '🍎',
+    },
+    {
+      title: 'خَمْسَةٌ بَيْنَ اثْنَيْن — اثْنَانِ لِكُلٍّ، وَيَبْقَى وَاحِدٌ يُرَى فِي الكَوْمَة',
+      total: 5, bowls: 2, given: [2, 2], glyph: '🍪',
+    },
+    {
+      title: 'تِسْعَةٌ بِالعَدْلِ بَيْنَ ثَلَاثَة — ثَلَاثَةٌ لِكُلٍّ',
+      total: 9, bowls: 3, given: [3, 3, 3], glyph: '⭐',
+    },
+  ];
+  /* **واللوحُ هنا لوحُ الشاشة بأصنافه** (`q-share` · `q-pile` · `q-bowls`): مراجعةُ
+     العين على ما يراه الطفل — كومةٌ فوق وأوعيةٌ تحتها — لا على صفٍّ يصفّه المعرض. */
+  const board = (c, at) => {
+    const left = c.total - c.given.reduce((a, b) => a + b, 0);
+    /* **وكلُّ شكلٍ في صندوقه** (`q-figure`) كما تبنيه `figureBox` في الشاشة — فما
+       يُراجَع هو التركيبُ نفسُه لا شبيهٌ له. **والمقاسُ يُملى على اللوح** (متغيّرٌ في
+       الأسلوب) لا بقاعدةٍ تُنازِع قواعدَ الشاشة على التخصيص.
+       **والمقاسُ يُحسَب على العرض ولا يُقصَر بعده**: لو تُرك للقصّ (`max-width`)
+       لَضاق الشكلُ عرضاً وبقي ارتفاعُه، **ومواضعُ العناصر نسبٌ من كلٍّ على حدة** —
+       فتتقارب أفقياً حتى تتراكب. وأمسكه حارسُ التراكب في `browser_test` يومَ جُرِّب،
+       ثم أمسك حارسُ الفائض الأفقيّ مقاساً أوسعَ من الصفحة. فالقاعدةُ: **أوسعُ ما
+       يسعه العرض** (ثلاثةُ أوعيةٍ عرضُ كلٍّ ٤٤٠ وحدةَ رسم) بسقفٍ لا يجاوزه. */
+    const box = (el) => h('div', { class: 'q-figure' }, el);
+    const pile = paint('objects', left, { seed: at * 31 + 3, glyph: c.glyph, room: c.total }).el;
+    const bowls = c.given.map((n, i) => h('div', { class: 'q-side' },
+      h('div', { class: 'q-stage q-board' },
+        box(paint('objects', n, { seed: at * 31 + i + 11, glyph: c.glyph, room: c.total }).el))));
+    return h('div', { class: 'gallery-share' },
+      h('h3', {}, c.title),
+      h('div', {
+        class: 'q-share',
+        css: { '--unit': 'min(.6px, (min(100vw, 62rem) - 8rem) / 1320)' },
+      },
+        h('div', { class: 'q-stage q-board q-pile' }, box(pile)),
+        h('div', { class: 'q-bowls' }, bowls)));
+  };
+  return h('section', { class: 'gallery-sheet', css: { '--accent': 'var(--accent-bond)' } },
+    h('h2', {}, 'القِسْمَةُ بِالعَدْل — كَوْمَةٌ فَوْقَ وَأَوْعِيَةٌ تَحْتَهَا'),
+    cases.map(board));
+}
 
 /**
  * **لوحُ أشياء عالم الطفل** (المرحلة ٩): الأربعةُ مصفوفةً باسم كلٍّ — **وبوابةُ عينِ
@@ -975,10 +1133,27 @@ function sheet(display) {
     h('h2', {}, TITLES[display] || display), h('div', { class: 'gallery-row' }, items));
 }
 
+/**
+ * **ألواحٌ ليست نمطاً واحداً**: تركيبُ شاشةٍ يُراجَع مجتمعاً (أشياءُ عالم الطفل ·
+ * لوحُ القسمة · شريطٌ يُقاس بيدٍ نصفِ منتهية). ومَن أراد لوحاً منها ناداه باسمه
+ * (`#/render/share`) ولو لم يكن نمطَ عرضٍ في المصيِّر — فالمراجعةُ البصرية على ما
+ * يراه الطفلُ لا على ما يسمّيه الكود.
+ */
+const EXTRA = { shape: worldSheet, units: laySheet, share: shareSheet };
+
+/**
+ * **أسماءُ الألواح التي ليست نمطاً** — يجردها مولّدُ اللقطات المرجعية
+ * (`browser_test.py --render-shots`) كما يجرد الأنماط، فلوحٌ جديد يدخل المراجعةَ
+ * البصرية **يومَ يُكتب** بلا سطرٍ يُضاف في العدّة. و`share` وحدَه ليس نمطاً، وأخواه
+ * تتمّةٌ للوحَي نمطيهما.
+ */
+export const boards = () => Object.keys(EXTRA).filter((k) => !PAINTERS[k]);
+
 /** لوحُ المصيِّر: `#/render/all` أو `#/render/<النمط>`. */
 export function renderGallery(part) {
   const names = part === 'all' ? displays() : displays().filter((d) => d === part);
-  if (!names.length) return null;
+  const extras = Object.keys(EXTRA).filter((k) => part === 'all' || part === k);
+  if (!names.length && !extras.length) return null;
 
   return h('div', {},
     topbar(
@@ -990,6 +1165,6 @@ export function renderGallery(part) {
       h('p', { class: 'hint' },
         'لوحُ المصيِّر — مرجعٌ بصريّ لأنماط الكميات، لا يظهر للطفل.'),
       names.map(sheet),
-      names.includes('shape') && worldSheet()),
+      extras.map((k) => EXTRA[k]())),
   );
 }
