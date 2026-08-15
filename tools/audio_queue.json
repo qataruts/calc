@@ -834,127 +834,143 @@
     "category": "modeling",
     "requestedBy": "session-audio",
     "priority": 30,
-    "status": "pending",
-    "model": "gemini-3.1-flash-tts-preview"
+    "status": "done",
+    "model": "gemini-3.1-flash-tts-preview",
+    "doneAt": "2026-08-15"
   },
   {
     "text": "وَبَقِيَ وَاحِدْ",
     "category": "modeling",
     "requestedBy": "session-audio",
     "priority": 30,
-    "status": "pending",
-    "model": "gemini-3.1-flash-tts-preview"
+    "status": "done",
+    "model": "gemini-3.1-flash-tts-preview",
+    "doneAt": "2026-08-15"
   },
   {
     "text": "أَيْنَ الْأَوَّلْ؟",
     "category": "instruction",
     "requestedBy": "session-audio",
     "priority": 20,
-    "status": "pending",
-    "model": "gemini-3.1-flash-tts-preview"
+    "status": "done",
+    "model": "gemini-3.1-flash-tts-preview",
+    "doneAt": "2026-08-15"
   },
   {
     "text": "أَيْنَ الثَّانِي؟",
     "category": "instruction",
     "requestedBy": "session-audio",
     "priority": 20,
-    "status": "pending",
-    "model": "gemini-3.1-flash-tts-preview"
+    "status": "done",
+    "model": "gemini-3.1-flash-tts-preview",
+    "doneAt": "2026-08-15"
   },
   {
     "text": "أَيْنَ الثَّالِثْ؟",
     "category": "instruction",
     "requestedBy": "session-audio",
     "priority": 20,
-    "status": "pending",
-    "model": "gemini-3.1-flash-tts-preview"
+    "status": "done",
+    "model": "gemini-3.1-flash-tts-preview",
+    "doneAt": "2026-08-15"
   },
   {
     "text": "أَيْنَ الرَّابِعْ؟",
     "category": "instruction",
     "requestedBy": "session-audio",
     "priority": 20,
-    "status": "pending",
-    "model": "gemini-3.1-flash-tts-preview"
+    "status": "done",
+    "model": "gemini-3.1-flash-tts-preview",
+    "doneAt": "2026-08-15"
   },
   {
     "text": "أَيْنَ الْخَامِسْ؟",
     "category": "instruction",
     "requestedBy": "session-audio",
     "priority": 20,
-    "status": "pending",
-    "model": "gemini-3.1-flash-tts-preview"
+    "status": "done",
+    "model": "gemini-3.1-flash-tts-preview",
+    "doneAt": "2026-08-15"
   },
   {
     "text": "الْأَوَّلْ",
     "category": "instruction",
     "requestedBy": "session-audio",
     "priority": 20,
-    "status": "pending",
-    "model": "gemini-3.1-flash-tts-preview"
+    "status": "done",
+    "model": "gemini-3.1-flash-tts-preview",
+    "doneAt": "2026-08-15"
   },
   {
     "text": "الثَّانِي",
     "category": "instruction",
     "requestedBy": "session-audio",
     "priority": 20,
-    "status": "pending",
-    "model": "gemini-3.1-flash-tts-preview"
+    "status": "done",
+    "model": "gemini-3.1-flash-tts-preview",
+    "doneAt": "2026-08-15"
   },
   {
     "text": "الثَّالِثْ",
     "category": "instruction",
     "requestedBy": "session-audio",
     "priority": 20,
-    "status": "pending",
-    "model": "gemini-3.1-flash-tts-preview"
+    "status": "done",
+    "model": "gemini-3.1-flash-tts-preview",
+    "doneAt": "2026-08-15"
   },
   {
     "text": "الرَّابِعْ",
     "category": "instruction",
     "requestedBy": "session-audio",
     "priority": 20,
-    "status": "pending",
-    "model": "gemini-3.1-flash-tts-preview"
+    "status": "done",
+    "model": "gemini-3.1-flash-tts-preview",
+    "doneAt": "2026-08-15"
   },
   {
     "text": "الْخَامِسْ",
     "category": "instruction",
     "requestedBy": "session-audio",
     "priority": 20,
-    "status": "pending",
-    "model": "gemini-3.1-flash-tts-preview"
+    "status": "done",
+    "model": "gemini-3.1-flash-tts-preview",
+    "doneAt": "2026-08-15"
   },
   {
     "text": "وَزِّعْ بِالْعَدْلْ",
     "category": "instruction",
     "requestedBy": "session-audio",
     "priority": 20,
-    "status": "pending",
-    "model": "gemini-3.1-flash-tts-preview"
+    "status": "done",
+    "model": "gemini-3.1-flash-tts-preview",
+    "doneAt": "2026-08-15"
   },
   {
     "text": "كَمْ لِكُلِّ وَاحِدْ؟",
     "category": "instruction",
     "requestedBy": "session-audio",
     "priority": 20,
-    "status": "pending",
-    "model": "gemini-3.1-flash-tts-preview"
+    "status": "done",
+    "model": "gemini-3.1-flash-tts-preview",
+    "doneAt": "2026-08-15"
   },
   {
     "text": "كَمْ وَحْدَةً طُولُهْ؟",
     "category": "instruction",
     "requestedBy": "session-audio",
     "priority": 20,
-    "status": "pending",
-    "model": "gemini-3.1-flash-tts-preview"
+    "status": "done",
+    "model": "gemini-3.1-flash-tts-preview",
+    "doneAt": "2026-08-15"
   },
   {
     "text": "قِسْ بِيَدِكْ",
     "category": "instruction",
     "requestedBy": "session-audio",
     "priority": 20,
-    "status": "pending",
-    "model": "gemini-3.1-flash-tts-preview"
+    "status": "done",
+    "model": "gemini-3.1-flash-tts-preview",
+    "doneAt": "2026-08-15"
   }
 ]
