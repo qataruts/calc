@@ -96,7 +96,13 @@
   --accent-pattern: #9A7BB8;    /* الأنماط والقياس (بنفسجيّ ناعم) — المرحلة ٨ */
   --accent-gate: #B98A2E;       /* البوابات والمراجعة (عنبريّ) */
 
-  --star: #2E8C86;              /* النجوم والفعل الرئيس — فيروزيّ لا ذهبيّ */
+  /* النجومُ والفعلُ الرئيس — فيروزيّ لا ذهبيّ. **وكان `#2E8C86` فقِيس فإذا حبرُه
+     ٤٫٠٣:١** (معايرةُ الجلسة م١٠، والعتبة ٤٫٥): وهو اللونُ الوحيد في اللوح يحمل
+     **نصّاً** على ظهره (زرُّ الفعل و«تابِعْ من هنا»)، فلا يكفي فيه ما يكفي لشكلٍ
+     يُرى. فعُمِّق حتى بلغ **٥٫٠٢:١** بالبياض — نفسُ الغالب (١٧٦°) ونفسُ العائلة،
+     ويحرسه `check_contrast.mjs` نهاراً وليلاً. (و`--accent-numeral` باقٍ على
+     الأصل: لونُ مرحلةٍ لا ظهرُ نصّ، و`--brand-2` علامةٌ لا تُمَسّ.) */
+  --star: #287B76;
   --ok: #4E9A6B;                /* صواب — مطفأ */
   --err: #C4605A;               /* خطأ — لا يصرخ */
 
@@ -287,7 +293,7 @@ a.btn { color: inherit; text-decoration: none; }
 .btn--primary {
   background: var(--star);
   border-color: transparent;
-  color: #fff;
+  color: var(--on-accent);
   font-weight: 700;
 }
 
@@ -308,7 +314,7 @@ a.btn { color: inherit; text-decoration: none; }
   padding: .9rem 1.1rem;
   border-radius: var(--radius);
   background: var(--star);
-  color: #fff;
+  color: var(--on-accent);
   box-shadow: var(--shadow);
   text-align: start;
   transition: transform .15s ease;
@@ -318,7 +324,10 @@ a.btn { color: inherit; text-decoration: none; }
 .continue .continue-face { font-family: var(--font-num); font-size: 2rem; line-height: 1.4; }
 .continue .continue-text { display: flex; flex-direction: column; }
 .continue b { font-size: 1.1rem; }
-.continue small { opacity: .85; }
+/* وسطرُها الثاني **بلا تخفيف**: كان `opacity: .85` فقِيس فإذا هو ٤٫١١:١ على اللون
+   المعمَّق — والشفافُ يُقاس مخفَّفاً لا بقيمته المكتوبة. وهدأتُه من حجمه ووزنه، لا
+   من حبرٍ يُنصَّف. (وبطاقةُ المراجعة تخفضه عندها بحبرها الخاص.) */
+.continue small { opacity: 1; }
 
 /* بطاقة مراجعة اليوم: بطاقة هادئة بحافة البوابات — لا تنافس «تابع من هنا» */
 .continue--review {
@@ -1116,17 +1125,19 @@ a.btn { color: inherit; text-decoration: none; }
   gap: .5rem 1rem;
   padding: .6rem 1rem;
   background: var(--accent-gate);
-  color: #fff;
+  color: var(--on-accent);
   font-size: .95rem;
   line-height: 1.5;
 }
 
+/* وحدُّ الزرّ **من حبره هو** (`currentColor`) لا من بياضٍ مكتوب: فحين يُقلَب الحبرُ
+   ليلاً ينقلب الحدُّ معه، وحين يُبدَّل اللوحُ يتبعه بلا سطرٍ يُعدَّل. */
 .preview-bar .btn {
   min-height: 2.25rem;
   padding: .25rem .9rem;
   font-size: .9rem;
-  color: #fff;
-  border-color: color-mix(in srgb, #fff 55%, transparent);
+  color: inherit;
+  border-color: color-mix(in srgb, currentColor 55%, transparent);
 }
 
 /* **شريطُ التثبيت** (منقولُ اقرأ `read@260bf48` — أمرُ المالك للعائلة كلِّها،
