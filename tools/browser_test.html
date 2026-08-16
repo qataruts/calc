@@ -1531,15 +1531,97 @@
     `و«اِصْنَعْ عَشَرَةً أَوَّلًا» تسأل أوّلاً **ما يُكمِل العشرة** — `
     + `${brGap} خانةً فارغة، وهي شقُّ المُضاف نفسُه (${brSplit}) مقروءين من الرسم`);
 
+  /* ————— بلاغُ الميدان ٧ (المالك، ١٦ أغسطس): «كم بقي» تشرح نفسَها —————
+
+     بتدقيقه: «كم بقي للعشرة ثم ٩+٣ مربكة. كم بقي لوحدها اوكي، لكن لما ٩ + ٣؟» —
+     فالسؤالُ سليمٌ بذاته، والإرباكُ من **جملةٍ تتصدّر سؤالاً ليست جوابَه**، ومن
+     **عبورٍ لا يُرى**. وثلاثةُ أحكامٍ تقيس ما رآه الميدان:
+
+       • لا جملةَ فوق السؤال الأول، وتظهر مع «كَمْ صَارَتْ مَعًا؟» الذي خانتُها جوابُه.
+       • وإطارُ العشرة **يمتلئ قبل** مشهد الإطارين — عبورٌ وقع لا قفزة.
+       • وفي «وحدك» الشقُّ الملوّن **لا يسبق الجواب** (يُطلَب بالنقر، عهدُ المرحلة ٦).
+
+     **ويُقاس الرسمُ لا الوعد** (`SEED.md §٩`: `hidden` يعلو عليه كلُّ `display` من
+     أصلنا فيكذب صامتاً)، فتُسأل الجملةُ عن صناديقها المرسومة. */
+  const brDrawn = (el) => !!el && el.getClientRects().length > 0;
+  ok(brBoard && !brDrawn(brBoard.querySelector('.q-sentence')),
+    'ولا جملةَ جمعٍ فوق السؤال الأول — **الإطاران وحدَهما مشهدُه** (بلاغ الميدان ٧)');
+
+  /* **وشاهدُ الترتيب مِرقَبٌ لا عيّنة** (سنّةُ `seenOnce`): نافذةُ العبور مئاتُ
+     المللي، فالعيّنةُ قد تقع خارجها والمِرقَبُ يشهد بما وقع متى وقع. **وموضعُ ما
+     عبر يُقاس مع ترتيبه**: النقطةُ تحلّ **في خانتها** لا في فراغٍ بجوارها. */
+  const brOrder = [];
+  let brLanded = null;
+  const brWatch = new MutationObserver(() => {
+    const f = bridge.querySelector('.q-meet .figure[data-display="ten-frame"][data-filled]');
+    if (f && Number(f.dataset.filled) >= brGap && !brOrder.includes('عبور')) {
+      brOrder.push('عبور');
+      const cells = [...f.querySelectorAll('[data-cell]')].slice(Number(f.dataset.drawn));
+      const flies = [...bridge.querySelectorAll('.q-fly')];
+      const home = (fly, cell) => {
+        const a = fly.getBoundingClientRect();
+        const b = cell.getBoundingClientRect();
+        const x = a.left + a.width / 2;
+        const y = a.top + a.height / 2;
+        return x > b.left - 4 && x < b.right + 4 && y > b.top - 4 && y < b.bottom + 4;
+      };
+      brLanded = flies.length === cells.length && cells.every((c, i) => home(flies[i], c));
+    }
+    if (bridge.querySelector('.figure[data-display="two-frames"]') && !brOrder.includes('إطاران')) {
+      brOrder.push('إطاران');
+    }
+  });
+  brWatch.observe(bridge.documentElement, { subtree: true, childList: true, attributes: true });
+
   answerOf(bridge)?.click();
   const brTotal = await until(bridge,
     (d) => d.querySelector('.q-fact-body .figure[data-display="two-frames"]'), 16000);
+  brWatch.disconnect();
+  ok(brOrder[0] === 'عبور' && brOrder.includes('إطاران'),
+    `و**العبورُ يُرى**: ${brGap} نقطةً تعبر فيمتلئ إطارُ العشرة **قبل** أن يصير المشهدُ `
+    + `إطارين (ما وقع: ${brOrder.join(' ← ') || 'لا شيء'})`);
+  ok(brLanded === true,
+    'و**النقطةُ العابرة تحلّ في خانتها** لا في فراغٍ بجوارها — مقيساً بالرسم بعد التنسيق'
+    + (brLanded === null ? ' — **لم يُرصَد عبورٌ أصلاً**' : ''));
   ok(brTotal && Number(bridge.querySelector('.q-solve--bridge').dataset.answer)
     === Number(brTotal.dataset.drawn)
     && brTotal.querySelectorAll('[data-part="a"]').length === 10,
   `ثم **تصير الحصيلةُ حزمةً وآحاداً في الإطارين** (${brTotal ? brTotal.dataset.drawn : '؟'}) `
     + '— والسؤالُ الثاني جوابُه ما رُسِم فيهما');
-  const brDone = await play(bridge, 110);   // جولتُها سؤالان، فخطواتُها ضِعف
+  ok(brDrawn(bridge.querySelector('.q-sentence')),
+    '**وتتصدّر جملةُ الجمع سؤالَها هي**: تظهر مع «كَمْ صَارَتْ مَعًا؟» الذي خانتُها جوابُه');
+
+  /* **وفي «وحدك» لا يسبق العونُ الجواب**: تُساق المحطةُ حتى تبدأ الخطوةُ المقيسة —
+     والخطوةُ تُقرأ من شريطها (`step--now`) لا من الشاشة التي نقيسها. */
+  const brPhase = (d) => [...d.querySelectorAll('.step')]
+    .findIndex((s) => s.classList.contains('step--now'));
+  for (let i = 0; i < 50 && brPhase(bridge) < 2; i++) {
+    (answerOf(bridge) || bridge.querySelector('.station-body .next'))?.click();
+    await new Promise((r) => setTimeout(r, 480));
+  }
+  const soloFigs = [...bridge.querySelectorAll('.q-meet .figure')];
+  const soloPeek = bridge.querySelector('.q-peek');
+  ok(brPhase(bridge) === 2 && soloFigs.length === 2
+    && soloFigs[1].dataset.split === undefined && brDrawn(soloPeek),
+  'وفي «وحدك» **الشقُّ الملوّن لا يسبق الجواب**: حزمةُ المُضاف بلا شقّ، والعونُ زرٌّ يُنقَر');
+  /* **وزرُّ العون يُقاس حيث نحن واقفون** (جردُ الصنف ومسطرةُ اللمس): مشيُ الجرد يقف
+     على «جرِّب معي» فلا يبلغ هذا الزرَّ أصلاً — وهو زرُّ شاشة طفل، فيه ما يُرى
+     (أيقونةُ العين) ويبلغ عتبةَ اللمس المعلَنة. */
+  const peekBox = soloPeek ? soloPeek.getBoundingClientRect() : { width: 0, height: 0 };
+  ok(!!soloPeek?.querySelector('.ui-icon svg')
+    && Math.min(peekBox.width, peekBox.height) >= TOUCH_MIN - 0.5,
+  `وزرُّ العون فيه ما يُرى (أيقونة) ويبلغ عتبةَ اللمس `
+    + `(${Math.round(peekBox.width)}×${Math.round(peekBox.height)} من ${TOUCH_MIN}بك)`);
+  const soloGap = soloFigs.length === 2
+    ? soloFigs[0].querySelectorAll('[data-cell]').length - Number(soloFigs[0].dataset.drawn) : -1;
+  soloPeek?.click();
+  const soloLit = await until(bridge,
+    (d) => [...d.querySelectorAll('.q-meet .figure')][1]?.dataset.split, 4000);
+  ok(Number(soloLit) === soloGap && soloGap > 0,
+    `وبالنقر يُكشَف الشقُّ فيُرى ما يُكمِل العشرة (${soloLit ?? '؟'} من ${soloGap}) — `
+    + 'عونٌ بلا حدٍّ ولا احتساب، والخاناتُ الفارغة تبقى هي السؤال');
+
+  const brDone = await play(bridge, 130);   // جولتُها سؤالان وبينهما عبورٌ يُرى
   ok(!!brDone, 'ومحطةُ العبور تُجتاز كاملةً لمساً حتى الاحتفال');
 
   // ————— ج) «اِطْرَحْ ضِمْنَ ٢٠» (٧·٦): يفرغ من حيث امتلأ، وينزل عبر العشرة —————
@@ -2187,6 +2269,75 @@
   ok(cleanBefore === 0 && caught.length === 1 && bareButtons(planted).length === 0,
     `**وحارسُ الصنف مُجرَّبٌ سالباً**: زرٌّ نصيٌّ دُسّ في شاشةٍ حيّة فأُمسِك `
     + `(${caught.length} قبل رفعه، و${bareButtons(planted).length} بعده)`);
+
+  /* ————— ١١ي‌أ) **حكمُ صنفٍ ثانٍ: جملةٌ رمزية لا تتصدّر سؤالاً ليست جوابَه** —————
+
+     بلاغُ الميدان ٧ وقع في `bridge` وحدَها، **والحكمُ صنفٌ لا موضع** (جردُ المدير،
+     ١٦ أغسطس): كلُّ شاشةٍ تعرض جملةً رمزية (`.q-sentence`) فخانتُها وعدٌ — «هذا ما
+     تنتظره هذه الجملة» — فيجب أن يوافق **جوابَ السؤال الجاري** (`dataset.answer`،
+     وهو مقروءٌ من المرسوم في كل لوح). فإن عُرضت «٩ + ٣ = ؟» فوق سؤالٍ جوابُه ثلاثةٌ
+     كان على الشاشة **رمزان متنافران في نظرةٍ واحدة**، وذلك عينُ ما بلّغ عنه المالك.
+
+     **والجردُ على الشاشات لا بالاسم**: أنواعُ عقد الرحلة تُقرأ **من المنهج** (سنّةُ
+     `browser_device.html`)، فمحطةٌ تدخل غداً بجملةٍ فوق سؤالٍ ليس جوابَها **تُمسَك
+     يومَ تُكتب** بلا سطرٍ يُضاف هنا. **وقيمةُ الجملة تُحسَب من المرسوم وعلاماتِه**
+     (بطاقاتُ حدودها وعلاماتُ عملياتها كما تُرى)، لا من نيّة الشاشة. */
+
+  const { sections: journeySections } = await import('/js/curriculum.js');
+  const firstOfEachType = () => {
+    const seen = new Map();
+    for (const section of journeySections()) {
+      for (const node of section.nodes || []) if (!seen.has(node.type)) seen.set(node.type, node);
+    }
+    return [...seen.values()];
+  };
+  const shownNow = (el) => !!el && el.getClientRects().length > 0;
+  const BOARDS_ANY = '.q-solve, .q-bond, .q-equal';
+  /* **ولا يُدفَع في هذا الجرد ثمنُ زمنٍ لا يُقاس فيه**: المقيسُ هنا **بنيةٌ على
+     الشاشة** (جملةٌ وجوابُ سؤالٍ) لا تعاقبٌ ولا مهلة — والوصولُ إلى جولةٍ تُلعَب
+     يمرّ بنمذجةٍ تَعُدّ بمهلها (`BEAT` لكل عنصر)، فتكلّف عشراتِ الثواني في كل نوع.
+     فتُقصَّر مُهَلُ نافذة التطبيق في هذا المشي وحدَه — كما يُبدَّل فيها `Audio` أصلاً
+     (والتعاقبُ الزمنيّ يُقاس في نطاق الصوت بمهله الحقيقية، لا هنا). */
+  const hurry = (win) => {
+    const raw = win.setTimeout;
+    win.setTimeout = (fn, ms, ...rest) => raw.call(win, fn, Math.min(ms || 0, 25), ...rest);
+  };
+  const sentenceRows = [];
+  let sentenceScreens = 0;
+  let typesWalked = 0;
+  for (const node of firstOfEachType()) {
+    const sdoc = await open(`#/${node.type}/${node.part}`);
+    hurry(frame.contentWindow);
+    /* **والنمذجةُ تُتَمّ ثم يُنقَر «تَابِعْ»** — فالجملةُ لا تُرى إلا في جولةٍ تُلعَب.
+       ويُنتظَر **أوّلُ ما يجيء** (زرٌّ أو لوح): البواباتُ بلا نمذجةٍ أصلاً، فلا
+       تُدفَع مهلةُ انتظارٍ لزرٍّ لا يجيء. */
+    const go = await until(sdoc,
+      (d) => d.querySelector('.station-body .next') || d.querySelector(BOARDS_ANY), 22000);
+    if (go?.classList?.contains('next')) {
+      go.click();
+      await until(sdoc, (d) => d.querySelector(BOARDS_ANY), 12000);
+    }
+    typesWalked++;
+    const line = sdoc.querySelector('.q-sentence');
+    if (!shownNow(line)) continue;
+    sentenceScreens++;
+    const board = line.closest('.q-solve');
+    const terms = [...line.querySelectorAll('.q-term .figure')].map((f) => Number(f.dataset.drawn));
+    const signs = [...line.querySelectorAll('.q-sign')].map((s) => s.textContent.trim());
+    const value = terms.slice(1).reduce(
+      (sum, term, i) => (signs[i] === '−' ? sum - term : sum + term), terms[0]);
+    const want = Number(board?.dataset.answer);
+    const slot = line.querySelector('.q-ask');
+    if (!(terms.length >= 2 && slot && Number.isFinite(want) && value === want)) {
+      sentenceRows.push(`${node.type}: ${terms.join(` ${signs[0] || '?'} `)} = ${value}`
+        + ` والسؤالُ جوابُه ${Number.isFinite(want) ? want : '؟'}`
+        + (slot ? '' : ' — ولا خانةَ سؤالٍ في الجملة'));
+    }
+  }
+  ok(sentenceRows.length === 0 && typesWalked >= 20,
+    `و**لا جملةَ رمزية تتصدّر سؤالاً ليست جوابَه**: ${sentenceScreens} شاشةً بجملةٍ `
+    + `من ${typesWalked} نوعَ عقدةٍ مجرودٍ من المنهج — خانةُ الجملة هي جوابُ سؤالها`
+    + (sentenceRows.length ? ` — **المخالف: ${sentenceRows.join(' | ')}**` : ''));
 
   /* ————— ١١ي‌ب) «اجعلهما سواء» تُجتاز **لمساً مباشراً** (الجلسة م٥) —————
 

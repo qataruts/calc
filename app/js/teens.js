@@ -29,6 +29,18 @@
 // ثم يُسأل عن الحصيلة في الإطارين. وشقُّ المُضاف من المصيِّر (`split`) فيُرى بلونين:
 // هذا ما يُكمِل العشرة، وهذا ما يفضل عنها — **بلا سطرِ تلوينٍ واحد** في الشاشة.
 //
+// ————— وثلاثةُ عهودٍ زادها بلاغُ الميدان ٧ (المالك، ١٦ أغسطس) —————
+//
+// «كم بقي للعشرة ثم ٩+٣ مربكة. كم بقي لوحدها اوكي، لكن لما ٩ + ٣؟» — والسؤالُ سليمٌ
+// بذاته (هو سؤالُ الجسور المدروس)، والإرباكُ **من مشهدٍ لا يشرح نفسَه**:
+//
+//   • **كلُّ سؤالٍ تتصدّره جملتُه**: جملةُ الجمع الرمزية سؤالٌ آخر جوابُه خانتُها، فلا
+//     تُعرَض فوق السؤال الأول (الإطاران وحدَهما مشهدُه) — وتظهر مع «كَمْ صَارَتْ مَعًا؟».
+//   • **والعبورُ يُرى حركةً**: تنتقل النقاطُ من حزمة المُضاف إلى الخانات الفارغة واحدةً
+//     واحدة، فيقع «أَكْمِلِ الْعَشَرَةَ» أمام العين ولا يُستبدَل المشهدُ قفزةً.
+//   • **والشقُّ الملوّن عونٌ لا إفشاء**: لونُه يقول الجواب، فهو نمذجةٌ في «شاهِدْ»
+//     و«جرِّبْ مَعِي»، وفي «وحدك» **يُطلَب بالنقر** (عهدُ المرحلة ٦ جارِها).
+//
 // ————— وخمسةُ عهودٍ أخرى —————
 //
 // ١) **الجوابُ من المرسوم**: العددُ المبنيّ مجموعُ ما رسمته الخانتان، و«ما يُكمِل
@@ -206,6 +218,66 @@ async function countUp(fig, alive = () => true) {
   await new Promise((r) => setTimeout(r, BEAT));
   if (!ones.length) return alive();
   return countMarks(ones, (i) => TEN + i + 1, alive);
+}
+
+// ————— العبورُ يُرى: نقاطٌ تنتقل إلى خانات الإطار (بلاغ الميدان ٧) —————
+
+/** زمنُ عبور النقطة الواحدة — **مصدرُه هنا** ويُمرَّر إلى الحركة في `app.css`. */
+const CROSS_MS = 320;
+
+const wait = (ms) => new Promise((r) => setTimeout(r, ms));
+
+/**
+ * **العبورُ يُرى حركةً** (بلاغ الميدان ٧): النقاطُ التي تُكمِل العشرة تنتقل من حزمة
+ * المُضاف إلى **خانات الإطار الفارغة** واحدةً واحدة — فيقع «أَكْمِلِ الْعَشَرَةَ» أمام
+ * العين، ولا يُستبدَل المشهدُ دفعةً فينقطع الخيطُ بين ما قاله الطفلُ وما وقع.
+ *
+ * **وهي كسوةٌ لا كمّية**: النقاطُ الطائرة طبقةٌ فوق الشكلين **بلا `data-mark`** — فلا
+ * يتبدّل ما يقرؤه قارئُ المصيِّر ولا جوابُ التمرين (الجوابُ من المرسوم كما هو).
+ * **وعددُ ما عبر يُعلَن** (`data-filled` على الإطار) فيقيسه الحارس: امتلأت العشرةُ
+ * **قبل** أن يصير المشهدُ إطارين — عبورٌ وقع لا قفزة.
+ *
+ * @param {object} frame الإطارُ الناقص — خاناتُه الفارغة وجهةُ العبور، **من الرسم**
+ * @param {object} give  حزمةُ المُضاف — أوائلُ نقاطها (شقُّها الأول) هي التي تعبر
+ */
+async function crossOver(frame, give, alive = () => true) {
+  const host = frame.box.parentElement;
+  const empty = frame.cells.slice(frame.drawn);
+  const movers = give.marks.slice(0, empty.length);
+  if (!host || !movers.length) return alive();
+  clearCross(frame, give);
+  const layer = h('div', { class: 'q-cross', css: { '--cross-ms': `${CROSS_MS}ms` } });
+  host.append(layer);
+  frame.el.dataset.filled = '0';
+  for (const [i, mark] of movers.entries()) {
+    if (!alive()) return false;
+    // **الموضعان من الرسم بعد التنسيق** لا من حسابٍ ثانٍ: ما يُرى هو ما يُقاس
+    const from = mark.getBoundingClientRect();
+    const to = empty[i].getBoundingClientRect();
+    const fly = h('span', {
+      class: 'q-fly',
+      css: {
+        left: `${from.left}px`, top: `${from.top}px`,
+        width: `${from.width}px`, height: `${from.height}px`,
+      },
+    });
+    layer.append(fly);
+    mark.classList.add('is-crossed');       // ومكانُ المغادر يبقى شاغراً يُرى
+    void fly.offsetWidth;                   // قراءةٌ تُجبِر التنسيق، وإلّا وقع الموضعان معاً
+    fly.style.transform = `translate(${(to.left + to.width / 2) - (from.left + from.width / 2)}px, `
+      + `${(to.top + to.height / 2) - (from.top + from.height / 2)}px)`;
+    await wait(CROSS_MS);
+    if (!alive()) return false;
+    frame.el.dataset.filled = String(i + 1);
+  }
+  return alive();
+}
+
+/** إزالةُ أثر العبور — كما تُزال آثارُ العدّ عند تبدّل المشهد أو إعادته. */
+function clearCross(frame, give) {
+  frame.box.parentElement?.querySelector('.q-cross')?.remove();
+  for (const mark of give.marks) mark.classList.remove('is-crossed');
+  delete frame.el.dataset.filled;
 }
 
 /**
@@ -416,14 +488,37 @@ function modelOf(station, rnd) {
     };
   }
 
+  /* **ونمذجةُ العبور مشهدان لا مشهد** (بلاغ الميدان ٧): إطارٌ ناقصٌ وحزمةٌ **تعبر
+     إليه**، ثم الإطاران — فيرى الطفلُ في «شاهِدْ» عينَ الترتيب الذي سيصنعه بيده، ولا
+     يبدأ الدرسُ من حصيلةٍ حاضرةٍ سلفاً. **والإطاران لا يُريان قبل أن يقع العبور**:
+     تُرتّب النمذجةُ مشهدَها بنفسها (`scene`) وتصفّره مع كل إعادة — والأشكالُ الثلاثة
+     **مُعلَنةٌ كلُّها** فيجردها الحارسُ بجبهة المحطة، فلا شكلَ يُرسَم خارج الجرد. */
   if (station.type === 'bridge') {
     const round = bridgeRound(station, rnd, { aided: true });
     return {
       title: ASK.total,
       hint: 'نُكْمِلُ الْعَشَرَةَ أَوَّلًا، ثُمَّ نَعُدُّ مَا فَضَلَ فَوْقَهَا',
       ops: round.ops,
-      figures: [round.whole],
-      count: (figs, alive) => countUp(figs[0], alive),
+      figures: [round.frame, round.give, round.whole],
+      scene: (figs) => {
+        clearCross(figs[0], figs[1]);
+        figs[0].box.hidden = false;
+        figs[1].box.hidden = false;
+        figs[2].box.hidden = true;
+      },
+      count: async (figs, alive) => {
+        const [frame, give, whole] = figs;
+        if (!(await crossOver(frame, give, alive))) return false;
+        await wait(BEAT / 2);               // العشرةُ التامّة تُرى لحظةً قبل أن يتبدّل المشهد
+        if (!alive()) return false;
+        clearCross(frame, give);
+        frame.box.hidden = true;
+        give.box.hidden = true;
+        whole.box.hidden = false;
+        // ثم **درسُ المحطة نفسُه**: حزمةٌ تُسمّى تامّةً («وَقَدِ اكْتَمَلَتِ الْعَشَرَةْ»)
+        // ثم آحادٌ تُعَدّ فوقها — فيقع الاسمُ على عشرةٍ اكتملت أمام العين للتوّ.
+        return countUp(whole, alive);
+      },
       reveal: {
         say: SAY.reveal,
         figures: [{ display: 'numeral', count: round.whole.count, seed: next() }],
@@ -634,13 +729,30 @@ function readView(round, hooks) {
 
 function bridgeView(round, hooks) {
   const frame = figureBox(round.frame, 'q-fact-fig');
-  const give = figureBox(round.give, 'q-fact-part');
+  /* **والشقُّ الملوّن عونٌ لا إفشاء** (بلاغ الميدان ٧): لونُ ما يُكمِل العشرة **يقول
+     الجواب**، فهو نمذجةٌ في «شاهِدْ» و«جرِّبْ مَعِي» — وفي «وحدك» حزمةٌ بلا شقّ حتى
+     **يُطلَب بالنقر**، عهدَ المرحلة ٦ جارِها («الكمّيةُ عوناً عند النقر»، بلا حدٍّ ولا
+     احتساب). وتبقى **الخاناتُ الفارغة هي السؤال** في الحالين. */
+  const lit = figureBox(round.give, 'q-fact-part');
+  const plain = figureBox({ ...round.give, split: null }, 'q-fact-part');
+  let give = round.aided ? lit : plain;
   const whole = figureBox(round.whole, 'q-fact-fig');
   const head = h('h2', {}, round.ask);
   const hint = h('p', { class: 'hint' }, round.hint);
   const choices = h('div', { class: 'q-choices' });
+  const peek = h('button', { class: 'btn btn--ghost q-peek' },
+    icon('eye'), ' أَرِنِي مَا يُكْمِلُ الْعَشَرَة');
   const gate = roundGate('اصنع عشرةً أولاً');
   let second = false;
+
+  const showSplit = () => {
+    peek.hidden = true;
+    if (give === lit) return;
+    give.box.replaceWith(lit.box);
+    give = lit;
+  };
+  peek.hidden = round.aided;
+  peek.addEventListener('click', showSplit);
 
   const slot = h('span', { class: 'q-ask num' }, '؟');
   const line = [];
@@ -649,13 +761,18 @@ function bridgeView(round, hooks) {
     line.push(figureBox(spec, 'q-term').box);
   }
   const sentence = line.length ? h('div', { class: 'q-sentence' }, ...line, slot) : null;
+  /* **وكلُّ سؤالٍ تتصدّره جملتُه** (بلاغ الميدان ٧): «٩ + ٣ = ؟» سؤالٌ آخر جوابُه
+     خانتُها، وخياراتُ السؤال الأول لا تجيبه — رمزان متنافران في نظرةٍ واحدة. فمشهدُ
+     السؤال الأول **الإطاران وحدَهما**، وتظهر الجملةُ مع «كَمْ صَارَتْ مَعًا؟». */
+  if (sentence) sentence.hidden = true;
 
   // **خاناتُ الإطار الفارغة هي السؤالُ الأول** — مقروءةً من الرسم لا من عددٍ مكتوب
   const gap = frame.cells.length - frame.drawn;
   const stage = h('div', { class: 'q-meet' }, frame.box, give.box);
   const board = h('div', { class: 'q-solve q-solve--bridge' },
     ...(sentence ? [sentence] : []),
-    h('div', { class: 'q-fact' }, h('div', { class: 'q-fact-body' }, stage)));
+    h('div', { class: 'q-fact' }, h('div', { class: 'q-fact-body' }, stage)),
+    peek);
   board.dataset.mode = 'bridge';
   board.dataset.answer = String(gap);
 
@@ -665,6 +782,8 @@ function bridgeView(round, hooks) {
     board.dataset.answer = String(whole.drawn);
     head.textContent = ASK.total;
     hint.textContent = 'حُزْمَةٌ تَامَّةٌ وَمَا فَضَلَ فَوْقَهَا';
+    peek.hidden = true;                     // ولا عونَ يُطلَب لكمّيةٍ صارت هي المشهد
+    if (sentence) sentence.hidden = false;   // **والجملةُ تتصدّر سؤالَها هي**
     stage.replaceChildren(whole.box);
     for (const cell of [...choices.children]) cell.remove();
     for (const spec of round.second) choices.append(cardFor(spec));
@@ -681,8 +800,14 @@ function bridgeView(round, hooks) {
         cell.btn.classList.add('good');
         pop(cell.btn);
         if (!second) {
-          // **والجولةُ لم تنتهِ**: سؤالٌ ثانٍ يليه، فتُرَدّ الحريةُ عند الخروج
+          /* **والجولةُ لم تنتهِ**: سؤالٌ ثانٍ يليه، فتُرَدّ الحريةُ عند الخروج.
+             **والعبورُ يُرى قبل أن يُقال**: يُكشَف الشقُّ (إن كان عوناً مطويّاً) ثم
+             تعبر النقاطُ إلى الخانات الفارغة، فتُسمّى العشرةُ تامّةً وقد اكتملت أمامه. */
+          showSplit();
+          if (!(await crossOver(frame, give, hooks.alive))) return;
           await say(ASK.ten);
+          if (!hooks.alive()) return;
+          await wait(BEAT / 2);      // العشرةُ التامّة تُرى لحظةً قبل أن يتبدّل المشهد
           if (!hooks.alive()) return;
           await toTotal();
           return;
@@ -704,6 +829,7 @@ function bridgeView(round, hooks) {
         await countUp(whole, hooks.alive);
         clearCount(whole);
       } else {
+        showSplit();               // ومع التصحيح يُكشَف العونُ (عهدُ المرحلة ٦ جارِها)
         await countCells(frame, hooks.alive);
         clearCells(frame);
       }

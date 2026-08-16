@@ -1760,6 +1760,30 @@ a.btn { color: inherit; text-decoration: none; }
 .q-solve--bridge .q-fact-part > .figure { --unit: .72px; }
 .q-solve--bridge .q-meet { gap: 1.4rem; align-items: flex-start; }
 
+/* ————— العبورُ يُرى: نقاطٌ تنتقل إلى خانات الإطار (بلاغ الميدان ٧) —————
+
+   **طبقةٌ فوق الشكلين لا كمّيةٌ فيهما**: النقطةُ الطائرة `span` بلا `data-mark`، فلا
+   يتبدّل ما يقرؤه قارئُ المصيِّر ولا جوابُ التمرين. وموضعُها من الرسم بعد التنسيق
+   (`getBoundingClientRect`)، فالطبقةُ **مثبَّتةٌ بالمنظور** (`fixed`) لتتّفق الإحداثيتان.
+   **وزمنُها من `teens.js`** (`--cross-ms`) — مصدرٌ واحد للحركة وللانتظار. */
+.q-cross { position: fixed; inset: 0; z-index: 5; pointer-events: none; }
+
+.q-fly {
+  position: absolute;
+  border-radius: 50%;
+  background: var(--accent, var(--accent-quantity));
+  transition: transform var(--cross-ms, 320ms) ease-in-out;
+}
+
+/* ومكانُ المغادر يبقى شاغراً يُرى — فيُعرَف من أين عبر (نظيرُ «ما غادر يُشطَب») */
+.fig-dot.is-crossed { fill: none; stroke: var(--ink-soft); stroke-width: 4; opacity: .45; }
+
+/* **ومَن طلب سكونَ الحركة يُعطَه**: النقطةُ تحلّ في خانتها بلا انزلاق، ويبقى العبورُ
+   **واحدةً بعد واحدة** — فالدرسُ في التتابع لا في الانزلاق. */
+@media (prefers-reduced-motion: reduce) {
+  .q-fly { transition-duration: 1ms; }
+}
+
 /* شريطُ النمط ومشهدُ القياس: بطلا شاشتيهما، ويُفردان على عرض البطاقة */
 .q-solve--pattern,
 .q-solve--measure { display: flex; justify-content: center; margin: .5rem 0 1rem; }
