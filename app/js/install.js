@@ -43,16 +43,41 @@ export function installState({ standalone, ua, touchPoints, promptReady, memo, n
   return safari ? 'ios' : 'ios-other';
 }
 
+/**
+ * **حالُ التثبيت تُقرأ من هنا ولا تُكرَّر** (الجلسة د٣): «أمثبَّتٌ هو؟» سؤالٌ جوابُه
+ * في هذا الملفّ وحدَه — وضعُ العرض المستقلّ، وعَلَمُ سفاري على iOS. فمن احتاجه
+ * (بطاقةُ أول تشغيل في `placement.js`) **يسأله ولا يكتب المقياسَ ثانيةً**: مقياسان
+ * في موضعين يفترقان يومَ تتبدّل المنصّة، فيقول أحدُهما «مثبَّت» ويقول الآخر «متصفّح».
+ */
+export const standalone = () => matchMedia('(display-mode: standalone)').matches
+  || navigator.standalone === true;
+
+/** أيمكن فتحُ نافذة التثبيت بنقرةٍ الآن؟ (الحدثُ مُمسَك — كروم/إيدج/أندرويد وحدها). */
+export const canPrompt = () => Boolean(deferredPrompt);
+
+/**
+ * فتحُ نافذة التثبيت الحقيقية — **زرُّ الشريط نفسُه** يُنادى من موضعٍ ثانٍ بلا شيفرةٍ
+ * ثانية (الحدثُ يُستهلك مرةً واحدة بحكم المنصة، والرفضُ يُرقِد الشريطَ أسبوعَه).
+ */
+export async function promptInstall() {
+  const prompt = deferredPrompt;
+  if (!prompt) return false;
+  deferredPrompt = null;
+  prompt.prompt();
+  const { outcome } = await prompt.userChoice;
+  if (outcome !== 'accepted') remember({ dismissedAt: Date.now() });
+  paint();                                // نجاحُ التثبيت يصمُت عبر appinstalled
+  return outcome === 'accepted';
+}
+
 const memo = () => { try { return JSON.parse(localStorage.getItem(KEY)) || {}; } catch { return {}; } };
 const remember = (patch) => {
   try { localStorage.setItem(KEY, JSON.stringify({ ...memo(), ...patch })); } catch { /* تخزينٌ ممتلئ: يظهر الشريط أكثر، ولا يضرّ */ }
 };
 
 function state() {
-  const standalone = matchMedia('(display-mode: standalone)').matches
-    || navigator.standalone === true;
   return installState({
-    standalone,
+    standalone: standalone(),
     ua: navigator.userAgent,
     touchPoints: navigator.maxTouchPoints || 0,
     promptReady: Boolean(deferredPrompt),
@@ -79,15 +104,7 @@ function paint() {
         'ثبّت «اِحْسِبْ» على هذا الجهاز — يفتح من أيقونته ويعمل بلا إنترنت.'),
       h('button', {
         class: 'btn btn--primary install-go',
-        onclick: async () => {
-          const prompt = deferredPrompt;
-          if (!prompt) return;
-          deferredPrompt = null;          // الحدثُ يُستهلك مرةً واحدة بحكم المنصة
-          prompt.prompt();
-          const { outcome } = await prompt.userChoice;
-          if (outcome !== 'accepted') remember({ dismissedAt: Date.now() });
-          paint();                         // نجاحُ التثبيت يصمُت عبر appinstalled
-        },
+        onclick: () => promptInstall(),
       }, 'ثبّت الآن'),
     ];
   } else if (mode === 'ios') {

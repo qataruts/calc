@@ -37,6 +37,10 @@ import './share.js';
 import './units.js';
 import './intro.js';
 import * as install from './install.js';
+/* **بطاقةُ أول تشغيل وحدَها** (الجلسة د٣): تُستورَد البطاقةُ لا الامتحان — زرُّها
+   يفتح بوابةَ لوحة وليّ الأمر، **ولا شاشةَ امتحانٍ مسجَّلة هنا ولا مسارَ يبلغه طفل**
+   (عهدُ `placement.js`: بابُه اللوحةُ وحدَها). */
+import { firstRunCard, focusSection } from './placement.js';
 import * as support from './support.js';
 import {
   h, icon, faceEl, toast, go, arNum, starsRow, topbar, brandMark, landmark, DEV,
@@ -98,6 +102,13 @@ function renderMap() {
   );
 
   const main = h('main', { class: 'map' });
+
+  /* **بطاقةُ أول تشغيل في صدر الخريطة** (الجلسة د٣ — بلاغ «ثبّت أولاً ثم امتحن»):
+     سطرٌ لوليّ الأمر على **رحلةٍ بكرٍ وحدَها**، يغيب بأوّل نجمةٍ يكسبها الطفل وبـ«لاحقاً»
+     — وحين يغيب **لا يُلحَق بالشجرة شيء** (`null`)، فلا فراغَ محجوزٌ ولا زحزحةَ لصدر
+     الخريطة. وقرارُه كلُّه في `placement.js` (الشرطُ والنصُّ والبابُ)، وهذا موضعُه فقط. */
+  const firstRun = firstRunCard();
+  if (firstRun) main.append(firstRun);
 
   const review = reviewCard();
   if (review) main.append(review);
@@ -380,6 +391,12 @@ async function render() {
   paintUpdateNote();                   // يظهر في الهدوء ويغيب عن الدرس (لا يقاطع)
   if (!name) revealNext();
   else window.scrollTo(0, 0);
+  /* **ومن جاء من بطاقة أول تشغيل نزل إلى قسمه** (الجلسة د٣): الطلبُ يُرفَع عند كبس
+     زرّها ويُستوفى هنا **بعد أن تُحَلّ بوّابةُ الضرب وتُرسَم اللوحة** — فالبابُ بوابةٌ
+     لا امتحان، والنزولُ لمن طلبه وحدَه. **وموضعُه بعد ردّ الشاشة إلى رأسها** لا قبله:
+     كلُّ شاشةٍ تُفتَح تُردّ إلى أعلاها، فنزولٌ يسبقه يُلغى في اللحظة نفسِها (وقد وقع
+     فعلاً — أمسكه حارسُ المتصفّح بموضع الزرّ من النافذة، ٢٣٥٢ من ١١٩٤). */
+  focusSection(app, name === 'parent');
 }
 
 /** إبقاء العقدة التالية في مجال النظر عند العودة للخريطة. */

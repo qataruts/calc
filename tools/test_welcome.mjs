@@ -360,6 +360,11 @@ for (const [label, src, where] of [
   ['أنجِز الكل بثلاث', mainJs, 'main.js'],
   ['محو التقدّم', mainJs, 'main.js'],
   ['مراجعة اليوم', mainJs, 'main.js'],
+  // **وزرّا بطاقة أول تشغيل** (الجلسة د٣): موضعُهما `placement.js` — البطاقةُ
+  // ونصُّها وبابُها هناك، وليس في `main.js` منها إلا موضعُها من الخريطة.
+  ['امتحان اللحاق', placementJs, 'placement.js'],
+  ['لاحقاً', placementJs, 'placement.js'],
+  ['ثبّته على الجهاز أولاً — تقدّمُ طفلك يُحفظ في التطبيق', placementJs, 'placement.js'],
 ]) {
   ok(guide.includes(label) && src.includes(label),
     `«${label}» موعودٌ في الدليل وموجودٌ بنصّه في ${where}`);

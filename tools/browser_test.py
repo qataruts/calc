@@ -27,7 +27,7 @@
 
 # (ولا سطرَ `سَوقة:` هنا: هذا الملفّ سَوقةُ المتصفّح نفسُها لا حارسٌ يُشغَّل بوسيطٍ
 #  مُعلَن — وفحصُه الذاتيّ يجرده `test_selftests.mjs` ويشغّله.)
-# يحرس نطاق map: app/index.html app/css/** app/js/ui.js app/js/main.js app/js/parent.js app/js/progress.js app/js/curriculum.js app/js/support.js app/fonts/** app/icons/**
+# يحرس نطاق map: app/index.html app/css/** app/js/ui.js app/js/main.js app/js/parent.js app/js/progress.js app/js/curriculum.js app/js/support.js app/js/placement.js app/js/install.js app/fonts/** app/icons/**
 # يحرس نطاق screens: app/js/** app/css/** app/emoji/**
 # يحرس نطاق audio: app/audio/** app/js/audio.js app/js/station.js tools/audio_queue.json
 # وجولتاها الأخريان (مقاساتُ الجهاز والمرجعُ التعريفيّ) لهما مادّتاهما كذلك:

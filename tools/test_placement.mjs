@@ -438,8 +438,15 @@ ok(/placementSection/.test(parentSrc) && /امتحان اللحاق/.test(parent
   'قسمُ «امتحان اللحاق» في اللوحة');
 ok(/placement\.renderPlacement\(/.test(parentSrc) && /examining/.test(parentSrc),
   'والامتحانُ يحلّ محلّ اللوحة خلف بوابتها — لا مسارَ ثانياً يبلغه طفل');
-ok(!/placement/.test(bare(src('main.js'))),
-  'ولا بابَ له في التوجيه — فلا يفتحه طفلٌ بعنوانٍ يكتبه');
+/* **والمحروسُ أن لا مسارَ يبلغ الامتحانَ، لا أن يكون الاسمُ غائباً** (تدقيقُ الجلسة
+   د٣): كان البابُ يجرد كلمةَ `placement` من `main.js` كلِّها، فلمّا دخلت **بطاقةُ أول
+   تشغيل** صدرَ الخريطة (وهي تستورد البطاقةَ وحدَها وزرُّها يفتح **بوابةَ اللوحة**)
+   لَاحمرّ على ما ليس عيباً — **وبقي الحكمُ نفسُه أشدَّ**: لا شاشةَ امتحانٍ مسجَّلة،
+   ولا نداءَ لمُصيِّره، ولا مسارٌ في العنوان يبلغه طفلٌ بكتابته. */
+const mainSrc = src('main.js');
+ok(!/renderPlacement|registerScreen\(\s*['"]placement/.test(bare(mainSrc))
+  && !/#\/placement|rungItems|renderSession/.test(bare(mainSrc)),
+  'ولا بابَ له في التوجيه — لا شاشةَ مسجَّلة ولا مسارٌ يفتحه طفلٌ بعنوانٍ يكتبه');
 ok(!/https:\/\//.test(parentSrc), 'واللوحةُ تبقى صفرَ عناوينَ خارجية');
 
 /* **والوسمُ يُقرأ ولا يُثبَّت** (تصحيحُ الجلسة ث٢): كان الرقمُ مكتوباً هنا (`v28`)
@@ -455,6 +462,94 @@ ok(/'js\/placement\.js'/.test(sw) && Boolean(shellTag),
 const guide = rootSrc('app/welcome/guide.html');
 ok(/امتحان اللحاق/.test(guide) && /٨٠/.test(guide),
   'وسطرُه في الصفحة التعريفية (`guide.html`) بعتبته');
+
+/* ————— ١١) بطاقةُ أول تشغيل: بابُ اللحاق لمن جاء من البوابة (الجلسة د٣) —————
+ *
+ * **العلّة الميدانية** (بلاغ `2026-08-17-install-before-exam-first-run-card`): بوابةُ
+ * العائلة تدعو «اختبر مستوى طفلك»، فيمتحن الوالدُ ابنَه **في المتصفّح** ثم يثبّت
+ * التطبيق — **وعلى iOS المخزنان منفصلان** — فيجد الرحلةَ من أوّلها: قياسٌ صحيحٌ ضاع.
+ *
+ * **والمحروسُ خمسةٌ**، وكلُّها قيودُ صدقٍ لا زينة: بطاقةٌ تظهر لمن مشى شهراً **تُلحّ
+ * بامتحانٍ يمحو معناه**، وبطاقةٌ تعود بعد ردِّها **تُعلّم تجاهلَها**، وزرٌّ يفتح
+ * الامتحانَ رأساً **يفتحه طفلٌ على نفسه**، ودعوةُ امتحانٍ في المتصفّح **تصنع العيبَ
+ * الذي جاءت لتمنعه**.
+ */
+
+console.log('\n١١. بطاقةُ أول تشغيل — بكرٌ وحدَها، ولا تعود');
+
+const cardAt = (over) => pl.firstRunState({ virgin: true, later: false, installed: true, ...over });
+
+// ١) **بكرٌ وحدَها** — والبكارةُ محسوبةٌ من السجلّ لا عَلَماً يُكتب
+p.reset();
+store.clear();
+const firstId = p.allNodes()[0].id;
+const virginNow = p.untouched();
+p.recordAttempt('count', 5, 'touch', false);      // محاولةٌ خاطئة: لعبَ ولم يكسب
+const afterTry = p.untouched();
+p.reset();
+store.clear();
+ok(virginNow && !afterTry && cardAt({}) === 'exam' && cardAt({ virgin: false }) === 'hidden'
+  && cardAt({ virgin: false, installed: false }) === 'hidden',
+  'تظهر على رحلةٍ بكرٍ وحدَها — **ومحاولةٌ خاطئةٌ تكفي لتغيب** (لعبَ ولم يكسب نجمة)');
+ok(/progress\.untouched\(\)/.test(placementSrc)
+  && /skills\(\)\.length === 0 && totalStars\(\) === 0/.test(src('progress.js')),
+  'وشرطُها **محسوبٌ من `progress.js`** — صفرُ نجومٍ وصفرُ محاولاتٍ في ليتنر، لا عَلَمَ يُكتب');
+
+// ٢) **«لاحقاً» تُخفيها إلى الأبد ولا تعود**
+p.reset();
+store.clear();
+ok(cardAt({ later: true }) === 'hidden' && cardAt({ later: true, installed: false }) === 'hidden'
+  && p.untouched(),
+  '**و«لاحقاً» تُخفيها ولو كانت الرحلةُ بكراً** — في الحالين معاً (امتحاناً وتثبيتاً)');
+ok(/rememberLater[\s\S]{0,200}setItem\(FIRST_KEY/.test(placementSrc)
+  && !/removeItem\(FIRST_KEY|delete .*FIRST_KEY/.test(placementSrc),
+  '**ولا تعود**: مِذكرتُها تُكتب في التخزين ولا موضعَ في الشيفرة كلِّها يمحوها');
+
+// ٣) **وتغيب بأوّل نجمةٍ يكسبها الطفل** — بلا سطرٍ ثانٍ يقولها
+p.setStars(firstId, 1);
+const afterStar = p.untouched();
+ok(!afterStar && cardAt({ virgin: afterStar }) === 'hidden',
+  `**وتغيب بأوّل نجمة**: نجمةٌ واحدة على «${p.findNode(firstId).title}» ⇒ لا بطاقة`);
+p.reset();
+store.clear();
+
+// ٤) **زرُّها يفتح البوابةَ لا الامتحان** — فلا يفتح طفلٌ على نفسه امتحاناً
+/* **والمقيسُ جسدُ البطاقة وحدَه**: يُقتطع من مطلعها إلى فاصل القسم الذي يليها — فلو
+   قِيس ذيلُ الملفّ كلُّه لَشمل مُصيِّرَ الامتحان نفسَه فمرّ الحكمُ على ضجيجٍ ليس منها. */
+const cardBlock = placementSrc.slice(placementSrc.indexOf('export function firstRunCard'))
+  .split('// —————')[0];
+ok(/firstrun-exam[\s\S]{0,200}go\('#\/parent'\)/.test(cardBlock)
+  && !/renderPlacement|rungItems|examining/.test(cardBlock),
+  '**وزرُّها يفتح `#/parent`** (بوابةَ اللوحة الحسابية) لا الامتحانَ — ولا نداءَ '
+  + 'لمُصيِّر الامتحان من البطاقة');
+// **وينزل بها إلى قسمه بعد حلّ البوّابة لا قبله** — واللوحةُ طويلةٌ وقسمُه في ذيلها
+ok(/askSection\(\);/.test(cardBlock) && /\.start-placement/.test(placementSrc)
+  && /focusSection\(app, name === 'parent'\)/.test(mainSrc)
+  && /if \(!el\) return;/.test(placementSrc),
+  'وينزل بعدها إلى **قسم اللحاق** — وطلبُه يُستوفى بعد رسم اللوحة لا قبل حلّ بوّابتها');
+
+// ٥) **وفي المتصفّح تُقدَّم دعوةُ التثبيت وحدَها** — علّةُ البلاغ نفسُها
+ok(cardAt({ installed: false }) === 'install' && cardAt({ installed: true }) === 'exam',
+  '**ولا دعوةَ امتحانٍ قبل التثبيت**: غيرُ المثبَّت يرى دعوةَ التثبيت وحدَها');
+ok(pl.FIRST_TEXT.install === 'ثبّته على الجهاز أولاً — تقدّمُ طفلك يُحفظ في التطبيق.'
+  && !/امتحن|اللحاق/.test(pl.FIRST_TEXT.install),
+  `ونصُّها بلفظه: «${pl.FIRST_TEXT.install}» — ولا ذكرَ لامتحانٍ فيه`);
+ok(/install\.standalone\(\)/.test(placementSrc) && !/display-mode|navigator\.standalone/.test(placementSrc),
+  '**وحالُ التثبيت تُقرأ من `install.js` ولا تُكرَّر** — مقياسان في موضعين يفترقان');
+
+// **وبطاقةُ بالغٍ لا شاشةُ طفل**: صفرُ نصٍّ منطوقٍ فيها (وبابُ «لا `say`» أعلاه يشملها)
+ok(!/SPOKEN|say\(/.test(cardBlock) && /class: 'firstrun'/.test(cardBlock)
+  && /\.firstrun\s*\{/.test(rootSrc('app/css/app.css')),
+  'وهي بطاقةُ بالغٍ: صفرُ نصٍّ منطوق، وتنسيقُها في لوح التطبيق لا لونٌ تكتبه بيدها');
+// **ولا فراغَ محجوزاً حين تغيب**: تُرَدّ `null` فلا عقدةَ في الشجرة أصلاً
+ok(/if \(mode === 'hidden'\) return null;/.test(cardBlock)
+  && /const firstRun = firstRunCard\(\);\s*\n\s*if \(firstRun\) main\.append\(firstRun\);/.test(mainSrc),
+  'ولا فراغَ محجوزاً حين تغيب — تُرَدّ `null` فلا يُلحَق بصدر الخريطة شيء');
+
+const guideNow = rootSrc('app/welcome/guide.html');
+ok(guideNow.includes('ثبّته على الجهاز أولاً') && guideNow.includes('لاحقاً')
+  && /يفتح بوّابةَ لوحة وليّ الأمر لا الامتحانَ مباشرة/.test(guideNow),
+  'وسطرُها في الدليل العملي بترتيبه: التثبيتُ أوّلاً، والزرُّ يفتح البوابة');
 
 console.log(fails ? `\n${fails} فشل` : '\nكل اختبارات «بوابة اللحاق» ناجحة');
 process.exit(fails ? 1 : 0);

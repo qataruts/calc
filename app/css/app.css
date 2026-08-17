@@ -1167,6 +1167,29 @@ a.btn { text-decoration: none; }
 
 .install-bar .install-go { min-height: 3rem; padding: .35rem 1.15rem; font-size: 1rem; }
 
+/* **بطاقةُ أول تشغيل** (الجلسة د٣ — بلاغ «ثبّت أولاً ثم امتحن»): سطرٌ لوليّ الأمر في
+   صدر الخريطة على رحلةٍ بكرٍ وحدَها. **وهيئتُها هيئةُ شريط التثبيت** لا هيئةُ بطاقة
+   الطفل («تابع من هنا»): ورقٌ هادئ وحرفٌ أصغر — فيُقرأ سطرَ كبارٍ ولا يزاحم دعوةَ
+   الدرس تحته. وأزرارُها `btn` على هدف اللمس الكامل (لا زرَّ الشريط الأصغر): وليُّ
+   الأمر يلمسها على الجهاز نفسِه الذي يلمسه طفلُه. */
+.firstrun {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: .5rem .85rem;
+  margin: 0 0 1rem;
+  padding: .7rem .9rem;
+  background: var(--paper-deep);
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  font-size: .95rem;
+  line-height: 1.6;
+}
+
+.firstrun-text { flex: 1 1 16rem; margin: 0; color: var(--ink-soft); }
+
+.firstrun-row { display: flex; flex-wrap: wrap; gap: .5rem; }
+
 /* **سطرُ التحديث الهادئ** (الجلسة ١٠·أ): خبرٌ لوليّ الأمر لا مقاطعةٌ لدرس — **في
    مجرى الصفحة** فوق الترويسة (لا طبقةٌ عائمة تغطّي زرّاً)، **وبلا زرٍّ ولا فعل**،
    ولا يُرسَم أصلاً على شاشة تمرين (`paintUpdateNote` في `main.js`). وهيئتُه هيئةُ

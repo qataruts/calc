@@ -472,6 +472,99 @@
     && shadowOf(backDoc) === offShadow && !barOf(backDoc).getAttribute('title'),
     'وإطفاؤه يردّ الشاشةَ كما كانت — لا خطَّ ولا اسم');
 
+  /* ————— ١٠) **بطاقةُ أول تشغيل**: ثبّتْ أوّلاً ثمّ امتحنْ (الجلسة د٣) —————
+
+     **العلّة الميدانية** (بلاغ `2026-08-17-install-before-exam-first-run-card`): بوابةُ
+     العائلة تدعو «اختبر مستوى طفلك»، فيمتحن الوالدُ ابنَه **في المتصفّح** ثم يثبّت
+     التطبيق — **وعلى iOS للمثبَّت مخزنٌ مستقلٌّ عن سفاري** — فيجد الرحلةَ من أوّلها.
+
+     `tools/test_placement.mjs` يجرد الشرطَ والنصَّ في node، **وهذا يمشي المشهدَ كما
+     يمشيه وليُّ الأمر في أوّل فتحة**: يراها في المتصفّح **دعوةَ تثبيتٍ بلا امتحان**،
+     ثم تُبدَّل حالُ الجهاز إلى «مثبَّت» فتصير دعوةَ امتحانٍ بزرّين، فيكبس فتستقبله
+     **بوّابةُ الضرب** لا الامتحان، ثم «لاحقاً» فتغيب **ولا تعود بعد إعادة الفتح**،
+     ثم بنجمةٍ واحدة في المخزن تغيب كذلك — **وتعود إن مُحيت النجمةُ والمِذكرة معاً**،
+     وهذا ضابطُ التجربة: فغيابٌ دائم يُقرأ «حُكمٌ يعمل» وهو عطبٌ في البطاقة نفسِها.
+
+     **وحالُ التثبيت تُبدَّل بعَلَم `navigator.standalone`** (طريقُ iOS في `install.js`)
+     ولا تُعاد الصفحةُ بعده — فيُقرأ في الرسمة التالية كما يُقرأ على جهازٍ مثبَّت. */
+
+  const RUN_KEY = 'ihsib.firstrun.v1';
+  const RUN_PROGRESS = 'ihsib.progress.v1';
+  const firstNodeId = (await import('/js/curriculum.js')).sections()[0].nodes[0].id;
+  const wipeRun = () => {
+    frame.contentWindow.localStorage.removeItem(RUN_KEY);
+    frame.contentWindow.localStorage.removeItem(RUN_PROGRESS);
+  };
+  const cardOn = (d) => d.querySelector('.firstrun');
+  /** الزرُّ باسمه المعروض — فلا يُصدَّق صنفٌ في الشيفرة على نصٍّ لا يراه أحد. */
+  const runBtn = (d, sel) => [...d.querySelectorAll(`.firstrun ${sel}`)][0] || null;
+
+  wipeRun();
+  const runDoc = await open('#/');
+  const runCard = cardOn(runDoc);
+  ok(!!runCard && shownIn(runCard).includes('ثبّته على الجهاز أولاً')
+    && !runBtn(runDoc, '.firstrun-exam'),
+    '**في المتصفّح: دعوةُ التثبيت وحدَها** — ولا زرَّ امتحانٍ قبل التثبيت'
+    + ` («${shownIn(runCard || runDoc.body).split('\n')[0] || 'لا بطاقة'}»)`);
+
+  Object.defineProperty(runDoc.defaultView.navigator, 'standalone',
+    { value: true, configurable: true });
+  runDoc.defaultView.location.hash = '#/parent';
+  await until(runDoc, (d) => d.querySelector('.gate .giant'), 6000);
+  runDoc.defaultView.location.hash = '#/';
+  const examBtn = await until(runDoc, (d) => runBtn(d, '.firstrun-exam'), 6000);
+  const runButtons = [...runDoc.querySelectorAll('.firstrun button')];
+  const runTight = runButtons
+    .map((el) => ({ el, r: el.getBoundingClientRect() }))
+    .filter(({ r }) => Math.min(r.width, r.height) < TOUCH_MIN - 0.5);
+  ok(!!examBtn && runButtons.length === 2
+    && shownIn(runButtons[0]).includes('امتحان اللحاق')
+    && shownIn(runButtons[1]).includes('لاحقاً') && !runTight.length,
+    `**وفي المثبَّت: سطرٌ وزرّان** («${runButtons.map((b) => shownIn(b).trim()).join('» و«')}»)`
+    + ' يبلغان هدفَ اللمس');
+
+  examBtn?.click();
+  const runGate = await until(runDoc, (d) => d.querySelector('.gate .giant'), 6000);
+  ok(!!runGate && !runDoc.querySelector('.gate-head') && !runDoc.querySelector('.station-screen'),
+    '**وزرُّها يفتح بوّابةَ اللوحة الحسابية لا الامتحانَ** — فلا يفتح طفلٌ على نفسه امتحاناً');
+
+  /* **ثم ينزل بها إلى قسمه**: اللوحةُ طويلةٌ وقسمُ اللحاق في ذيلها، فوالدٌ جاء من
+     البطاقة يجد رأسَها ولا يعرف أين يمضي. **والمقيسُ ما تراه العين**: أزرّ القسم في
+     النافذة بعد حلّ الضرب؟ (والنزولُ سلسٌ، فيُنتظَر استقرارُه.) */
+  const [ra, rb] = (runGate?.textContent || '').split('×');
+  const runInput = runDoc.querySelector('.gate input');
+  if (runInput) {
+    runInput.value = String(arDigits(ra) * arDigits(rb));
+    runDoc.querySelector('.gate-go')?.click();
+  }
+  const startHere = await until(runDoc, (d) => d.querySelector('.start-placement'), 8000);
+  await new Promise((r) => setTimeout(r, 1200));      // نزولٌ سلسٌ يستقرّ
+  const startBox = startHere?.getBoundingClientRect();
+  ok(!!startBox && startBox.top >= 0 && startBox.bottom <= runDoc.defaultView.innerHeight,
+    '**ونزلت اللوحةُ إلى قسم اللحاق** — فزرُّه في النافذة لا في ذيلٍ يُبحَث عنه'
+    + ` (${startBox ? `أعلاه ${Math.round(startBox.top)} من ${runDoc.defaultView.innerHeight}` : 'لا زرّ'})`);
+
+  runDoc.defaultView.location.hash = '#/';
+  const laterBtn = await until(runDoc, (d) => runBtn(d, '.firstrun-later'), 6000);
+  laterBtn?.click();
+  ok(!!laterBtn && !cardOn(runDoc),
+    '**و«لاحقاً» تُخفيها في مكانها** بلا إعادة رسم الخريطة');
+  const afterLater = await open('#/');
+  ok(!cardOn(afterLater), '**ولا تعود بعد إعادة الفتح** — مِذكرتُها في التخزين');
+
+  frame.contentWindow.localStorage.removeItem(RUN_KEY);
+  frame.contentWindow.localStorage.setItem(RUN_PROGRESS,
+    JSON.stringify({ v: 1, stars: { [firstNodeId]: 1 } }));
+  const afterStar = await open('#/');
+  ok(!cardOn(afterStar),
+    `**وتغيب بأوّل نجمةٍ يكسبها الطفل** (${firstNodeId}) — ولو مُحيت مِذكرةُ «لاحقاً»`);
+
+  wipeRun();
+  const runBack = await open('#/');
+  ok(!!cardOn(runBack),
+    'وتعود على رحلةٍ بكرٍ بلا مِذكرة — **فالغيابان أعلاه حُكمُها لا عطبٌ فيها**');
+  wipeRun();
+
   }   // ————— ختامُ نطاق `map` —————
 
   if (inScope('screens')) {
@@ -2251,6 +2344,9 @@
     ['.preview-bar', 'شريطُ المعاينة — يخاطب المعلّم أو وليَّ الأمر لا الطفل'],
     ['.gate', 'بوابةُ لوحة وليّ الأمر الحسابية — بابٌ للبالغ بطبعه'],
     ['.install-bar', 'بابُ التثبيت — يخاطب وليَّ الأمر على جهازه'],
+    ['.firstrun', 'بطاقةُ أول تشغيل — سطرُ بالغٍ على رحلةٍ بكرٍ وحدَها (ثبّتْ أوّلاً '
+      + 'ثمّ امتحنْ)، تغيب بأوّل نجمةٍ يكسبها الطفل فلا يلقاها إلا مَن فتح التطبيقَ '
+      + 'ولم يمشِ فيه بعد — ولا فعلَ فيها يلزم الطفل'],
     ['.node, .continue, .station-head',
       'عقدُ الخريطة وبطاقةُ المتابعة ورأسُ المحطة: لغتُها **وجهٌ ولونٌ ونجومٌ وموضعٌ '
       + 'على الدرب** لا كلمات — الوجهُ رقمُ موضعها أو نجمةُ بوابتها (محرفٌ واحد لا '

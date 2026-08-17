@@ -120,7 +120,7 @@
 // فعاد حبرُه أبيض). **وهي رفعةٌ لازمة**: صفحةُ التعريف مستثناةٌ من العامل **ولوحُها
 // ليس** — فمن زار قبل اليوم يُخدَم لوحَ `v28` من القشرة فلا يرى الإصلاح أبداً حتى
 // تُبطَل. (ومعها أُعلن الحبرُ في `welcome/welcome.css` — خارجَ القشرة — احتياطاً.)
-const VERSION = 'v30';
+const VERSION = 'v31';
 const SHELL_CACHE = `ihsib-shell-${VERSION}`;
 const AUDIO_CACHE = 'ihsib-audio';        // ثابتٌ عمداً — لا يحمل VERSION
 const KEEP = [SHELL_CACHE, AUDIO_CACHE];

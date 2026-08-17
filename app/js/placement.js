@@ -54,6 +54,8 @@
 
 import { STAGES } from './curriculum.js';
 import { GATE_SIZE, passed } from './gate.js';
+// **حالُ التثبيت تُقرأ ولا تُكرَّر** (بطاقةُ أول تشغيل أدناه — الجلسة د٣).
+import * as install from './install.js';
 import * as progress from './progress.js';
 import { renderSession, sessionItems } from './review.js';
 // **مسطرةُ الامتحان الواحدة**: يُستورَد نطاقُ الامتحان وحدَه — لا مقدارٌ من مقادير
@@ -281,6 +283,119 @@ export function state() {
     next: list[at]?.title || null,
     gate: at >= list.length && stopper ? stopper.title : null,
   };
+}
+
+// ————— بطاقةُ أول تشغيل: بابُ اللحاق لمن جاء من البوابة (الجلسة د٣) —————
+//
+// **علّتُها ميدانية** (بلاغ العائلة `2026-08-17-install-before-exam-first-run-card`):
+// بوابةُ العائلة تدعو «اختبر مستوى طفلك — لا يبدأ من الصفر»، فيفتح الوالدُ التطبيقَ
+// **في المتصفّح** ويمتحن ابنَه — **وعلى iOS للمثبَّت مخزنٌ مستقلٌّ عن سفاري** — ثم
+// يثبّته فيجد الرحلةَ من أوّلها: **قياسٌ صحيحٌ ضاع ببابٍ خاطئ**. والعلاجُ في موضع
+// العيب: مَن دخل أوّلَ مرّةٍ **يُدَلّ على البابين قبل أن يمشي**، لا أن نعتمد على أن
+// يقرأ صفحةً قبل أن يدخل. **والقاعدةُ المستخلَصة**: كلُّ دعوةٍ من خارج التطبيق تُقاس
+// **بمخزن مَن يستجيب لها**.
+//
+// وأربعةُ قيودٍ لكلٍّ علّتُه:
+//  ١) **بطاقةُ بالغٍ لا شاشةُ طفل**: صفرُ نصٍّ منطوقٍ وصفرُ توليد — تُقرأ وتُترَك،
+//     وقالبُها شريطُ `install.js` القائم (سطرٌ وزرّان) لا شاشةُ تمرين.
+//  ٢) **وشرطُها ضيّقٌ محسوب**: **رحلةٌ بكر** (`progress.untouched()` — صفرُ نجومٍ
+//     وصفرُ محاولاتٍ في ليتنر) — فمن يمشي منذ أسبوع لا يراها أبداً، **ولا فراغَ
+//     محجوزاً حين تغيب** (تُرَدّ `null` فلا عقدةَ في الشجرة أصلاً).
+//  ٣) **وتُخفى إلى الأبد ولا تعود**: بـ«لاحقاً» (مِذكرةٌ في التخزين) أو **بأوّل نجمةٍ
+//     يكسبها الطفل** (يقولها الشرطُ نفسُه بلا سطرٍ ثانٍ) — فلا تُلحّ على من ردّها.
+//  ٤) **ولا تقع بنقرةٍ عابرة**: زرُّها يفتح **بوابةَ لوحة وليّ الأمر** (مسألةَ الضرب)
+//     لا الامتحانَ — فلا يفتح طفلٌ على نفسه امتحاناً. **وفي المتصفّح تُقدَّم دعوةُ
+//     التثبيت وحدَها**: امتحانٌ يُجرى في سفاري ثم يُثبَّت التطبيق يضيع بتمامه.
+
+const FIRST_KEY = 'ihsib.firstrun.v1';
+
+const firstMemo = () => {
+  try { return JSON.parse(localStorage.getItem(FIRST_KEY)) || {}; } catch { return {}; }
+};
+const rememberLater = () => {
+  try { localStorage.setItem(FIRST_KEY, JSON.stringify({ later: Date.now() })); }
+  catch { /* تخزينٌ ممتلئ: تعود البطاقةُ ما دامت الرحلةُ بكراً، ولا تضرّ */ }
+};
+
+/**
+ * ما تعرضه البطاقةُ الآن — **دالّةٌ نقيّة** تُفحَص في node بجدول حالات (كأختها
+ * `installState`): فمنطقُ «متى تُعرَض وأيَّ دعوةٍ تحمل» محروسٌ لا مظنون.
+ * @returns {'hidden'|'exam'|'install'}
+ */
+export function firstRunState({ virgin, later, installed }) {
+  if (later || !virgin) return 'hidden';
+  return installed ? 'exam' : 'install';
+}
+
+/** نصُّ السطر الواحد — لكلِّ حالٍ دعوتُها، **ولا دعوةَ امتحانٍ قبل التثبيت**. */
+export const FIRST_TEXT = {
+  exam: 'طفلُك يعرف العدَّ والحسابَ أصلاً (من مدرسةٍ أو مركز)؟ امتحنه فيبدأ من حيث'
+    + ' هو لا من أوّل الرحلة.',
+  install: 'ثبّته على الجهاز أولاً — تقدّمُ طفلك يُحفظ في التطبيق.',
+};
+
+/* **والبابُ يبلغ قسمَه لا رأسَ اللوحة**: اللوحةُ طويلة وقسمُ اللحاق في ذيلها، فوالدٌ
+   جاء من البطاقة يجد رأسَ اللوحة ولا يعرف أين يمضي. **وبينهما بوّابةُ الضرب**، فلا
+   يُنزَل بالشاشة إلا **بعد أن تُحَلّ** وتُرسَم اللوحةُ فعلاً — ولذلك طلبٌ يُرفَع ثم
+   يُستوفى في أوّل رسمةٍ تحمل القسمَ، **ويسقط بمغادرة اللوحة** فلا ينزل بمن لم يطلب. */
+let wantSection = false;
+
+/** يطلب النزولَ إلى قسم اللحاق بعد فتح البوابة (تناديه البطاقةُ وحدَها). */
+export const askSection = () => { wantSection = true; };
+
+/**
+ * يُستوفى الطلبُ بعد كل رسمةٍ من الموجِّه.
+ * @param {ParentNode} root جذرُ الشاشة المرسومة الآن
+ * @param {boolean} onParent أنحن في مسار اللوحة؟ (وإلا سقط الطلبُ)
+ */
+export function focusSection(root, onParent) {
+  if (!wantSection) return;
+  if (!onParent) { wantSection = false; return; }
+  const el = root.querySelector('.start-placement');
+  if (!el) return;                    // البوّابةُ ما زالت معروضة — يُنتظَر حلُّها
+  wantSection = false;
+  el.scrollIntoView({ block: 'center', behavior: 'smooth' });
+}
+
+/**
+ * البطاقةُ عقدةً — أو `null` فلا أثرَ لها في الشجرة (لا فراغَ محجوز).
+ * تُنادى من صدر الخريطة (`main.js`)، **وتزيل نفسَها** بـ«لاحقاً» فلا تُعاد رسمةُ
+ * الخريطة كلِّها لسطرٍ يُخفى.
+ */
+export function firstRunCard() {
+  const mode = firstRunState({
+    virgin: progress.untouched(),
+    later: Boolean(firstMemo().later),
+    installed: install.standalone(),
+  });
+  if (mode === 'hidden') return null;
+
+  const later = h('button', {
+    class: 'btn firstrun-later',
+    onclick: () => { rememberLater(); card.remove(); },
+  }, 'لاحقاً');
+
+  // **البابُ بوابةُ اللوحة لا الامتحان**: `#/parent` تعرض مسألةَ الضرب أوّلاً، ومن
+  // ورائها قسمُ اللحاق — نقرتان لوليّ الأمر، وبابٌ مغلقٌ في وجه الطفل.
+  const invite = mode === 'exam'
+    ? h('button', {
+      class: 'btn btn--primary firstrun-exam',
+      onclick: () => { askSection(); go('#/parent'); },
+    }, 'امتحان اللحاق')
+    // **وزرُّ التثبيت القائم إن أمكن**: حيث يعطينا النظامُ الحدثَ (كروم/إيدج/أندرويد).
+    // وحيث لا يعطيه (iOS) فشريطُ `install.js` فوقها يشرح خطوتيه — ولا نَعِد بما لا نملك.
+    : install.canPrompt()
+      ? h('button', {
+        class: 'btn btn--primary firstrun-install',
+        onclick: () => install.promptInstall(),
+      }, 'ثبّت الآن')
+      : null;
+
+  const card = h('div', { class: 'firstrun' },
+    h('p', { class: 'firstrun-text' }, FIRST_TEXT[mode]),
+    h('div', { class: 'firstrun-row' }, invite, later),
+  );
+  return card;
 }
 
 // ————— الشاشة: جلسةُ ملء شاشةٍ بنسق بوّابتنا —————
