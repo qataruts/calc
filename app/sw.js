@@ -112,7 +112,10 @@
 // بحبرٍ تباينُه ٢٫٠٢:١ — والإصلاحُ منشورٌ لا يبلغه.
 // **وإلى `v27` في الجلسة د** (وضعُ الدعم): ملفٌّ جديد في القشرة (`js/support.js`)
 // وتحرّكت الشيفرةُ واللوحُ معاً — ومقابضُ الوضع لا تبلغ جهازاً بقي على المخزون.
-const VERSION = 'v27';
+// **وإلى `v28` في الجلسة ل** (بوابةُ اللحاق): ملفٌّ جديد في القشرة (`js/placement.js`)
+// وتحرّك `parent.js` و`review.js` معه — وامتحانُ اللحاق بابُه اللوحةُ فيلزم أن يعمل
+// دون إنترنت كسائرها.
+const VERSION = 'v28';
 const SHELL_CACHE = `ihsib-shell-${VERSION}`;
 const AUDIO_CACHE = 'ihsib-audio';        // ثابتٌ عمداً — لا يحمل VERSION
 const KEEP = [SHELL_CACHE, AUDIO_CACHE];
@@ -141,6 +144,7 @@ const SHELL = [
   'js/ops.js',
   'js/parent.js',
   'js/patterns.js',
+  'js/placement.js',
   'js/progress.js',
   'js/quantity.js',
   'js/registry.js',

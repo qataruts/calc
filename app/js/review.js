@@ -286,9 +286,15 @@ export function setBuilders({ item, fillers, view, longs } = {}) {
 
 /** تمارينُ جلسةٍ من مهاراتٍ بعينها — تستعملها المراجعةُ والبوابات معاً.
  *  **والجرعةُ تُقرأ عند كل بناء** لا مرّةً عند التحميل — فمن بدّل المقبضَ في اللوحة
- *  يجد أثرَه في جلسة اليوم لا في إقلاعٍ قادم. */
-export function sessionItems(due, size = sessionSize(), rnd = Math.random) {
-  return buildSession({ due, itemFor, fillers: fillersOf(rnd), longs: longKinds, size, rnd });
+ *  يجد أثرَه في جلسة اليوم لا في إقلاعٍ قادم.
+ *
+ *  **وحوضُ التنويع يُحقَن ليُمنَع** (الجلسة ل): امتحانُ اللحاق يقيس **شريحةً بعينها**
+ *  ليفتحها، فلو كمّل عيّنتَه من حصيلة الطفل لَحُكم على مرحلةٍ بخطأٍ في مادّةٍ ليست
+ *  منها — فيمرّره فارغاً. ومَن سكت أخذ الحوضَ كما كان (المراجعةُ والبوّابات). */
+export function sessionItems(due, size = sessionSize(), rnd = Math.random, fillers = null) {
+  return buildSession({
+    due, itemFor, fillers: fillers || fillersOf(rnd), longs: longKinds, size, rnd,
+  });
 }
 
 export function renderReview() {

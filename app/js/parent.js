@@ -15,6 +15,7 @@
 // (pill · vchip · note · chip) وتُلوَّن بمتغيّر `--accent`، فلا تحتاج تنسيقاً جديداً.
 
 import * as progress from './progress.js';
+import * as placement from './placement.js';
 import * as support from './support.js';
 import { CONCEPT_SECTIONS, conceptOf, rangeText, journeyConcepts } from './curriculum.js';
 import { h, go, toast, arNum, arCount, topbar, shake, PAUSE_ACCENT } from './ui.js';
@@ -39,6 +40,7 @@ const ENOUGH_MINUTES = 15;
 const STUCK_DAYS = 21;
 
 let unlocked = false;        // البوابة تُفتح لهذه الجلسة فقط (لا تُحفظ في التخزين)
+let examining = false;       // امتحانُ اللحاق جارٍ — يحلّ محلّ اللوحة ما دام
 
 /** ثوانٍ ← نصّ عربي مقروء. */
 export function minutesText(seconds) {
@@ -511,6 +513,54 @@ function journeySection(rerender) {
   );
 }
 
+/**
+ * **قسمُ امتحان اللحاق** (الجلسة ل — بلاغ `calc-catchup-gate-commissioned`):
+ *
+ * طفلٌ يعرف الحسابَ أصلاً (من مدرسةٍ أو مركز) لا يُحبَس في «كم ترى؟ ١–٢» — يُمتحَن
+ * فيُفتح له ما أثبته ويقف حيث ينكسر. **وموضعُه هذه اللوحة لا شاشةُ الطفل**: امتحانٌ
+ * يفتح محطاتٍ لا يقع بلمسةٍ عابرة، واللوحةُ محميّةٌ سلفاً بمسألةِ ضربٍ يعجز عنها
+ * الطفل — فالتحقّقُ من أنّ الفاتحَ بالغٌ قائمٌ بالبناء لا بزرٍّ ثانٍ.
+ *
+ * **وحدودُه تُقال هنا كما تقع**: البواباتُ لا تُقفز (تُجتاز بنفسها فتقصُر السلّم)،
+ * ولا يُغلق مفتوحٌ أبداً، والإعادةُ تستأنف من آخر حدّ.
+ */
+function placementSection(rerender) {
+  const info = placement.state();
+
+  const start = h('button', {
+    class: 'btn btn--primary start-placement',
+    onclick: () => {
+      if (!info.left) { toast('لا مرحلةَ تُمتحَن الآن'); return; }
+      examining = true;
+      // مغادرةُ الشاشة تُنهي الامتحان: فلا يعود وليُّ الأمر إلى نصفِ امتحانٍ لم يطلبه
+      addEventListener('hashchange', () => { examining = false; }, { once: true });
+      rerender();
+    },
+  }, 'امتحان اللحاق');
+
+  return h('div', {},
+    h('p', { class: 'hint' },
+      'طفلٌ يعرف العدَّ والحسابَ أصلاً (من مدرسةٍ أو مركز)؟ امتحنه هنا: مرحلةً مرحلة'
+      + ` بحتى ${arNum(placement.CAP)} تمارين من تمارين المراجعة نفسِها — ما يجتازه`
+      + ' بإصابة ٨٠٪ (عتبةُ بوابة الإتقان نفسُها) يُفتح له بمحطاته، وعند أول إخفاقٍ يقف'
+      + ' فتبدأ رحلتُه من هناك.'),
+    h('div', { class: 'row parent-tool' }, start,
+      info.left
+        ? h('span', { class: 'pill' }, `أمامه ${arNum(info.left)} من ${arNum(info.total)}`)
+        : h('span', { class: 'pill' }, 'لا مرحلةَ تُمتحَن الآن')),
+    info.next && h('p', { class: 'hint' }, `يبدأ من: ${info.next}.`),
+    // **والبوّابةُ تُسمّى حين تقصُر السلّم**: فلا يظنّ الوالدُ أنّ الامتحان انتهى وقد
+    // وقف عند بوّابةٍ يجتازها طفلُه بنفسه.
+    info.gate && h('p', { class: 'note' },
+      `والسلّمُ يقف عند «${info.gate}» — البواباتُ لا تُقفز: يعبرها بنفسه، ثم يُستأنف`
+      + ' الامتحانُ لما بعدها.'),
+    h('p', { class: 'note' },
+      'ولا يُغلق ما فُتح أبداً: الإعادةُ تستأنف من آخر حدٍّ بلغه، والنجمةُ الواحدة تفكّ'
+      + ' القفل ولا تدّعي إتقاناً — تبقى المحطةُ تدعوه إلى لعبها. وكلُّ محاولةٍ فيه'
+      + ' تُسجَّل في سجلّ مهاراته كأيّ محاولةٍ أخرى، ولا تُعَدّ مراجعةَ اليوم.'),
+  );
+}
+
 // ————— أقسام الحساب السبعة: **مفهومٌ بعملية لا درجة** (`METHOD.md §٦`) —————
 //
 // نصُّ المنهج: «لوحة وليّ الأمر: مفهومٌ بعملية لا درجة — (يقدّر حتى ٥ فوراً)، (يحتاج
@@ -701,6 +751,8 @@ function dashboard(rerender = () => {}) {
 
     ...section('تحكّم في الرحلة', journeySection(rerender)),
 
+    ...section('امتحان اللحاق — لطفلٍ يعرف حسابه', placementSection(rerender)),
+
     ...section('معاينةُ التطبيق كلِّه', previewSection()),
 
     // **«بلِّغنا» وحدةٌ مستقلة** (الجلسة غ): هذه اللوحةُ تعرض ما يخصّ الطفل، فالعنوانُ
@@ -726,16 +778,33 @@ function dashboard(rerender = () => {}) {
   );
 }
 
-/** الشاشة: البوابة أولاً، ثم اللوحة — والفتح يبقى ما دامت الصفحة مفتوحة. */
+/**
+ * الشاشة: البوابة أولاً، ثم اللوحة — والفتح يبقى ما دامت الصفحة مفتوحة.
+ *
+ * **وامتحانُ اللحاق يحلّ محلّ اللوحة ولا يفتح مساراً ثانياً**: هو جلسةُ ملء شاشةٍ
+ * للطفل خلف بوابة وليّ أمره، فمسارُه مسارُها (`#/parent`) — ولا عنوانَ يُكتب في شريط
+ * المتصفّح يبلغه طفلٌ بنفسه (ولذلك لا ذكرَ له في `main.js`). ويعود إلى اللوحة
+ * بـ`onDone`، ومغادرةُ الشاشة تُنهيه (المستمعُ في `placementSection`).
+ */
 export function renderParent(rerender) {
-  if (unlocked) return dashboard(rerender);
-  return gateScreen(() => {
-    unlocked = true;
-    rerender();
-  });
+  if (!unlocked) {
+    return gateScreen(() => {
+      unlocked = true;
+      rerender();
+    });
+  }
+  if (examining) {
+    const exam = placement.renderPlacement({
+      onDone: () => { examining = false; rerender(); },
+    });
+    if (exam) return exam;
+    examining = false;      // لم تبق درجةٌ تُمتحَن: اللوحةُ نفسُها لا شاشةٌ فارغة
+  }
+  return dashboard(rerender);
 }
 
 /** لإعادة إغلاق البوابة في الاختبارات. */
 export function lockGate() {
   unlocked = false;
+  examining = false;
 }

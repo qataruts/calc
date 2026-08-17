@@ -2909,6 +2909,119 @@
     + (faceShut.length ? ` — **${faceShut.join(' | ')}**` : '')
     + (bothFaces.size < 2 ? ' — **لم يُقَس الوجهان**' : ''));
 
+  /* ————— ١١ن) **بوابةُ اللحاق**: بابُها اللوحة، وفتحُها مُثبَت (الجلسة ل) —————
+
+     `tools/test_placement.mjs` يجرد السلّمَ والتغطيةَ والعتبةَ في node، **وهذا يمشي
+     المشهدَ كما يمشيه وليُّ الأمر**: يفتح اللوحةَ بحلّ ضربها، فيجد قسمَ اللحاق بعدد
+     درجاته، ثم يبدأ الامتحانَ فيحلّ محلّ اللوحة **جلسةَ ملء شاشة** بنسق بوّابتنا،
+     ويجيب من المرسوم حتى يعبر — **فيُقابَل ما كُتب في الجهاز**: عقدُ المرحلة الأولى
+     بنجمةٍ واحدة، وما بعدها على حاله. ثم يُنهي جلسةً بلا محاولةٍ واحدة فيقف عند
+     شرخه **ولا يُفتح شيء**.
+
+     والمقيسُ ما لا يمسكه جردُ مصدر: أنّ الشاشةَ تُرسَم فعلاً، وأنّ الفتحَ يبلغ
+     التخزين، وأنّ أزرارَها ليست حروفاً وحدَها (جردُ الصنف) وتبلغ هدفَ اللمس. */
+
+  const PROGRESS_KEY = 'ihsib.progress.v1';
+  const curric = await import('/js/curriculum.js');
+  const { arNum } = await import('/js/ui.js');
+  const { CAP } = await import('/js/placement.js');
+  // درجاتُ سلّمِ طفلٍ جديد: أقسامُ الرحلة قبل أوّل بوّابة — **محسوبةٌ من المنهج**
+  const rungCount = curric.sections().findIndex((s) => s.kind === 'gate');
+
+  frame.contentWindow.localStorage.removeItem(PROGRESS_KEY);
+  const catchDoc = await open('#/parent', '&dev=1');
+  const [catchA, catchB] = (catchDoc.querySelector('.gate .giant')?.textContent || '').split('×');
+  const catchGate = catchDoc.querySelector('.gate input');
+  if (catchGate) {
+    catchGate.value = String(arDigits(catchA) * arDigits(catchB));
+    catchDoc.querySelector('.gate-go')?.click();
+    await new Promise((r) => setTimeout(r, 500));
+  }
+  const startBtn = catchDoc.querySelector('.start-placement');
+  const leftPill = [...catchDoc.querySelectorAll('.parent-tool .pill')]
+    .map((el) => el.textContent.trim()).join(' ');
+  ok(!!startBtn && leftPill.includes(`أمامه ${arNum(rungCount)} من ${arNum(rungCount)}`),
+    `وفي اللوحة قسمُ «امتحان اللحاق» بعدد درجاته («${leftPill}» — ${rungCount} درجاتٍ`
+    + ' قبل أوّل بوّابة، وهي ما يحسبه المنهج)');
+
+  startBtn?.click();
+  const examHead = await until(catchDoc, (d) => d.querySelector('.gate-head'), 12000);
+  const examDots = catchDoc.querySelectorAll('.dots .dot').length;
+  ok(!!examHead && shownIn(examHead).includes('امْتِحَانُ اللَّحَاق')
+    && examDots > 0 && examDots <= CAP,
+    `وبدؤه يحلّ محلّ اللوحة **جلسةَ ملء شاشة** بنسق البوّابة (${examDots} تمريناً، `
+    + `وسقفُها ${CAP})`);
+  ok(shownIn(examHead).includes(curric.STAGES[0].title),
+    'وترويستُها تسمّي المرحلةَ التي يُمتحَن فيها');
+  ok(!catchDoc.querySelector('.audit') && catchDoc.querySelector('.station-screen'),
+    'واللوحةُ تغيب ما دام يُمتحَن — لا شاشتان في واحدة');
+  const examBare = bareButtons(catchDoc);
+  const examTight = undersized(catchDoc);
+  ok(!examBare.length && !examTight.length,
+    'وأزرارُها ليست حروفاً وحدَها وتبلغ هدفَ اللمس'
+    + (examBare.length ? ` — نصٌّ وحدَه: ${bareNames(examBare)}` : '')
+    + (examTight.length ? ` — ضيّقة: ${tightNames(examTight)}` : ''));
+
+  const catchVerdict = await play(catchDoc, 40);
+  ok(!!catchVerdict && !catchVerdict.classList.contains('celebrate--again'),
+    `ويُجاب من المرسوم حتى يُعبَر (${catchVerdict
+      ? shownIn(catchVerdict).split('\n')[1] || 'حكمٌ بلا عنوان' : 'لا حكم'})`);
+
+  /* **والفتحُ يُقاس على اللوحة لا في المخزن**: بطاريةُ الفحص تفتح التطبيق في وضع
+     المعاينة (`?preview=1`) **وهو لا يمسّ القرص عمداً** (`save` في `progress.js`) —
+     فالمقياسُ ما تراه عينُ وليّ الأمر بعد الامتحان: **نجومُ الرحلة = عقدُ المرحلة
+     الأولى بنجمةٍ واحدة لكلٍّ** (فلا نجمةَ زائدة تعني عقدةً فُتحت وراءها)، و«التالي»
+     **أوّلُ عقدةٍ في المرحلة الثانية** (فالجبهةُ وقفت حيث وقف الامتحان بالضبط). */
+  [...catchDoc.querySelectorAll('.celebrate .btn')]
+    .find((b) => shownIn(b).includes('يكفي'))?.click();
+  await until(catchDoc, (d) => d.querySelector('.audit'), 8000);
+  const leftAfter = [...catchDoc.querySelectorAll('.parent-tool .pill')]
+    .map((el) => el.textContent.trim()).join(' ');
+  ok(!!catchDoc.querySelector('.audit')
+    && leftAfter.includes(`أمامه ${arNum(rungCount - 1)} من ${arNum(rungCount)}`),
+    `و«يكفي اليوم» يردّه إلى اللوحة وقد نقصت درجةٌ («${leftAfter}»)`);
+
+  const firstNodes = curric.sections()[0].nodes.length;
+  /** النجومُ المكسوبة كما تقرؤها اللوحة — الشقُّ الأيمن من شارة «النجوم». */
+  const starsShown = (d) => ([...d.querySelectorAll('.audit-row .pill')]
+    .map((el) => el.textContent.trim()).find((t) => t.startsWith('النجوم')) || '')
+    .split(':')[1]?.split('/')[0].trim();
+  // (وسطرُ «أين هو الآن» لا سطرُ التوصية — وذاك يبدأ بـ«التالي في رحلته».)
+  const nextLine = [...catchDoc.querySelectorAll('.audit .hint')]
+    .map((el) => el.textContent.trim()).find((t) => t.startsWith('التالي:'));
+  ok(starsShown(catchDoc) === arNum(firstNodes),
+    `**والفتحُ يبلغ اللوحة**: نجومُ الرحلة ${starsShown(catchDoc)} — عقدُ المرحلة الأولى `
+    + `(${arNum(firstNodes)}) بنجمةٍ واحدة لكلٍّ ولا زيادةَ عقدةٍ وراءها`);
+  ok(nextLine === `التالي: ${curric.sections()[1].nodes[0].title}.`,
+    `و«التالي» أوّلُ عقدةٍ في المرحلة الثانية — فالجبهةُ وقفت حيث وقف («${nextLine}»)`);
+
+  /* **وأوّلُ إخفاقٍ يُنهي ولا يفتح شيئاً**: تُبدأ الدرجةُ التالية ثم تُنهى الجلسةُ
+     بلا محاولةٍ واحدة (زرُّ `?dev=1`) — فالحكمُ «لَيْسَ عبوراً» ولا زرَّ إعادةٍ فيه. */
+  catchDoc.querySelector('.start-placement')?.click();
+  await until(catchDoc, (d) => d.querySelector('.gate-head'), 12000);
+  [...catchDoc.querySelectorAll('.dev-row .btn')]
+    .find((b) => b.textContent.includes('إنهاء الجلسة'))?.click();
+  const stopped = await until(catchDoc, (d) => d.querySelector('.celebrate'), 8000);
+  ok(!!stopped && stopped.classList.contains('celebrate--again')
+    && shownIn(stopped).includes('وَقَفْنَا هُنَا'),
+    'وجلسةٌ بلا إصابةٍ تقف عند شرخها («وَقَفْنَا هُنَا»)');
+  ok(![...catchDoc.querySelectorAll('.celebrate .btn')].some((b) => shownIn(b).includes('أعِد')),
+    'ولا زرَّ إعادةٍ في شاشة الوقوف — أوّلُ إخفاقٍ يُنهي، والإعادةُ من اللوحة');
+
+  /* **ولا تفتح عقدةً واحدة**: يُخرَج بزرّ الشاشة نفسِه (وهو الذي **يُنهي الامتحان**
+     ثم يمضي إلى الخريطة — ولو بُدّل المسارُ بيدٍ لبقي الامتحانُ جارياً فرُسِمت درجتُه
+     التالية مكانَ اللوحة)، ثم تُفتَح اللوحةُ (وبوابتُها مفتوحةٌ لهذه الجلسة) فتُقرأ
+     نجومُها — هي هي، لم تزد بعقدةٍ من المرحلة التي وقف عندها. */
+  [...catchDoc.querySelectorAll('.celebrate .btn')]
+    .find((b) => shownIn(b).includes('الخريطة'))?.click();
+  await until(catchDoc, (d) => d.querySelector('main.map'), 8000);
+  catchDoc.defaultView.location.hash = '#/parent';
+  await until(catchDoc, (d) => d.querySelector('.audit'), 8000);
+  ok(starsShown(catchDoc) === arNum(firstNodes),
+    `ولم تُفتح بها عقدةٌ واحدة: النجومُ ${starsShown(catchDoc)} كما كانت — «الوقوفُ عند`
+    + ' الشرخ» لا يُثمر فتحاً');
+  frame.contentWindow.localStorage.removeItem(PROGRESS_KEY);
+
   }   // ————— ختامُ نطاق `screens` (صدرُه: المصيِّر والشاشاتُ والبوابات) —————
 
   if (inScope('audio')) {
