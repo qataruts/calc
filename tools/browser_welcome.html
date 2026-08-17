@@ -153,7 +153,32 @@ for (const width of [390, 820, 1280]) {
   ok(el.scrollWidth <= el.clientWidth + 1,
     `لا تمريرَ أفقيّ عند عرض ${width}px`);
 }
+/* **شريطُ الإنصاف: يُرى، ورابطُه ينزل نزولاً نظيفاً** (الجلسة ث٢ — أمرُ المالك عبر
+   مدير المجموعة): سطران تحت الصدر مباشرة يُريان الميزتين لمن لا يمرّر، ورابطُهما إلى
+   القسم المفصَّل. **والشريطُ العلويُّ لاصق** (`position: sticky`) — فالنزولُ لا يُقاس
+   بوصول العنوان إلى الشاشة بل بألّا يختفي تحته: يُقاس ارتفاعُ الشريط لحظتَها ويُقابَل
+   بموضع ترويسة القسم. **وأربعةُ عروض**: عرضان يلتفّ فيهما الشريطُ فيطول (١٥٦بك
+   و١١٠بك) وعرضان يستوي فيهما سطراً (٧٢بك) — فالحدودُ مقيسةٌ لا مظنونة. */
+for (const width of [360, 480, 640, 820]) {
+  frame.style.width = `${width}px`;
+  await sleep(160);
+  frame.contentWindow.scrollTo(0, 0);
+  await sleep(60);
+  const band = doc.querySelector('.w-band');
+  const link = band?.querySelector('a[href="#pace"]');
+  const bandBox = band?.getBoundingClientRect();
+  ok(!!band && !!link && bandBox?.height > 0 && bandBox?.top > 0,
+    `شريطُ الإنصاف معروضٌ عند ${width}px (${Math.round(bandBox?.height || 0)}بك ارتفاعاً)`);
+  link?.click();
+  await sleep(320);
+  const bar = Math.round(doc.querySelector('.w-top').getBoundingClientRect().height);
+  const head = Math.round(doc.querySelector('#pace > h2').getBoundingClientRect().top);
+  ok(head >= bar - 1,
+    `ونقرُه يُنزل ترويسةَ القسم تحت الشريط اللاصق عند ${width}px (${head}بك ≥ ${bar}بك)`);
+}
+
 frame.style.width = '820px';
+frame.contentWindow.scrollTo(0, 0);
 await sleep(140);
 
 const start = [...doc.querySelectorAll('a.w-start')];

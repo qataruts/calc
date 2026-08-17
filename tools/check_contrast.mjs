@@ -88,7 +88,21 @@ function resolve(value, vars, depth = 0) {
   return resolve(value.slice(0, m.index) + got + value.slice(m.index + m[0].length), vars, depth + 1);
 }
 
-/** `#rgb` · `#rrggbb` · `rgb()` ⇒ ثلاثةُ أعداد (٠–٢٥٥)، وما سواه `null`. */
+/** يقسم قائمةً على فواصلها العليا وحدَها — فـ`var(--a, b)` لا تنشقّ بفاصلتها. */
+function commas(text) {
+  const out = [];
+  let depth = 0;
+  let start = 0;
+  for (let i = 0; i < text.length; i++) {
+    if (text[i] === '(') depth++;
+    else if (text[i] === ')') depth--;
+    else if (text[i] === ',' && depth === 0) { out.push(text.slice(start, i)); start = i + 1; }
+  }
+  out.push(text.slice(start));
+  return out.map((s) => s.trim());
+}
+
+/** `#rgb` · `#rrggbb` · `rgb()` · `color-mix()` ⇒ ثلاثةُ أعداد (٠–٢٥٥)، وما سواه `null`. */
 function rgb(value) {
   const v = (value || '').trim();
   let m = v.match(/^#([0-9a-f]{3})$/i);
@@ -102,6 +116,26 @@ function rgb(value) {
   }
   if (v.toLowerCase() === 'white') return [255, 255, 255];
   if (v.toLowerCase() === 'black') return [0, 0, 0];
+  // **والممزوجُ يُحسَب لا يُهمَل** (الجلسة ث٢): أسطحُنا المصبوغة `color-mix` —
+  // لونُ لوحٍ بنسبةٍ فوق ورقٍ أو بطاقة — ولو رُدَّت `null` لَخرج كلُّ سطحٍ مصبوغ
+  // من القياس صامتاً، **وهو عينُ ما يقرؤه الوالد**. والنسبةُ من أيّ الطرفين جاءت
+  // (`A 8%, B` أو `A, B 92%`)، وما سُكت عنها فنصفان.
+  m = v.match(/^color-mix\(\s*in\s+srgb\s*,([\s\S]*)\)$/i);
+  if (m) {
+    const parts = commas(m[1]);
+    if (parts.length !== 2) return null;
+    const side = (text) => {
+      const p = /(?:^|\s)([\d.]+)%(?:\s|$)/.exec(text);
+      const bare = p ? `${text.slice(0, p.index)} ${text.slice(p.index + p[0].length)}` : text;
+      return { color: rgb(bare.trim()), pct: p ? Number(p[1]) / 100 : null };
+    };
+    const [a, b] = parts.map(side);
+    if (!a.color || !b.color) return null;
+    const wa = a.pct !== null ? a.pct : (b.pct !== null ? 1 - b.pct : 0.5);
+    const wb = b.pct !== null ? b.pct : 1 - wa;
+    const sum = wa + wb;
+    return sum > 0 ? [0, 1, 2].map((i) => (a.color[i] * wa + b.color[i] * wb) / sum) : null;
+  }
   return null;
 }
 
@@ -120,11 +154,15 @@ function ratio(fg, bg) {
 /** حبرٌ بشفافيةٍ يُركَّب على أرضيته — فالشفافُ لا يُقاس بقيمته المكتوبة. */
 const over = (fg, bg, alpha) => fg.map((c, i) => alpha * c + (1 - alpha) * bg[i]);
 
-/** نسبةُ قاعدةٍ بعينها: حبرُها على خلفيّتها، ورموزُها تُحلّ من لوحٍ يُمرَّر. */
-function ratioOf(css, selector, vars) {
+/**
+ * نسبةُ قاعدةٍ بعينها: حبرُها على خلفيّتها، ورموزُها تُحلّ من لوحٍ يُمرَّر.
+ * وإن كان الحبرُ على سطحٍ سواه (رابطٌ في شريط) سُمّي السطحُ فقُرئت منه الأرضية.
+ */
+function ratioOf(css, selector, vars, surfaceSel) {
   const own = decls(css, selector);
-  const fg = rgb(resolve(own.color, vars));
-  const bg = rgb(resolve(own.background || own['background-color'], vars));
+  const surface = surfaceSel ? decls(css, surfaceSel) : own;
+  const fg = rgb(resolve(own.color !== undefined ? own.color : surface.color, vars));
+  const bg = rgb(resolve(surface.background || surface['background-color'], vars));
   return fg && bg ? { fg, bg, ratio: ratio(fg, bg) } : { fg, bg, ratio: null };
 }
 
@@ -162,9 +200,16 @@ const LARGE_ON = [
 // **حكمُ المدير**: يُرفعان إلى ٤٫٥ — «قارئُهما والدٌ يقرأ نصاً، لا إعفاءَ بالجمهور».
 // وهما دائرتان صغيرتان (٠٫٩٥–١ريم) في `welcome.css`، **ورموزُ اللوح من `app.css`**
 // (الصفحةُ التعريفية لا تعرّف لوناً) — فتُقرأ الإعلاناتُ من ملفّها والرموزُ من اللوح.
+//
+// **وشريطُ الإنصاف نصٌّ على لون** (الجلسة ث٢): سطران في إطارٍ مصبوغٍ بلون اللوح تحت
+// صدر الرئيسة — أوّلُ ما يقرؤه مديرُ مركزٍ لا يمرّر. **وسطحُه ممزوج** (`color-mix`)
+// فلا يكفي أن يُقاس حبرُ الصفحة على ورقها، **ورابطُه يُقاس على سطح الشريط لا على
+// الورق** — فهو الحبرُ الذي يُنقر.
 const WELCOME_PAIRS = [
   { name: 'رقمُ بطاقة الأسس `.w-num`', on: '.w-num' },
   { name: 'رقمُ سطر الدقائق `.w-time .w-time-n`', on: '.w-time .w-time-n' },
+  { name: 'شريطُ الإنصاف `.w-band`', on: '.w-band' },
+  { name: 'رابطُه `.w-band a`', on: '.w-band a', surface: '.w-band' },
 ];
 
 /** يقيس زوجاً في وضعٍ واحد — ويقرأ خلفيّتَه من قاعدة سطحه إن لم يُعلنها. */
@@ -253,7 +298,7 @@ function main() {
     for (const [mode, isNight] of [['نهاراً', false], ['ليلاً', true]]) {
       // الإعلاناتُ من ملفّ الصفحة، والرموزُ من لوح التطبيق (مصدرُ الألوان الوحيد)
       const vars = isNight ? { ...tokens(day), ...tokens(night) } : tokens(day);
-      const m = ratioOf(wcss, pair.on, vars);
+      const m = ratioOf(wcss, pair.on, vars, pair.surface);
       ok(m.ratio !== null && m.ratio >= THRESHOLD,
         `${pair.name} ${mode}: ${hex(m.fg)} على ${hex(m.bg)} = ${fmt(m.ratio)}`);
     }
@@ -334,6 +379,26 @@ function selfTest() {
     '.node--done .node-face');
   T(!/var\(--on-accent\b/.test(STRAY.color),
     '**ومَن كتب حبرَه بيده يُمسَك** — فلا يُقاس زوجٌ لا يستعمله أحد');
+
+  // ————— السطحُ الممزوج: يُحسَب ولا يُهمَل (الجلسة ث٢) —————
+  const half = rgb('color-mix(in srgb, #000000 50%, #ffffff)');
+  T(half && half.every((c) => Math.abs(c - 127.5) < 1e-9), 'ونصفان من أسودَ وأبيض رماديٌّ وسط');
+  T(JSON.stringify(rgb('color-mix(in srgb, #000000, #ffffff)')) === JSON.stringify(half),
+    'وما سُكت عن نسبته فنصفان');
+  const tint = rgb(resolve('color-mix(in srgb, var(--accent-x) 8%, var(--paper-deep))', vars));
+  T(tint && tint[0] > 220, `وصبغةُ ٨٪ تبقى قريبةً من أرضيّتها (${hex(tint)})`);
+  // **وشريطُ الإنصاف يُقاس بسطحه الممزوج، ورابطُه على سطحِه لا على الورق**
+  const BAND = `.w-band { background: color-mix(in srgb, var(--accent-x) 8%, var(--paper-deep));`
+    + ` color: var(--ink); }\n.w-band a { color: var(--ink); }`;
+  T(ratioOf(BAND, '.w-band', vars).ratio >= THRESHOLD,
+    `وحبرُ الشريط على سطحه المصبوغ: ${fmt(ratioOf(BAND, '.w-band', vars).ratio)}`);
+  T(ratioOf(BAND, '.w-band a', vars, '.w-band').ratio >= THRESHOLD,
+    `ورابطُه معه: ${fmt(ratioOf(BAND, '.w-band a', vars, '.w-band').ratio)}`);
+  const PALE = BAND.replace('color: var(--ink); }', 'color: var(--accent-pale); }');
+  T(ratioOf(PALE, '.w-band', vars).ratio < THRESHOLD,
+    `**وحبرٌ باهتٌ في الشريط يسقط**: ${fmt(ratioOf(PALE, '.w-band', vars).ratio)} دون ${THRESHOLD}:1`);
+  T(rgb('linear-gradient(180deg, #fff, #000)') === null,
+    'وما ليس لوناً يُرَدّ `null` فيحمرّ البابُ ولا يمرّ صامتاً');
 
   // أرقامُ التعريفية: حالُها قبل الإصلاح تسقط، وبعده تمرّ (وكلاهما مقيسٌ لا مُصدَّق)
   const WAS = '.w-num { background: var(--accent-x); color: var(--on-accent); }';

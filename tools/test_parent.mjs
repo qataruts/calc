@@ -49,6 +49,7 @@ globalThis.localStorage = {
 const progress = await import(new URL('progress.js', APP));
 const curriculum = await import(new URL('curriculum.js', APP));
 const parent = await import(new URL('parent.js', APP));
+const support = await import(new URL('support.js', APP));
 
 let fails = 0;
 let asleep = 0;
@@ -268,6 +269,77 @@ if (!nodes.length) {
       .join(' · ')})`);
   progress.reset();
 }
+
+// ————— ٦ب) والنسخةُ تحفظ ما ضبطه المعلّم: مقابضُ وضع الدعم —————
+//
+// **العلّةُ التي وُلد منها هذا الباب** (الجلسة ث٢): النسخةُ كانت تصدّر `snapshot()`
+// وحدَه، ومقابضُ الدعم في مخزنٍ آخر — **فتُفقَد بنقل الجهاز**، ولا يظهر الفقدُ يومَ
+// الحفظ بل يومَ يمشي الطفلُ بإيقاعٍ لم يُضبَط له، **ولا شاشةَ تُخفق**. فيُقاس هنا
+// أربعةٌ: أنّها تُنقَل، وأنّها **تعمل** بعد الاستعادة (لا أن تُخزَّن وكفى)، وأنّ
+// **الأقدمَ يُقرأ ولا يُطفئ ما في الجهاز**، وأنّ ملفاً محرَّراً بيدٍ **لا يخترع مقبضاً**.
+
+console.log('\n٦ب. وما ضبطه المعلّم يسافر معها');
+
+progress.reset();
+support.reset();
+record('subitize|3|flash', [true, true, true], today);
+support.setMode(true);
+support.set('calm', false);                       // شغّل الوضعَ وأطفأ مقبضاً منه
+const knobsBefore = support.snapshot();
+const bundleText = progress.backupText();
+
+const parsed = JSON.parse(bundleText);
+ok(parsed.format === progress.BACKUP_FORMAT && progress.BACKUP_FORMAT >= 2
+  && parsed.support !== undefined,
+`تُكتب المقابضُ في الملفّ بشكلٍ يعلن نفسه (format ${parsed.format})`);
+// (و`|| {}` لا تتساهل: غيابُ الحقل يسقط في الباب الذي قبله وفي المقابلة بعده —
+//  وحارسٌ ينهار بعطبٍ يُخفي البقيّةَ ويكتب أثراً مكان بلاغٍ يُقرأ.)
+ok(Object.keys(parsed).every((k) => ['kind', 'format', 'savedAt', 'state', 'support'].includes(k))
+  && Object.entries(parsed.support || {}).every(([k, v]) =>
+    (k === 'on' || support.KEYS.includes(k)) && typeof v === 'boolean'),
+'ولا بياناتِ طفلٍ زائدة: مقاديرُ نعم/لا بمفاتيحَ من الجدول لا غير');
+
+progress.reset();
+support.reset();
+ok(!support.modeOn() && Object.keys(support.snapshot()).length === 0,
+  'ويُمحى الجهازُ فيعود الإيقاعُ إلى القائم (كما يقع في جهازٍ جديد)');
+
+const back = progress.readBackup(bundleText);
+ok(!back.error && progress.restore(back.bundle), 'ثم تُقرأ النسخةُ وتُستعاد');
+
+const knobsAfter = support.snapshot();
+const keys = [...new Set([...Object.keys(knobsBefore), ...Object.keys(knobsAfter)])];
+const drift = keys.filter((k) => knobsBefore[k] !== knobsAfter[k]);
+ok(drift.length === 0,
+  `وتعود المقابضُ **حقلاً حقلاً** (${keys.map((k) => `${k}=${knobsAfter[k]}`).join(' · ')})`
+  + (drift.length ? ` — اختلف: ${drift.join('، ')}` : ''));
+
+// **وتعمل لا تُخزَّن وكفى**: ما يقرؤه المحرّكُ يتحرّك بحركة الملفّ
+ok(support.modeOn() && support.isOn('dose') && !support.isOn('calm'),
+  'وتشتغل فعلاً: الوضعُ مشتغل، ومقبضٌ أُطفئ يبقى مطفأً بعد الاستعادة');
+ok(support.sessionSize() === support.KNOBS.dose.supported,
+  `وجرعةُ الجلسة تتبعها: ${support.sessionSize()} تمارين`
+  + ` (المُعانةُ ${support.KNOBS.dose.supported} والقائمةُ ${support.KNOBS.dose.standing})`);
+ok(progress.backupSummary(back.bundle).support === true,
+  'ويقرؤها وليُّ الأمر قبل التأكيد (فلا يُبدَّل إيقاعُ طفله صامتاً)');
+ok(/وضع الدعم/.test(src('parent.js')) && /سطرُ|في النسخة/.test(src('parent.js')),
+  'وسطرُ «ما في النسخة» يذكرها بعبارته');
+
+// **والأقدمُ يُقرأ ولا يُطفئ**: ملفُّ الشكل ١ لا يحمل مقابضَ، فلا يمحو ما ضُبط هنا
+const older = JSON.stringify({ kind: progress.BACKUP_KIND, format: 1, state: parsed.state });
+const oldRead = progress.readBackup(older);
+ok(!oldRead.error && progress.restore(oldRead.bundle) && support.modeOn() && !support.isOn('calm'),
+  'ونسخةٌ بلا الحقل (شكلٌ ١) تُستعاد ولا تُرفَض — ولا تُطفئ ما ضبطه المعلّم هنا');
+ok(progress.backupSummary(oldRead.bundle).support === null,
+  'ولا يُقال عنها في اللوحة شيء (لا تحمل مقابضَ فلا تمسّها)');
+
+// **ولا يخترع ملفٌّ مقبضاً**: قيمةٌ نصّية تسقط، ومفتاحٌ ليس في الجدول لا يدخل المخزن
+progress.restore({ ...back.bundle, support: { on: true, evil: 1, calm: 'لا' } });
+const dirty = support.snapshot();
+ok(support.modeOn() && !('evil' in dirty) && support.isOn('calm'),
+  'وملفٌّ محرَّرٌ بيدٍ لا يدسّ مقبضاً ولا قيمةً نصّية (يُنقّى على الجدول)');
+progress.reset();
+support.reset();
 
 console.log(fails
   ? `\n${fails} فشل`

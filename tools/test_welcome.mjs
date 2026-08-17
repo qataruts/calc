@@ -563,5 +563,52 @@ ok(parentJs.includes('support.PROMISE'),
 ok(flat(guide).includes(flat(support.PROMISE)) && flat(html).includes(flat(support.PROMISE)),
   'والدليلُ والرئيسةُ يحملانه حرفاً بحرف — فالمواضعُ الثلاثة نصٌّ واحد');
 
+// ————— ١٠ب. شريطُ الإنصاف: تحت الصدر مباشرة، ورابطُه إلى قسمه —————
+//
+// **أمرُ المالك عبر مدير المجموعة** (`2026-08-17-equity-band-under-hero.md`): «وضعُ
+// الدعم في الواجهة أو بعدها مباشرة لأهميته». والقسمُ وحدَه لا يكفي: **مديرُ مركزٍ لا
+// يمرّر** — فسطران تحت الصدر يُريانه الميزتين قبل أن يقرّر.
+//
+// **وهذا البابُ يمنع سقوطَه وسقوطَ رابطه في تحريرٍ قادم**، وأربعةُ أخطارٍ يقيسها:
+//   • **يسقط الشريطُ كلُّه** فتعود الميزتان إلى العمق (ولا يشتكي أحد: الصفحةُ تُرسَم).
+//   • **يُزحزَح موضعُه** فيصير في العمق — فيُقاس أنّه بعد الصدر **وقبل كل قسم**،
+//     **وأنّ التثبيت يبقى أوّلَ الأقسام** (أمرُ المالك السابق لم يُزحزَح).
+//   • **ينكسر رابطُه** أو يُعاد تسميةُ القسم — فيُقاس أنّ هدفَه قسمُ الميزتين بعينه.
+//   • **يتضخّم فيصير قسماً ثانياً** يكرّر ما تحته — فيُقاس أنّه سطران بلا بطاقةٍ ولا
+//     صورةٍ ولا نصِّ الحدّ، وأنّ القسمَ المفصَّل باقٍ مكانَه (فوقه).
+
+console.log('\n١٠ب. شريطُ الإنصاف تحت الصدر');
+
+const bandAt = html.indexOf('<aside class="w-band"');
+const band = bandAt >= 0 ? flat(html.slice(bandAt, html.indexOf('</aside>', bandAt))) : '';
+ok(band.length > 0, 'وتحت الصدر شريطُ إنصافٍ يُرى قبل أن يمرّر الزائرُ سطراً');
+
+const heroEnds = html.indexOf('</header>', html.indexOf('class="w-hero"'));
+const between = html.slice(heroEnds, bandAt).replace(/<!--[\s\S]*?-->/g, '');
+ok(bandAt > heroEnds && !/<\w/.test(between),
+  'وموضعُه تحت الصدر **مباشرة** — لا عنصرَ بينهما (تعليقُ العلّة وحدَه)');
+
+const firstSection = html.indexOf('<section class="w-section"');
+ok(bandAt < firstSection && /id="install-first"/.test(html.slice(firstSection, firstSection + 90)),
+  'وقبل الأقسام كلِّها — **والتثبيتُ يبقى أوّلَها** فلا يزاحمه سطران');
+
+for (const name of FEATURES)
+  ok(band.includes(name), `ويسمّي الميزةَ باسمها الذي في قسمها: «${name}»`);
+ok(band.includes('من مستواه') && band.includes('بإيقاعٍ أهدأ'),
+  'وبلفظنا نحن: يبدأ «من مستواه» لا من أوّل كمّية، ويمشي به «بإيقاعٍ أهدأ»');
+ok(band.includes('اختياريّ') && band.includes('لوحة وليّ الأمر'),
+  'وكلاهما اختياريٌّ من لوحة وليّ الأمر (لا من شاشة الطفل)');
+
+const target = /<a href="#([a-z-]+)"/.exec(band)?.[1] || '';
+ok(target === 'pace' && html.includes(`id="${target}"`) && html.indexOf(`id="${target}"`) > bandAt,
+  `ورابطُه ينزل إلى قسمه المفصَّل (#${target || 'لا رابط'}) — والقسمُ باقٍ مكانَه تحته`);
+
+ok(!/<img|<script|w-card/.test(band) && !flat(band).includes(flat(support.PROMISE)),
+  'وهو سطران لا قسمٌ ثانٍ: لا صورةَ فيه ولا جافاسكربت ولا بطاقةَ ولا نصُّ الحدّ مكرَّراً');
+
+const bandCss = css.slice(css.indexOf('.w-band {'), css.indexOf('}', css.indexOf('.w-band {')));
+ok(bandCss.includes('var(--accent-') && !/#[0-9a-fA-F]{3}/.test(bandCss),
+  'ولونُه من لوح التطبيق لا قيمةٌ منسوخة');
+
 console.log(fails ? `\n${fails} فشل` : '\nكل اختبارات «المرجع التعريفي» ناجحة');
 process.exit(fails ? 1 : 0);

@@ -452,13 +452,33 @@ export function reviewStreak(today = new Date()) {
 // الخصوصية). وثمنُها أن **محو بيانات المتصفّح أو حذف التطبيق المثبَّت يمحو رحلة
 // الطفل كلها**، وأن تبديل الجهاز يبدأ من الصفر. فالمخرج ملفٌّ صغير يملكه وليّ الأمر:
 // نجومٌ وصناديقُ ليتنر ودقائقُ ومراجعات.
+//
+// **والشكلُ ٢: ومعها ما ضبطه المعلّم** (الجلسة ث٢): مقابضُ وضع الدعم في مخزنٍ آخر
+// (`ihsib.support.v1`) فكانت **تُفقَد بنقل الجهاز** — يستعيد المعلّمُ رحلةَ طفله
+// كاملةً ثم يمشي به التطبيقُ بإيقاعٍ لم يُضبَط له. فصارت النسخةُ **ملفَّ وليّ الأمر**:
+// رحلةُ الطفل من هذا المخزن، ومعايرةُ الإيقاع من مخزنها — **كلٌّ يعود إلى موضعه**.
+//
+// **وحالُ امتحان اللحاق ليست حقلاً يُزاد**: الامتحانُ **لا مخزنَ له أصلاً** — أثرُه
+// نجومٌ في `stars` ومحاولاتٌ في `skills` (`placement.js`: «كلُّ محاولةٍ تدخل ليتنر
+// قياساً حقيقياً بلا وسمٍ خاصّ»)، وموضعُ استئنافه **محسوبٌ** من الرحلة نفسِها
+// (`startRung`: أوّلُ درجةٍ لم تكتمل عقدُها). فما فتحه الامتحانُ مستعادٌ من اليوم،
+// **ولو خُزّن حدُّه لصار حقيقتين لشيءٍ واحد** — والمحسوبُ لا يُنسَخ.
+//
+// **وقراءةُ الأقدم متساهلة**: ملفُّ الشكل ١ (بلا مقابض) يُستعاد كما هو، **ولا يُطفئ
+// ما ضبطه المعلّم على هذا الجهاز** — فالغائبُ ليس أمراً بالمحو.
 
 export const BACKUP_KIND = 'ihsib.progress';
-export const BACKUP_FORMAT = 1;      // شكل الملف نفسه — لا نسخة حالة الطفل (`VERSION`)
+export const BACKUP_FORMAT = 2;      // شكل الملف نفسه — لا نسخة حالة الطفل (`VERSION`)
 
-/** النسخة كما تُكتب في الملف: ترويسةٌ تعرّف نفسها، وحالةُ الطفل كاملةً. */
+/** النسخة كما تُكتب في الملف: ترويسةٌ تعرّف نفسها، وحالةُ الطفل، ومعايرةُ إيقاعه. */
 export function backup(at = Date.now()) {
-  return { kind: BACKUP_KIND, format: BACKUP_FORMAT, savedAt: at, state: snapshot() };
+  return {
+    kind: BACKUP_KIND,
+    format: BACKUP_FORMAT,
+    savedAt: at,
+    state: snapshot(),
+    support: support.snapshot(),
+  };
 }
 
 export function backupText(bundle = backup()) {
@@ -509,6 +529,10 @@ export function backupSummary(bundle) {
     stars: done.reduce((sum, n) => sum + Math.min(MAX_STARS, stars[n.id]), 0),
     skills: Object.keys(bundle?.state?.skills || {}).length,
     seconds: bundle?.state?.seconds || 0,
+    // **وحالُ وضع الدعم تُقال قبل التأكيد**: الاستعادةُ تكتب فوق ما ضبطه المعلّمُ على
+    // هذا الجهاز — فيراه قبل أن يقع. و`null` تعني «الملفُّ لا يحمل مقابض» (شكلٌ أقدم)
+    // ⇒ لا يُمَسّ ما في الجهاز، فلا يُقال في اللوحة شيء.
+    support: bundle?.support === undefined ? null : bundle.support?.on === true,
   };
 }
 
@@ -521,6 +545,9 @@ export function restore(bundle) {
   if (!next || typeof next.stars !== 'object') return false;
   state = { ...blank(), ...next, v: VERSION };
   save();
+  // **ولكلِّ مخزنٍ استعادتُه**: المقابضُ تعود إلى مخزنها هي (وتنقّي ما ليس منها)،
+  // وملفٌّ لا يحملها (شكلٌ ١) لا يُطفئ ما ضبطه المعلّمُ هنا.
+  if (bundle.support !== undefined) support.restore(bundle.support);
   return true;
 }
 

@@ -125,10 +125,18 @@
    ملفٍّ لا يدخل القشرة أبداً — فيصحّ الزرّان ولو خُدم اللوحُ القديم. */
 .w-wrap a.btn--primary, .w-topnav a.btn--primary { color: var(--on-accent); }
 
+/* **وفراغُ النزول يفرغ للشريط اللاصق** (الجلسة ث٢): كان `1.5rem` فيحطّ عنوانُ القسم
+   على ٢٤بك من أعلى الشاشة **والشريطُ العلويُّ لاصقٌ فوقه** — فيختفي تحته ويبدو الرابطُ
+   كأنّه لم يعمل (وهو ما أمسكه حارسُ المتصفّح يومَ كُتب رابطُ شريط الإنصاف).
+   **والقيمُ مقيسةٌ لا مظنونة**: ارتفاعُ الشريط ١٥٦بك دون ٤٨٠ · ١١٠بك عندها · ٧٢بك
+   فوق ٥٦٠ (يلتفّ ضيقاً ويستوي واسعاً)، فلكلِّ مدىً فراغُه فوق قياسه. */
 .w-section {
   margin: 3.5rem 0 0;
-  scroll-margin-top: 1.5rem;
+  scroll-margin-top: 5.5rem;
 }
+
+@media (max-width: 40rem) { .w-section { scroll-margin-top: 7.5rem; } }
+@media (max-width: 30rem) { .w-section { scroll-margin-top: 10.5rem; } }
 
 .w-section > h2 {
   font-size: clamp(1.5rem, 4vw, 2rem);
@@ -954,3 +962,29 @@
 .w-steps { margin: 0 0 1.5rem; }
 .w-steps svg { display: block; width: 100%; height: auto; }
 .w-steps figcaption { margin-top: .5rem; }
+
+/* **شريطُ الإنصاف** (أمر المالك، ١٧ أغسطس ٢٠٢٦): سطران تحت الصدر مباشرة يُريان
+   الميزتين لمن لا يمرّر، ويحيلان إلى قسمهما المفصَّل. **ولونُه من اللوح** —
+   `--accent-gate` لونُ قسم الميزتين نفسِه — لا قيمةٌ منسوخة.
+
+   **ويُعلن حبرَه كما أعلن أرضيّته**: من فرش لنفسه سطحاً غيرَ سطح الصفحة لا يترك
+   حبرَه للوراثة — فيُقاس ما يقرؤه الوالدُ بـ`tools/check_contrast.mjs` نهاراً
+   وليلاً. **ورابطُه بحبر الشريط لا بأزرق المتصفّح**: ذاك ليس في لوحنا ولا يُقاس،
+   فيُعرَف رابطاً بخطٍّ تحته وثِقَلٍ وسهمِ نزول. */
+.w-band {
+  margin: 1.5rem 0 0;
+  padding: 1rem 1.25rem;
+  border-radius: 18px;
+  border: 2px solid color-mix(in srgb, var(--accent-gate) 35%, var(--line));
+  background: color-mix(in srgb, var(--accent-gate) 8%, var(--card));
+  color: var(--ink);
+}
+
+.w-band p { margin: 0; font-size: 1.02rem; }
+
+.w-band a {
+  color: var(--ink);
+  font-weight: 700;
+  text-decoration: underline;
+  white-space: nowrap;
+}
