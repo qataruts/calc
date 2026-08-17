@@ -3,7 +3,7 @@
 // يحرس: app/welcome/** app/js/** app/emoji/**
 //   (المرجعُ التعريفيّ وأرقامُه المحسوبةُ من المنهج ولقطاتُه من التطبيق)
 //
-// المحروسُ هنا ثمانية، وكلُّها شروطُ قبولٍ لا زينة:
+// المحروسُ هنا عشرة، وكلُّها شروطُ قبولٍ لا زينة:
 //   ١) **خارج التطبيق**: لا في قائمة SHELL، ولا يجيب عنها عاملُ الخدمة، ولا تسجّل
 //      عاملاً، ولا تصل بيانَ التطبيق (manifest) — فلا تدخل PWA المثبَّتة بحال.
 //   ٢) **لا مَورد شبكيّ خارجيّ البتّة**: كلُّ ما تجلبه الصفحةُ عند فتحها ملفٌّ في هذا
@@ -20,6 +20,10 @@
 //      `app/js/parent.js` و`app/js/main.js` — فلو غُيّر اسمٌ هناك احمرّ هنا.
 //   ٨) **النصُّ منقولٌ من البيانات لا مُعادُ الصياغة**: أسماءُ المراحل والبوابات
 //      وقراراتُ المنهج تُقرأ وقتَ الفحص من مصادرها ويُقابَل بها ما في الصفحة.
+//   ٩) **حارسُ المدى**: اللقطاتُ تمثّل مدى التطبيق لا أوّلَه (بيانُ اللقطات وصورُه).
+//  ١٠) **قسمُ الميزتين وحدُّه**: امتحانُ اللحاق ووضعُ الدعم **قسمٌ مستقلٌّ بعنوانه** في
+//      الرئيسة، **ومقابضُه مجرودةٌ من `support.js`**، **وعبارةُ الحدّ لا تسقط** —
+//      ونصُّها واحدٌ حرفاً في المواضع الثلاثة (اللوحةُ والدليلُ والرئيسة).
 
 import { readFileSync, existsSync, readdirSync } from 'node:fs';
 import { execFileSync } from 'node:child_process';
@@ -54,6 +58,11 @@ globalThis.localStorage = {
 const JS = new URL('js/', APP);
 const progress = await import(new URL('progress.js', JS));
 const { STAGES, GATES, LEVEL_MAX, CONCEPT_SECTIONS, SIGNS, stations } = await import(new URL('curriculum.js', JS));
+// **ومقابضُ وضع الدعم من مصدرها**: ما تَعِد به الصفحةُ يُجرَد من الجدول المعلَن لا
+// يُكتب في هذا الحارس بيد — فمقبضٌ يُزاد غداً يُطلَب اسمُه في الصفحة يومَ يُكتب.
+const support = await import(new URL('support.js', JS));
+const placementJs = read('js/placement.js', APP);
+const gateJs = read('js/gate.js', APP);
 const emojiIndex = JSON.parse(read('emoji/index.json', APP));
 // **بنكُ الصوت يُحسب من بيانه لا يُقدَّر**: بصمةٌ لكل ملفٍّ مولَّد في `versions.json`،
 // فدفعةٌ جديدة تُسقِط الفحصَ يومَ تُصرَّف — وذاك الحارسُ يعمل لا عيبٌ فيه.
@@ -235,6 +244,8 @@ const expected = {
   max: LEVEL_MAX,
   concepts: CONCEPT_SECTIONS.length,
   icons: Object.keys(emojiIndex.files).length,
+  // مقابضُ وضع الدعم المعروضةُ في اللوحة — لا الكامنةَ (`pending`): الصفحةُ تَعِد بما يراه
+  knobs: support.PANEL_KEYS.length,
 };
 
 let statCount = 0;
@@ -442,6 +453,101 @@ const heroShot = /class="w-hero-shot">\s*<img[^>]*src="shots\/([a-z]+)\.png"/.ex
 const heroText = manifest[heroShot]?.text || '';
 ok(Boolean(heroShot) && heroText.includes(SIGNS.add) && heroText.includes('؟') && /[٠-٩]/.test(heroText),
   `وصدرُ الرئيسة («${heroShot || 'لا صورة'}») فيه جملةُ جمعٍ بالرموز المشرقية وخانةُ السؤال`);
+
+// ————— ١٠. قسمُ الميزتين — والحدُّ يُحرَس كالوعد —————
+//
+// **أمرُ المالك عبر مدير المجموعة** (`2026-08-17-features-need-their-own-sections.md`):
+// امتحانُ اللحاق ووضعُ الدعم **قسمٌ مستقلٌّ بعنوانه** في الرئيسة — لا سطرٌ في بطاقةٍ
+// ولا إحالةٌ على الدليل وحدَه. وثلاثةُ أخطارٍ يقيسها هذا الباب:
+//   • **سقوطُ الحدّ**: نصٌّ يُنقَل يسقط منه ما لا يُعَدّ — وعند اقرأ سقطت عبارةُ «ولا
+//     يَعِد بحجم أثر» ساعةَ نقلِ النصّ فأمسكها حارسُهم. فكلُّ عبارةٍ من الحدّ **تُقاس
+//     وحدَها فتُسمَّى يومَ تسقط**، لا يكفي أن تُقاس الفقرةُ جملةً.
+//   • **افتراقُ النصّ**: الوعدُ يُقرأ في ثلاثة مواضع (لوحةُ وليّ الأمر · الدليل ·
+//     الرئيسة) **وحرفيّتُه واحدة**: اللوحةُ تأخذه من مصدره (`support.PROMISE`)
+//     والصفحتان تحملانه حرفاً بحرف — فما يُقرأ هنا هو ما يُقرأ خلف بوابة وليّ الأمر.
+//   • **وعدٌ بما لا يراه**: المقابضُ **تُجرَد من `support.js`** لا تُكتب هنا بيد —
+//     فمعروضُ اللوحة كلُّه مسمّىً في الصفحة، **والكامنُ** (`pending`) **لا يُوعَد به**.
+//     وما تدّعيه بطاقةُ اللحاق مقيسٌ على شيفرتها: العتبةُ والقياسُ والفتحُ.
+
+console.log('\n١٠. قسمُ الميزتين وحدُّه');
+
+const supportJs = read('js/support.js', APP);
+const progressJs = read('js/progress.js', APP);
+
+const secAt = html.indexOf('<section class="w-section" id="pace"');
+const section = secAt >= 0 ? html.slice(secAt, html.indexOf('</section>', secAt)) : '';
+ok(section.length > 0, 'وللميزتين في الرئيسة قسمٌ مستقلٌّ بعنوانه — لا سطرٌ في بطاقة');
+
+const FEATURES = ['امتحانُ اللحاق', 'وضعُ الدعم'];
+const heading = flat(/<h2>([\s\S]*?)<\/h2>/.exec(section)?.[1] || '').trim();
+ok(heading.length > 0 && !FEATURES.some((f) => heading.includes(f)),
+  `وعنوانُه يخاطب الحاجةَ لا الميزة: «${heading}»`);
+
+// مقدّمتُه سطران: بابان اختياريان **في اللوحة لا في شاشة الطفل**، يُفتحان ويُغلقان
+const lede = flat(/<p class="w-lede">([\s\S]*?)<\/p>/.exec(section)?.[1] || '');
+for (const needle of ['بابان اختياريان', 'لوحة وليّ الأمر', 'لا من شاشة الطفل', 'يغلقهما'])
+  ok(lede.includes(needle), `ومقدّمتُه تقول: «${needle}»`);
+
+// بطاقتان بعنوانيهما — والاسمُ في العنوان لا في المتن
+const secCards = [...section.matchAll(/<article class="w-card"[\s\S]*?<\/article>/g)].map((m) => m[0]);
+const cardOf = (name) => flat(secCards
+  .find((c) => flat(/<h3>([\s\S]*?)<\/h3>/.exec(c)?.[1] || '').includes(name)) || '');
+ok(secCards.length === 2, `وفيه بطاقتان (${secCards.length})`);
+for (const name of FEATURES) ok(cardOf(name).length > 0, `وبطاقتُها بعنوانها: «${name}»`);
+
+/* **وما تَعِد به بطاقةُ اللحاق مقيسٌ على شيفرتها** — لا شعارَ في صفحةٍ بلا سندٍ في
+   ملفّ: العتبةُ تُستورَد من البوّابة، والمحاولةُ تُكتب بكاتب المراجعة نفسِه ولا
+   تُقيَّد مراجعةَ يوم، والفتحُ يتخطّى ما فُتح فلا تُنقَص نجمةٌ كسبها بيده. */
+const exam = cardOf(FEATURES[0]);
+ok(exam.includes('يفتح ما أُثبت لا ما ادُّعي'), 'واللحاقُ يَعِد بما أُثبت لا بما ادُّعي');
+ok(exam.includes('عتبةُ بوّابات الإتقان نفسُها')
+  && /import \{[^}]*\bpassed\b[^}]*\} from '\.\/gate\.js'/.test(placementJs) && /passed\(/.test(placementJs),
+  'والعتبةُ عتبةُ البوّابة نفسُها — يستوردها `placement.js` ولا يكتب رقماً');
+ok(exam.includes('تدخل صناديقَ المراجعة قياساً حقيقياً')
+  && /renderSession/.test(placementJs) && !/markReview\(/.test(placementJs),
+  'وكلُّ محاولةٍ تدخل ليتنر قياساً حقيقياً بلا وسمٍ خاصّ (ولا تُقيَّد مراجعةَ يوم)');
+ok(exam.includes('وما فُتح لا يُغلق أبداً') && /getStars\(id\) > 0\) continue/.test(placementJs),
+  'وما فُتح لا يُغلق — `openRung` تتخطّى ما له نجمة فلا تُنقَص نجمةٌ كسبها بيده');
+
+/* **ومقابضُ الدعم مجرودةٌ من جدولها**: كلُّ معروضٍ في اللوحة مسمّىً هنا باسمه الذي
+   يقرؤه وليُّ الأمر، **والكامنُ لا يُوعَد به** — ومقبضٌ يُزاد غداً يُحمِر هذا الباب. */
+const care = cardOf(FEATURES[1]);
+for (const key of support.PANEL_KEYS)
+  ok(care.includes(support.KNOBS[key].title),
+    `ومقبضُ «${key}» مسمّىً في الصفحة: «${support.KNOBS[key].title}»`);
+const pending = support.KEYS.filter((k) => !support.PANEL_KEYS.includes(k));
+ok(pending.every((k) => !flat(section).includes(support.KNOBS[k].title)),
+  `ولا وعدَ بمقبضٍ لم يُعرَض في اللوحة (${pending.length} كامناً)`);
+ok(care.includes('فاصلُ العدّ') && care.includes('مقبضُنا وحدَنا') && 'beat' in support.KNOBS,
+  '«وفاصلُ العدّ» مسمّىً مقبضَنا الذي لا نظيرَ له عند الإخوة');
+ok(care.includes('ولا يُحتسب ما أُعين عليه إتقاناً')
+  && /helped/.test(progressJs) && /mayPrompt/.test(supportJs),
+  'ولا يُحتسب ما أُعين عليه إتقاناً — والحكمُ في `progress.js` لا في الصفحة');
+ok(care.includes('مسطرةٌ واحدة للجميع')
+  && /duringExam/.test(placementJs) && /duringExam/.test(gateJs),
+  'وما يمسّ القياسَ يُعطَّل في البوّابة وفي اللحاق معاً (مسطرةُ الامتحان الواحدة)');
+ok(care.includes('خطٌّ أخضر تحت شارة الشريط')
+  && flat(support.MARK.note).includes('خطٌّ أخضر تحت شارة الشريط'),
+  'والمؤشّرُ الموصوف هو المؤشّرُ المعلَن في `support.MARK`');
+ok(care.includes('بلا كلمةٍ تَسِمُ الطفل'), 'ويعرفه المعلّم بلا كلمةٍ تَسِمُ الطفل');
+
+/* **وفقرةُ الحدّ تحتهما — عبارةً عبارة**: لو سقطت واحدةٌ منها في نقلٍ قادم سُمّيت
+   باسمها هنا (وهو عينُ ما أمسكه حارسُ اقرأ يومَ نُقل النصّ إليه). */
+const note = flat(/<p class="w-sec-note">([\s\S]*?)<\/p>/.exec(section)?.[1] || '');
+ok(note.includes(flat(support.PROMISE)),
+  'وتحتهما فقرةُ الحدّ بنصّ الوعد الصادق من اللوحة حرفاً بحرف');
+for (const [what, needle] of [
+  ['لا يشخّص ولا يعالج ولا يحكم', 'لا يشخّص ولا يعالج ولا يحكم'],
+  ['ولا يَعِد بحجم أثر', 'يَعِد بقدرِ أثرٍ'],
+  ['ولا يخدم الكفيفَ ولا الأصمَّ ولا غيرَ الناطق', 'لا يخدم الكفيفَ ولا الأصمَّ ولا غيرَ الناطق'],
+  ['وهو في تجربةٍ ميدانية', 'تجربةٍ ميدانية'],
+]) ok(note.includes(needle), `ولا تسقط منها عبارةٌ: ${what}`);
+
+// **وحرفيّتُه واحدةٌ في المواضع الثلاثة** — اللوحةُ من المصدر، والصفحتان بنصّه
+ok(parentJs.includes('support.PROMISE'),
+  'واللوحةُ تأخذه من مصدره لا منسوخاً (`support.PROMISE`)');
+ok(flat(guide).includes(flat(support.PROMISE)) && flat(html).includes(flat(support.PROMISE)),
+  'والدليلُ والرئيسةُ يحملانه حرفاً بحرف — فالمواضعُ الثلاثة نصٌّ واحد');
 
 console.log(fails ? `\n${fails} فشل` : '\nكل اختبارات «المرجع التعريفي» ناجحة');
 process.exit(fails ? 1 : 0);
