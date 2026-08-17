@@ -23,8 +23,11 @@ import {
   stationById, stationForReview, figureBox, quantityCard, countAloud, clearCount,
   probeOf, registerExercise, stationScreen, roundGate,
 } from './station.js';
+import { optionCount } from './support.js';
 
-const OPTIONS = 3;         // ثلاثُ بطاقاتٍ: هدفٌ ومجاوران
+/* **سَعةُ حوض الاختيار — من `support.js` لا ثابتاً هنا** (وضعُ الدعم، الجلسة د):
+   القائمُ ثلاثُ بطاقات (الجوابُ ومجاوراه — `METHOD.md §٣`)، ومقبضُ «حوضٌ أضيق» يردّها
+   بطاقتين. **وهو ممّا يمسّ القياس** فيعود إلى الثلاث داخل البوابات (`duringExam`). */
 const GUIDED = 2;          // «جرِّب معي» — جولتان بعونٍ مرئيّ (`METHOD.md §٤`)
 const SOLO = 5;            // «وحدك» — أربعٌ إلى ستّ، وهي المقيسة
 
@@ -90,7 +93,7 @@ function flashRound(station, rnd, flash) {
   const skill = skillOf(station, 'subitize', 'flash');
   const pool = span(f.min, f.max);
   const count = pick(pool, rnd);
-  const counts = shuffle([count, ...nearOptions(count, pool, OPTIONS - 1, rnd)], rnd);
+  const counts = shuffle([count, ...nearOptions(count, pool, optionCount() - 1, rnd)], rnd);
   const card = cardDisplay(f, counts);
   const next = seeder(rnd);
   const target = { display: heroDisplay(f, rnd), count, seed: next() };
@@ -112,7 +115,7 @@ function matchRound(station, rnd) {
   const skill = skillOf(station, 'match', 'set');
   const pool = span(f.min, f.max);
   const count = pick(pool, rnd);
-  const counts = shuffle([count, ...nearOptions(count, pool, OPTIONS - 1, rnd)], rnd);
+  const counts = shuffle([count, ...nearOptions(count, pool, optionCount() - 1, rnd)], rnd);
   const card = cardDisplay(f, counts);
   const other = f.displays.filter((d) => d !== card);
   const next = seeder(rnd);

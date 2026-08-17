@@ -31,6 +31,7 @@
 
 import * as progress from './progress.js';
 import * as audio from './audio.js';
+import * as support from './support.js';
 import { stations, worldThing } from './curriculum.js';
 import { paint, spotStyle, spanStyle } from './render.js';
 import { setBuilders } from './review.js';
@@ -43,6 +44,13 @@ import {
 
 /** فاصلُ العدّ بين عنصرٍ وعنصر: يُسمَع الاسمُ ويُرى التعليم. */
 export const BEAT = 620;
+/**
+ * **فاصلُ العدّ بعد مقبض «عدٌّ أبطأ»** (وضعُ الدعم — الجلسة د): مطفأً هو `BEAT` حرفاً،
+ * ومشتغلاً يتّسع. **وموضعُه حلقاتُ العدّ الأربع وحدَها** (`countAloud` · `countMarks` ·
+ * `countCells` · `countAlongLine`) — فما بين جملتين في النمذجة فاصلُ كلامٍ لا فاصلُ
+ * عدّ، ومهلةُ الخطف طبيعةُ تمرينٍ لا مقبض. والكمّيةُ لا تتغيّر بحرف: الزمنُ وحدَه يتّسع.
+ */
+export const beat = () => support.beat(BEAT);
 /** مهلةُ العرض الخاطف في «كم ترى؟» — **طبيعةُ تمرينٍ لا مؤقّتُ ضغط** (`METHOD.md §٢.٧`):
  *  تمنع العدَّ فتُجبِر التقدير، وتُعاد بنقرةٍ **بلا حدٍّ ولا احتساب**. */
 export const FLASH_MS = 1200;
@@ -601,7 +609,7 @@ export async function countAlongLine(fig, upTo, alive = () => true) {
     // **العلامةُ تُضاء ثم يُنتظَر اسمُها ثم الفاصل** — فلا يسبق العدُّ المرئيُّ الصوتَ
     if (value > 0) await say(NUMBER_NAME[value]);
     if (!alive()) return false;
-    await wait(BEAT);
+    await wait(beat());
   }
   return alive();
 }
@@ -626,7 +634,7 @@ export async function countCells(fig, alive = () => true) {
     cell.classList.add('is-counted');
     await say(NUMBER_NAME[i + 1]);
     if (!alive()) return false;
-    await wait(BEAT);
+    await wait(beat());
   }
   return alive();
 }
@@ -661,10 +669,10 @@ export async function countAloud(figures, alive = () => true) {
       // بديلٌ عن انتظارها): فيقع الاسمُ على معدوده تماماً، ولا يدهس اسمٌ اسماً.
       await say(NUMBER_NAME[i + 1]);
       if (!alive()) return false;
-      await wait(BEAT);
+      await wait(beat());
     }
     if (!alive()) return false;
-    await wait(BEAT / 2);
+    await wait(beat() / 2);
   }
   return true;
 }
@@ -691,7 +699,7 @@ export async function countMarks(marks, name, alive = () => true, cls = 'is-coun
     // **العنصرُ يُعلَّم ثم يُنتظَر اسمُه ثم الفاصل** — كعدّ الكميات سواءً بسواء
     await say(NUMBER_NAME[name(i)]);
     if (!alive()) return false;
-    await wait(BEAT);
+    await wait(beat());
   }
   return alive();
 }

@@ -40,8 +40,11 @@ import {
   stationById, stationForReview, figureBox, numeralCard, quantityCard, touchLayer, probeOf,
   registerExercise, stationScreen, roundGate,
 } from './station.js';
+import { optionCount } from './support.js';
 
-const OPTIONS = 3;
+/* **سَعةُ حوض الاختيار — من `support.js` لا ثابتاً هنا** (وضعُ الدعم، الجلسة د):
+   القائمُ ثلاثُ بطاقات (الجوابُ ومجاوراه — `METHOD.md §٣`)، ومقبضُ «حوضٌ أضيق» يردّها
+   بطاقتين. **وهو ممّا يمسّ القياس** فيعود إلى الثلاث داخل البوابات (`duringExam`). */
 const GUIDED = 2;
 const SOLO = 5;
 
@@ -113,7 +116,7 @@ function nearShapes(kind, part, wanted, rnd) {
 function nameRound(station, rnd, { face, aided = false } = {}) {
   const skill = skillOf(station, 'shape', 'name');
   const next = seeder(rnd);
-  const others = nearShapes(face, station.part, OPTIONS - 1, rnd);
+  const others = nearShapes(face, station.part, optionCount() - 1, rnd);
   const options = shuffle([face, ...others], rnd)
     .map((kind) => ({ display: 'shape', count: 1, seed: next(), shapes: [kind] }));
 
@@ -142,7 +145,7 @@ function sidesRound(station, rnd, { face, aided = false } = {}) {
   const board = { display: 'shape', count: 1, seed: next(), shapes: [face] };
   const sides = shapeOf(face).sides;
   const options = shuffle(
-    [sides, ...nearOptions(sides, span(Math.max(f.min, 1), f.numeral), OPTIONS - 1, rnd)], rnd)
+    [sides, ...nearOptions(sides, span(Math.max(f.min, 1), f.numeral), optionCount() - 1, rnd)], rnd)
     .map((n) => ({ display: 'numeral', count: n, seed: next() }));
 
   return {

@@ -38,8 +38,11 @@ import {
   stationById, stationForReview, figureBox, quantityCard, numeralCard, countAloud,
   clearCount, probeOf, registerExercise, stationScreen, roundGate,
 } from './station.js';
+import { optionCount } from './support.js';
 
-const OPTIONS = 3;         // ثلاثُ بطاقات: هدفٌ ومجاوران (`METHOD.md §٣`)
+/* **سَعةُ حوض الاختيار — من `support.js` لا ثابتاً هنا** (وضعُ الدعم، الجلسة د):
+   القائمُ ثلاثُ بطاقات (الجوابُ ومجاوراه — `METHOD.md §٣`)، ومقبضُ «حوضٌ أضيق» يردّها
+   بطاقتين. **وهو ممّا يمسّ القياس** فيعود إلى الثلاث داخل البوابات (`duringExam`). */
 const GUIDED = 2;          // «جرِّب معي» — جولتان بعونٍ مرئيّ
 
 /** أنواعُ الشاشات التي تملكها هذه الوحدة (يقابلها `STATIONS` في `test_measure.mjs`). */
@@ -145,7 +148,7 @@ function targetsOf(station, count, rnd) {
 function matchRound(station, rnd, { target, toNumeral, aided = false }) {
   const f = station.frontier;
   const pool = span(f.min, f.numeral);
-  const counts = shuffle([target, ...nearOptions(target, pool, OPTIONS - 1, rnd)], rnd);
+  const counts = shuffle([target, ...nearOptions(target, pool, optionCount() - 1, rnd)], rnd);
   const next = seeder(rnd);
   const card = cardDisplay(f, counts, rnd);
   const hero = { display: quantityDisplay(f, target, rnd), count: target, seed: next() };

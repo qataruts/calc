@@ -15,6 +15,7 @@
 // (pill · vchip · note · chip) وتُلوَّن بمتغيّر `--accent`، فلا تحتاج تنسيقاً جديداً.
 
 import * as progress from './progress.js';
+import * as support from './support.js';
 import { CONCEPT_SECTIONS, conceptOf, rangeText, journeyConcepts } from './curriculum.js';
 import { h, go, toast, arNum, arCount, topbar, shake, PAUSE_ACCENT } from './ui.js';
 import { feedbackSection } from './feedback.js';
@@ -241,6 +242,56 @@ function previewSection() {
     h('p', { class: 'note' },
       'وهو للمعلّم أو وليّ الأمر يقيّم التطبيق — لا للطفل: القفلُ التسلسليّ'
       + ' (لا يُعرض عليه ما لم يبلغه) من أسس المنهج لا قيدٍ عليه.'),
+  );
+}
+
+/**
+ * **قسمُ وضع الدعم** (الجلسة د — بلاغ العقد، البند ٥): مفتاحٌ أعلى واحد تتبعه المقابضُ
+ * كلُّها، ثم يُطفئ وليُّ الأمر ما لا يحتاجه طفلُه، و«أعِد الافتراضات» يردّ المخزنَ إلى
+ * فراغه. **والمفاتيحُ من الجدول لا مكتوبةً بيد** (`PANEL_KEYS` — فما لم تبلغه شاشةٌ
+ * بعدُ لا مفتاحَ له)، وكلُّ اسمٍ وسطرِ شرحٍ يُقرأ من `support.js` — فلا يفترق ما يقرؤه
+ * الوالدُ عمّا يقع في الشاشة.
+ *
+ * **وسطرُ الوعد الصادق فوقها** بنصّه (`support.PROMISE`) — هو نفسُه في الصفحة
+ * التعريفية حرفاً بحرف: لا يشخّص، ولا يعالج، ولا يحكم، ولا يخدم الكفيفَ ولا الأصمَّ
+ * ولا غيرَ الناطق، ولا يَعِد بحجم أثر.
+ */
+function supportSection(rerender) {
+  const on = support.modeOn();
+
+  const toggle = (label, active, onclick, className = '') => h('button', {
+    class: `btn ${className}`.trim(),
+    'aria-pressed': active ? 'true' : 'false',
+    css: active ? { 'border-color': 'var(--star-text)', color: 'var(--star-text)' } : {},
+    onclick,
+  }, active ? `✓ ${label}` : label);
+
+  return h('div', {},
+    h('p', { class: 'hint' }, support.PROMISE),
+
+    h('div', { class: 'row', css: { 'justify-content': 'flex-start' } },
+      toggle(on ? 'وضعُ الدعم مشتغل' : 'شغّل وضعَ الدعم', on,
+        () => { support.setMode(!on); rerender(); }, 'support-mode btn--primary')),
+
+    // المقابضُ تتبع المفتاح الأعلى، فلا تُعرَض إلا وهو مشتغل — ولا مفتاحَ بلا أثر.
+    on && h('div', { class: 'support-knobs' },
+      support.PANEL_KEYS.map((key) => {
+        const knob = support.KNOBS[key];
+        const active = support.isOn(key);
+        return h('div', { class: 'note', css: { 'text-align': 'start', 'margin-top': '.5rem' } },
+          h('div', { class: 'row', css: { 'justify-content': 'flex-start' } },
+            toggle(knob.title, active, () => { support.set(key, !active); rerender(); },
+              `support-knob knob-${key}`)),
+          h('p', { class: 'hint', css: { margin: '.35rem 0 0' } }, knob.line));
+      })),
+
+    on && h('div', { class: 'row', css: { 'justify-content': 'flex-start', 'margin-top': '.75rem' } },
+      h('button', {
+        class: 'btn support-reset',
+        onclick: () => { support.reset(); toast('عاد وضعُ الدعم إلى الافتراضات'); rerender(); },
+      }, 'أعِد الافتراضات')),
+
+    h('p', { class: 'note' }, support.MARK.note),
   );
 }
 
@@ -643,6 +694,8 @@ function dashboard(rerender = () => {}) {
         : 'لا محطة تالية — الرحلة تُكتب بعد.'),
       h('p', { class: 'hint' },
         `بانتظار التثبيت الآن: ${arNum(due.length)} من ${arNum(progress.skills().length)} مهارة سُجّلت.`)),
+
+    ...section('وضعُ الدعم', supportSection(rerender)),
 
     ...section('نسخة احتياطية من تقدّمه', backupSection(rerender)),
 

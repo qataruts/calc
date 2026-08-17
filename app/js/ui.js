@@ -7,6 +7,8 @@
 // اقرأ · `coverEl` · `inkLift`/`giantInk` — رفعةُ حبر الحرف العربي في صندوقه، ولا
 // حرفَ بطلاً في هذا التطبيق). وبقي المحايد كما هو حرفاً بحرف. الجرد في `docs/SEED.md`.
 
+import * as support from './support.js';
+
 export const DEV = typeof location !== 'undefined'
   && new URLSearchParams(location.search).get('dev') === '1';
 
@@ -76,8 +78,17 @@ export function go(hash) {
   location.hash = hash;
 }
 
+/**
+ * الشريطُ اللاصق أعلى كل شاشة — **وحاملُ مؤشّر وضع الدعم** (الجلسة د، بند العقد ٦):
+ * العلامةُ نفسُها خطٌّ في اللوح (`:root.support-on .topbar .pill`) فلا تُكتب هنا حرفاً،
+ * **واسمُها في `title` لوليّ الأمر وحدَه** — لا كلمةَ يقرؤها طفلٌ ولا رمزَ بطء. ولأنّ
+ * الشريطَ واحدٌ لكل شاشة (خريطةً ومحطةً ومراجعةً وبوابةً ولوحة) فموضعُ العلامة هنا
+ * يبلغها كلَّها بلا سطرٍ يُعاد في سبعة مواضع.
+ */
 export function topbar(...extra) {
-  return h('header', { class: 'topbar' }, extra);
+  return h('header',
+    support.modeOn() ? { class: 'topbar', title: support.MARK.label } : { class: 'topbar' },
+    extra);
 }
 
 export function starsRow(count, className = 'node-stars') {

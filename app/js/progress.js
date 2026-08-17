@@ -16,6 +16,7 @@
 // أبوابُ قراءةٍ لا حساب. والجردُ الكامل بأسبابه في `docs/SEED.md`.
 
 import { sections } from './curriculum.js';
+import * as support from './support.js';
 
 const STORE_KEY = 'ihsib.progress.v1';
 export const VERSION = 1;
@@ -285,9 +286,17 @@ export function skills() {
  *
  * **والخطأ يُسجَّل على المهارة المطلوبة لا على ما لمس** (`METHOD.md §٤`) — يفرضه
  * المُنادي بتمرير مفتاح الهدف، وهو عقدُ شاشات التمارين مع هذه الوحدة.
+ *
+ * **والملقَّنُ لا يُحتسب إتقاناً** (وضعُ الدعم — الجلسة د، المبدأ الثاني «العونُ
+ * يُسجَّل ولا يُزوَّر القياس»): محاولةٌ وقع فيها تلميحٌ قبلها (`helped`) **لا ترفع
+ * صندوقاً ولا تُسجَّل صواباً ولا خطأً** — تُسجَّل معانةً وتبقى المهارةُ مستحقّةً
+ * كما كانت، **فالعونُ لا يُبعد موعداً ولا يبلغ صندوقَ الإتقان أبداً**. وموضعُ
+ * القاعدة هنا — **في وحدة القياس لا في الشاشة** — فما من شاشةٍ تستطيع أن تلقّن
+ * وتحتسب. ويحرسه `tools/test_support.mjs`.
+ *
  * @returns {object|null} حالة المهارة بعد التسجيل
  */
-export function recordAttempt(concept, range, kind, correct, today = dayNumber()) {
+export function recordAttempt(concept, range, kind, correct, today = dayNumber(), helped = false) {
   if (!concept || !kind) return null;
   const key = skillKey(concept, range, kind);
   const s = state.skills[key]
@@ -297,6 +306,17 @@ export function recordAttempt(concept, range, kind, correct, today = dayNumber()
      من الصندوق ولا من `seen` (وهو آخرُ يوم) — فتُقيَّد بدايتُها يومَ تبدأ.
      وسجلٌّ قديم بلا `since` يبدأ عدُّه من اليوم: لا نخترع له ماضياً لم نقِسه. */
   if (s.since === undefined) s.since = today;
+  if (helped) {
+    /* **المعانةُ تُسجَّل ولا تُحتسب**: لا صندوقَ يرتفع ولا صوابٌ ولا خطأٌ يُعَدّ —
+       ويبقى موعدُها كما كان (وإن تقدّم فإلى اليومِ لا بعده)، فمَن أُعين على مهارةٍ
+       يلقاها ثانيةً بلا عون. */
+    s.helped = (s.helped || 0) + 1;
+    s.due = Math.min(s.due ?? today, today);
+    s.seen = today;
+    state.skills[key] = s;
+    save();
+    return s;
+  }
   if (correct) {
     s.right++;
     s.box = Math.min(MAX_BOX, s.box + 1);
@@ -304,7 +324,9 @@ export function recordAttempt(concept, range, kind, correct, today = dayNumber()
     s.wrong++;
     s.box = 0;
   }
-  s.due = today + BOX_DAYS[s.box];
+  /* **وتقاربُ المواعيد مقبضُ دعمٍ في موضعٍ واحد** (`support.days`): مطفأً يردّ
+     `BOX_DAYS` حرفاً، ومشتغلاً يقرّبها ولا ينزل بموعدٍ دون يوم. */
+  s.due = today + support.days(BOX_DAYS[s.box]);
   s.seen = today;
   state.skills[key] = s;
   save();

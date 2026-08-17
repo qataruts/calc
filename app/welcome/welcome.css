@@ -308,6 +308,13 @@
 /* الأسس الخمسة: رقمٌ بلونٍ من ألوان مراحل التطبيق (اللون لا يحمل معنى وحده — معه رقمه) */
 .w-basis .w-card { border-inline-start: 6px solid var(--accent, var(--accent-quantity)); }
 
+/* **والرقمُ يُقرأ بحبر الصفحة واللونُ طوقٌ حوله** (تتمةُ م١٠ — حكم المدير، ١٦ أغسطس
+   ٢٠٢٦): كان الرقمُ `--on-accent` على لون المرحلة، فيقع نهاراً عند ٤٫٠٣:١ على
+   `--accent-numeral` وأدنى على غيره — **وقارئُه والدٌ يقرأ نصّاً** (٠٫٩٥–١ريم) فلا
+   إعفاءَ له بعتبة الرسم الكبير. ولا لونَ مرحلةٍ في اللوح يبلغ ٤٫٥ مع بياضٍ ولا مع
+   حبرٍ داكن، **فالعلاجُ في السطح لا في الحبر**: ورقٌ عميق وحبرُ المتن (٩٫٢٣ نهاراً
+   و١٣٫٨٦ ليلاً)، ويبقى لونُ المرحلة **طوقاً** فلا يفقد الرقمُ دلالتَه.
+   ويقيسهما `tools/check_contrast.mjs` بعتبة ٤٫٥ في الوضعين. */
 .w-num {
   display: inline-flex;
   align-items: center;
@@ -315,8 +322,9 @@
   width: 2.1rem;
   height: 2.1rem;
   border-radius: 50%;
-  background: var(--accent, var(--accent-quantity));
-  color: var(--on-accent);
+  background: var(--paper-deep);
+  color: var(--ink);
+  border: 2px solid var(--accent, var(--accent-quantity));
   font-weight: 700;
 }
 
@@ -617,6 +625,7 @@
 
 .w-time a { text-decoration: none; color: inherit; }
 
+/* وأختُه في القياس والعلّة (تتمةُ م١٠) — ورقٌ عميق وحبرُ المتن، واللونُ طوق. */
 .w-time .w-time-n {
   display: inline-flex;
   align-items: center;
@@ -624,8 +633,9 @@
   width: 1.9rem;
   height: 1.9rem;
   border-radius: 50%;
-  background: var(--accent, var(--accent-quantity));
-  color: var(--on-accent);
+  background: var(--paper-deep);
+  color: var(--ink);
+  border: 2px solid var(--accent, var(--accent-quantity));
   font-family: var(--font-head);
   font-size: .95rem;
 }
@@ -733,6 +743,15 @@
 }
 
 .w-what dd { margin: 0; color: var(--ink-soft); }
+
+/* **سطرُ الوعد الصادق** (الجلسة د): نصُّه نصُّ اللوحة حرفاً بحرف، ويُفرَد سطراً
+   مستقلاً بحدٍّ جانبيّ — فما يُقرأ هنا هو ما يُقرأ خلف بوابة وليّ الأمر. */
+.w-promise {
+  display: block;
+  margin-top: .5rem;
+  padding-inline-start: .7rem;
+  border-inline-start: 3px solid var(--accent, var(--accent-quantity));
+}
 
 @media (max-width: 40rem) {
   .w-what > div { grid-template-columns: 1fr; }

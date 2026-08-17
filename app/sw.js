@@ -110,7 +110,9 @@
 // وتحرّك `app.css` وحدَه — لونُ الفعل الرئيس وحبرُه في الوضعين. **ولوحٌ تحرّك يقتضي
 // رفعةً** كشيفرةٍ سواءً بسواء: وإلّا بقي جهازُ الطفل على المخزون فقرأ زرَّه الليليَّ
 // بحبرٍ تباينُه ٢٫٠٢:١ — والإصلاحُ منشورٌ لا يبلغه.
-const VERSION = 'v26';
+// **وإلى `v27` في الجلسة د** (وضعُ الدعم): ملفٌّ جديد في القشرة (`js/support.js`)
+// وتحرّكت الشيفرةُ واللوحُ معاً — ومقابضُ الوضع لا تبلغ جهازاً بقي على المخزون.
+const VERSION = 'v27';
 const SHELL_CACHE = `ihsib-shell-${VERSION}`;
 const AUDIO_CACHE = 'ihsib-audio';        // ثابتٌ عمداً — لا يحمل VERSION
 const KEEP = [SHELL_CACHE, AUDIO_CACHE];
@@ -147,6 +149,7 @@ const SHELL = [
   'js/shapes.js',
   'js/share.js',
   'js/station.js',
+  'js/support.js',
   'js/teens.js',
   'js/ui.js',
   'js/units.js',

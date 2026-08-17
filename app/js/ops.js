@@ -65,8 +65,11 @@ import {
   stationById, stationForReview, figureBox, numeralCard, countAloud, countMarks,
   clearCount, probeOf, registerExercise, stationScreen, roundGate,
 } from './station.js';
+import { optionCount } from './support.js';
 
-const OPTIONS = 3;         // ثلاثُ بطاقات: الجوابُ ومجاوراه (`METHOD.md §٣`)
+/* **سَعةُ حوض الاختيار — من `support.js` لا ثابتاً هنا** (وضعُ الدعم، الجلسة د):
+   القائمُ ثلاثُ بطاقات (الجوابُ ومجاوراه — `METHOD.md §٣`)، ومقبضُ «حوضٌ أضيق» يردّها
+   بطاقتين. **وهو ممّا يمسّ القياس** فيعود إلى الثلاث داخل البوابات (`duringExam`). */
 const GUIDED = 2;          // «جرِّب معي» — جولتان بعونٍ مرئيّ، غيرُ مقيستين
 const SOLO = 5;            // «وحدك» (`METHOD.md §٤`: ٤–٦)
 
@@ -303,7 +306,7 @@ function reachOf(frontier, rnd, low = 2) {
 /** بطاقاتُ الجواب: الجوابُ ومجاوراه من مدى رموز المحطة (`METHOD.md §٣`). */
 function optionsFor(frontier, answer, rnd, next) {
   const pool = span(frontier.min, frontier.numeral);
-  return shuffle([answer, ...nearOptions(answer, pool, OPTIONS - 1, rnd)], rnd)
+  return shuffle([answer, ...nearOptions(answer, pool, optionCount() - 1, rnd)], rnd)
     .map((v) => ({ display: 'numeral', count: v, seed: next() }));
 }
 

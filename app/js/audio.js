@@ -10,6 +10,8 @@
 // الرابط فيُكسَر كاشُ ذلك الملف **وحده**، وما لم يُبدَّل يبقى مخزوناً كما هو.
 // وغيابُ البيان لا يُعطّل شيئاً — رابطٌ بلا وسم كما كان.
 
+import * as support from './support.js';
+
 const AUDIO_URL = new URL('../audio/', import.meta.url);
 const MANIFEST_URL = new URL('manifest.json', AUDIO_URL);
 const VERSIONS_URL = new URL('versions.json', AUDIO_URL);
@@ -182,6 +184,10 @@ function playFile(text) {
   return new Promise((resolve, reject) => {
     const el = new Audio(urlFor(text));
     el.preload = 'auto';
+    /* **سرعةُ السماع مقبضُ دعمٍ لا ملفٌّ ثانٍ** (الجلسة د): الملفُّ هو هو والكلمةُ هي
+       هي — يُبطَّأ تشغيلُها قليلاً حين يُشغَّل الوضع، و`١` مطفأً فلا يُمَسّ العنصر.
+       (والمتصفّحُ يحفظ الطبقةَ افتراضاً فلا يغلُظ الصوت.) */
+    el.playbackRate = support.rate();
     let settled = false;
     let timer = 0;
     const close = () => {
@@ -201,8 +207,11 @@ function playFile(text) {
        الملفّ متى عُرف، ومن طول نصّه قبل ذلك. */
     const arm = () => {
       clearTimeout(timer);
+      /* **والمهلةُ تُقسَم على سرعة التشغيل**: ما طولُه ثانيةٌ يُسمَع في أطولَ منها إن
+         بُطِّئ — فلو بقيت المهلةُ على الطول المكتوب لَقطعت الكلامَ في وضع الدعم. */
+      const speed = el.playbackRate > 0 ? el.playbackRate : 1;
       const ms = (Number.isFinite(el.duration) && el.duration > 0
-        ? el.duration * 1000 : estimateMs(text)) + 1500;
+        ? el.duration * 1000 : estimateMs(text)) / speed + 1500;
       timer = setTimeout(cut, ms);
     };
     arm();

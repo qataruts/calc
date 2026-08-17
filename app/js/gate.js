@@ -21,6 +21,7 @@
 
 import { gateById, gateSkills } from './curriculum.js';
 import * as progress from './progress.js';
+import { duringExam } from './support.js';
 import { renderSession, sessionItems, starsForReview } from './review.js';
 import { h, icon, faceEl, go, arNum, starsRow, mascot, PAUSE_ACCENT } from './ui.js';
 
@@ -41,12 +42,19 @@ export const passed = (right, errors) =>
  *
  * **والتنويعُ يبقى من الحصيلة كلِّها** (`METHOD.md §٦`: «والتكميل تنويعاً من الحصيلة»):
  * المدى يحكم **مادّةَ الضعف** لا حوضَ التنويع.
+ *
+ * **وتُبنى بمسطرةٍ واحدة** (وضعُ الدعم — بلاغ `support-and-placement-coexist`): البوابةُ
+ * امتحانُ إتقانٍ بعتبةٍ واحدة للجميع (٨٠٪)، **فما يمسّ القياس من مقابض الدعم يعود إلى
+ * القائم داخلها** (حوضٌ ثلاثيّ وتلقينٌ ممتنع) — ولا يُفتَح لطفلٍ بحوضٍ أضيق ما لم
+ * يُفتَح لغيره. **وما يريح يسري** كما يسري خارجها (صوتٌ أبطأ وعدٌّ أبطأ وهدوءٌ):
+ * مَن يُمتحَن بشاشةٍ تُربكه يُقاس إرباكُه لا معرفتُه. **ونطاقُه البناءُ نفسُه** —
+ * `duringExam` نداءٌ متزامن يُردّ في `finally`، لا عَلَمٌ يُخزَّن فيعلق مفتوحاً.
  */
 export function gateItems(gateId, rnd = Math.random) {
   const scope = new Set(gateSkills(gateId));
   const weakest = progress.weakestSkills()
     .filter((s) => scope.has(`${s.concept}|${s.range}|${s.kind}`));
-  return sessionItems(weakest, GATE_SIZE, rnd);
+  return duringExam(() => sessionItems(weakest, GATE_SIZE, rnd));
 }
 
 export function renderGate(gateId) {

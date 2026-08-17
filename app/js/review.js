@@ -20,12 +20,16 @@
 
 import * as progress from './progress.js';
 import * as audio from './audio.js';
+import { sessionSize } from './support.js';
 import {
   h, icon, toast, go, arNum, arCount, starsRow, topbar, mascot, cheer, shuffle, onScreen, DEV,
   PAUSE_ACCENT,
 } from './ui.js';
 
-export const SESSION_SIZE = 6;    // جلسة قصيرة تُنجَز في دقائق (`METHOD.md §٦`)
+/* جلسة قصيرة تُنجَز في دقائق (`METHOD.md §٦`) — **وهو `standing` لمقبض الجرعة** في
+   `support.js`: الرقمُ مكتوبٌ هنا مرّةً واحدة ويقابله الفاحصُ بالجدول، والمقروءُ عند
+   البناء `sessionSize()` فيتبع الوضعَ إن شُغِّل. */
+export const SESSION_SIZE = 6;
 const ACCENT = PAUSE_ACCENT;      // المراجعة تثبيتُ مهارات — لونها لون البوابات
 
 /**
@@ -53,7 +57,7 @@ export const starsForReview = (errors, items) => (errors === 0 ? 3 : errors <= i
  */
 export function buildSession({
   due = [], itemFor = () => null, fillers = [], longs = {},
-  size = SESSION_SIZE, rnd = Math.random,
+  size = sessionSize(), rnd = Math.random,
 } = {}) {
   const items = [];
   const seen = new Set();
@@ -280,8 +284,10 @@ export function setBuilders({ item, fillers, view, longs } = {}) {
   if (longs) longKinds = longs;
 }
 
-/** تمارينُ جلسةٍ من مهاراتٍ بعينها — تستعملها المراجعةُ والبوابات معاً. */
-export function sessionItems(due, size = SESSION_SIZE, rnd = Math.random) {
+/** تمارينُ جلسةٍ من مهاراتٍ بعينها — تستعملها المراجعةُ والبوابات معاً.
+ *  **والجرعةُ تُقرأ عند كل بناء** لا مرّةً عند التحميل — فمن بدّل المقبضَ في اللوحة
+ *  يجد أثرَه في جلسة اليوم لا في إقلاعٍ قادم. */
+export function sessionItems(due, size = sessionSize(), rnd = Math.random) {
   return buildSession({ due, itemFor, fillers: fillersOf(rnd), longs: longKinds, size, rnd });
 }
 

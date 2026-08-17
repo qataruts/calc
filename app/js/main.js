@@ -37,6 +37,7 @@ import './share.js';
 import './units.js';
 import './intro.js';
 import * as install from './install.js';
+import * as support from './support.js';
 import {
   h, icon, faceEl, toast, go, arNum, starsRow, topbar, brandMark, landmark, DEV,
   PAUSE_ACCENT,
@@ -510,9 +511,26 @@ document.addEventListener('visibilitychange', () => {
    عرضٌ لا جهازُ طفلٍ يُثبَّت عليه. */
 if (!progress.PREVIEW) install.mount();
 
+/* **صبغُ وضع الدعم على الجذر** (الجلسة د): صنفان لا شاشةَ ثالثة — `calm` يستدعي قواعدَ
+   خفض الحركة القائمة في اللوح، و`support-on` يُظهر خطَّ المؤشّر في الشريط اللاصق.
+   ويُنادى عند كل تبديلٍ في اللوحة فيقع الأثرُ في اللحظة نفسِها بلا إعادة رسم، **ويُصبَغ
+   `title` على الشرائط الحيّة** كما تصبغه `topbar` على ما يُبنى بعدها (فلا يفترق شريطٌ
+   قائم عن شريطٍ جديد). */
+function paintSupport() {
+  const on = support.modeOn();
+  document.documentElement.classList.toggle('calm', support.calm());
+  document.documentElement.classList.toggle('support-on', on);
+  for (const bar of document.querySelectorAll('.topbar')) {
+    if (on) bar.title = support.MARK.label;
+    else bar.removeAttribute('title');
+  }
+}
+support.onChange(paintSupport);
+
 window.addEventListener('hashchange', render);
 audio.ready();
 startClock();
 render();
+paintSupport();
 registerServiceWorker();
 watchShellUpdate();

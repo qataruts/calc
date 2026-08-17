@@ -28,8 +28,11 @@ import {
   stationById, stationForReview, figureBox, quantityCard, markButton, touchLayer, countAloud,
   clearCount, probeOf, registerExercise, stationScreen, roundGate,
 } from './station.js';
+import { optionCount } from './support.js';
 
-const OPTIONS = 3;
+/* **سَعةُ حوض الاختيار — من `support.js` لا ثابتاً هنا** (وضعُ الدعم، الجلسة د):
+   القائمُ ثلاثُ بطاقات (الجوابُ ومجاوراه — `METHOD.md §٣`)، ومقبضُ «حوضٌ أضيق» يردّها
+   بطاقتين. **وهو ممّا يمسّ القياس** فيعود إلى الثلاث داخل البوابات (`duringExam`). */
 const GUIDED = 2;
 const SOLO = 5;
 
@@ -99,7 +102,7 @@ function touchRound(station, rnd, { wide = false, restage = false } = {}) {
   const pools = focusPool(f);
   const pool = wide ? pools.wide : pools.focus;
   const count = pick(pool, rnd);
-  const counts = shuffle([count, ...nearOptions(count, pools.wide, OPTIONS - 1, rnd)], rnd);
+  const counts = shuffle([count, ...nearOptions(count, pools.wide, optionCount() - 1, rnd)], rnd);
   const card = cardDisplay(f, counts);
   const next = seeder(rnd);
   const subject = { display: touchDisplay(f, rnd), count, seed: next() };

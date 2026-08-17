@@ -36,8 +36,11 @@ import {
   countAlongLine, clearLine, slotLayer, probeOf, registerExercise, stationScreen,
   roundGate,
 } from './station.js';
+import { optionCount } from './support.js';
 
-const OPTIONS = 3;
+/* **سَعةُ حوض الاختيار — من `support.js` لا ثابتاً هنا** (وضعُ الدعم، الجلسة د):
+   القائمُ ثلاثُ بطاقات (الجوابُ ومجاوراه — `METHOD.md §٣`)، ومقبضُ «حوضٌ أضيق» يردّها
+   بطاقتين. **وهو ممّا يمسّ القياس** فيعود إلى الثلاث داخل البوابات (`duringExam`). */
 const GUIDED = 2;
 const SOLO = 5;
 
@@ -199,7 +202,7 @@ export function lineRound(station, rnd, { aided = false } = {}) {
   const skill = skillOf(station, 'line', 'place');
   const pool = span(f.min, f.max);
   const target = pick(pool, rnd);
-  const spots = shuffle([target, ...nearOptions(target, pool, OPTIONS - 1, rnd)], rnd);
+  const spots = shuffle([target, ...nearOptions(target, pool, optionCount() - 1, rnd)], rnd);
   const next = seeder(rnd);
   const card = { display: 'numeral', count: target, seed: next() };
   const rail = { display: 'line', count: f.max, seed: next() };
@@ -371,7 +374,7 @@ function neighborRound(station, rnd, mode = null, aided = false) {
   const given = pick(span(lo, hi), rnd);
   const target = face === 'after' ? given + 1 : face === 'before' ? given - 1 : given;
   const counts = shuffle([target, ...nearOptions(target, pool.filter(
-    (n) => face === 'same' || n !== given), OPTIONS - 1, rnd)], rnd);
+    (n) => face === 'same' || n !== given), optionCount() - 1, rnd)], rnd);
   const next = seeder(rnd);
   const check = checkDisplay(f);
   const card = { display: 'numeral', count: given, seed: next() };

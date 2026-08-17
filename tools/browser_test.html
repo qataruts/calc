@@ -389,6 +389,89 @@
   ok(!!dl, 'وفيها سطرُ خزن الأصوات بشريطه وزرِّه (فلا يفاجئ وليَّ الأمر صمتٌ لا يعرف سببه)');
   ok(!dl || !!dl.querySelector('.dl-bar .dl-fill'), 'والشريطُ مبنيٌّ بمِلئه');
 
+  /* **وقسمُ وضع الدعم خلفها كذلك** (الجلسة د — بند العقد ٥): بابُه **لوحةُ وليّ الأمر
+     وحدَها**، فيُقاس هنا حيث فُتحت: مفتاحٌ أعلى واحد تتبعه المقابضُ، و«أعِد الافتراضات»
+     يردّ الحال. (وأثرُه على شاشة الطفل يُقاس أدناه، والمقاديرُ في `test_support.mjs`.) */
+  const modeBtn = doc.querySelector('.support-mode');
+  ok(!!modeBtn && doc.querySelectorAll('.support-knob').length === 0,
+    'وفيها قسمُ وضع الدعم: مفتاحٌ أعلى واحد ولا مقبضَ معروضٌ قبل تشغيله');
+  modeBtn?.click();
+  await new Promise((r) => setTimeout(r, 400));
+  const knobs = doc.querySelectorAll('.support-knob').length;
+  ok(knobs === 6 && doc.documentElement.classList.contains('support-on'),
+    `وتشغيلُه يفتح مقابضَه الستّة ويصبغ الجذرَ في اللحظة نفسِها (${knobs} مقبضاً)`);
+  doc.querySelector('.knob-pool')?.click();
+  await new Promise((r) => setTimeout(r, 300));
+  ok(doc.querySelector('.knob-pool')?.getAttribute('aria-pressed') === 'false',
+    'ومقبضٌ يُطفأ وحدَه ويبقى الوضعُ مشتغلاً');
+  doc.querySelector('.support-reset')?.click();
+  await new Promise((r) => setTimeout(r, 400));
+  ok(!doc.documentElement.classList.contains('support-on')
+    && doc.querySelectorAll('.support-knob').length === 0,
+    'و«أعِد الافتراضات» يردّ الجهازَ إلى ما كان');
+
+  /* ————— ٩) **مؤشّرُ وضع الدعم على الشاشة نفسِها** (الجلسة د — بند العقد ٦) —————
+
+     المصدرُ يُجرَد في `tools/test_support.mjs`، **وهذا يقيس ما تراه العين**: يظهر
+     بالاشتغال ويغيب بالإطفاء · **بلا كلمةٍ تَسِمُ الطفل** (نصُّ الشريط لا يزيد حرفاً —
+     وهو ما لا يمسكه جردُ مصدر: يكفي أن يُمرَّر اسمُ العلامة ولداً في الشريط فيُقرأ
+     على الشاشة) · **ولا يزحزح تخطيطاً** (صندوقُ الشارة هو هو في الحالين) · **ولا
+     فعلَ فيه** (لا زرَّ يُزاد ولا رابط).
+
+     **والتشغيلُ من مخزن الوضع لا من اللوحة**: بابُ الوالد مقيسٌ أعلاه، والمقصودُ هنا
+     أثرُ المفتاح على شاشة الطفل — فيُكتب المخزنُ ثم تُفتَح الصفحةُ من جديد كما يفتحها
+     جهازٌ وُضع فيه الوضعُ أمس. */
+  const SUPPORT_KEY = 'ihsib.support.v1';
+  const barOf = (d) => d.querySelector('.topbar');
+  const pillOf = (d) => d.querySelector('.topbar .pill');
+  const shadowOf = (d) => (pillOf(d) ? d.defaultView.getComputedStyle(pillOf(d)).boxShadow : '');
+  const boxOf = (d) => {
+    const r = pillOf(d)?.getBoundingClientRect();
+    return r ? `${Math.round(r.width)}×${Math.round(r.height)}@${Math.round(r.top)}` : '';
+  };
+  const setSupport = async (value) => {
+    const w = frame.contentWindow;
+    if (value) w.localStorage.setItem(SUPPORT_KEY, JSON.stringify(value));
+    else w.localStorage.removeItem(SUPPORT_KEY);
+    return open('#/');
+  };
+
+  const offDoc = await setSupport(null);
+  const offShadow = shadowOf(offDoc);
+  const offBox = boxOf(offDoc);
+  const offText = shownIn(barOf(offDoc));
+  const offButtons = barOf(offDoc).querySelectorAll('button, a').length;
+  ok(!barOf(offDoc).getAttribute('title') && !offDoc.documentElement.classList.contains('support-on'),
+    'الوضعُ مطفأً: لا علامةَ في الشريط ولا صنفَ على الجذر');
+
+  const onDoc = await setSupport({ on: true });
+  const onRoot = onDoc.documentElement;
+  ok(onRoot.classList.contains('support-on') && onRoot.classList.contains('calm'),
+    'وتشغيلُه يصبغ الجذرَ صنفَين: مؤشّرٌ وهدوءٌ حسّيّ'
+    + ` (${[...onRoot.classList].join('، ') || 'بلا صنف'})`);
+  ok(shadowOf(onDoc) !== offShadow && /inset/.test(shadowOf(onDoc)),
+    'وتظهر علامتُه خطّاً في شارة الشريط (ظلٌّ داخليّ يُرى)');
+  ok(boxOf(onDoc) === offBox && offBox,
+    `**ولا يزحزح تخطيطاً**: صندوقُ الشارة هو هو (${boxOf(onDoc)} · وكان ${offBox})`);
+  ok(shownIn(barOf(onDoc)) === offText,
+    `**ولا كلمةَ تُزاد على شاشة الطفل**: نصُّ الشريط كما كان («${offText.replace(/\s+/g, ' ').trim()}»)`);
+  ok(barOf(onDoc).getAttribute('title') === 'وضعُ الدعم مشتغل',
+    'واسمُه في `title` لوليّ الأمر وحدَه');
+  ok(barOf(onDoc).querySelectorAll('button, a').length === offButtons,
+    `**ولا فعلَ فيه**: لا زرَّ يُزاد ولا رابط (${offButtons})`);
+
+  /* **ويبلغ شاشةَ الطفل لا الخريطةَ وحدَها**: المحطةُ شريطُها هو الشريط نفسُه. */
+  const stDoc = await open('#/count/three');
+  await until(stDoc, (d) => d.querySelector('.station-screen'), 12000);
+  ok(stDoc.documentElement.classList.contains('support-on')
+    && /inset/.test(shadowOf(stDoc)) && !shownIn(barOf(stDoc)).includes('دعم'),
+    'ويُرى في شاشة المحطة كما يُرى في الخريطة — بلا كلمةٍ فيها');
+
+  const backDoc = await setSupport(null);
+  ok(!backDoc.documentElement.classList.contains('support-on')
+    && shadowOf(backDoc) === offShadow && !barOf(backDoc).getAttribute('title'),
+    'وإطفاؤه يردّ الشاشةَ كما كانت — لا خطَّ ولا اسم');
+
   }   // ————— ختامُ نطاق `map` —————
 
   if (inScope('screens')) {

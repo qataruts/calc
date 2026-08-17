@@ -67,9 +67,12 @@ import {
   countCells, clearCount, clearCells, clearLine, countMarks, slotLayer,
   probeOf, registerExercise, stationScreen, roundGate,
 } from './station.js';
+import { optionCount } from './support.js';
 import { lineRound, lineView } from './compare.js';
 
-const OPTIONS = 3;         // ثلاثُ بطاقات: الجوابُ ومجاوراه (`METHOD.md §٣`)
+/* **سَعةُ حوض الاختيار — من `support.js` لا ثابتاً هنا** (وضعُ الدعم، الجلسة د):
+   القائمُ ثلاثُ بطاقات (الجوابُ ومجاوراه — `METHOD.md §٣`)، ومقبضُ «حوضٌ أضيق» يردّها
+   بطاقتين. **وهو ممّا يمسّ القياس** فيعود إلى الثلاث داخل البوابات (`duringExam`). */
 const GUIDED = 2;          // «جرِّب معي» — جولتان بعونٍ مرئيّ، غيرُ مقيستين
 const SOLO = 5;            // «وحدك» (`METHOD.md §٤`: ٤–٦)
 
@@ -320,8 +323,8 @@ function buildRound(station, rnd, { aided = false, target: given = null } = {}) 
 
   // بطاقاتُ البناء: **الحزمةُ حاضرةٌ دائماً** ومعها آحادٌ مجاورة — والعشرون حزمتان
   const values = ones > 0
-    ? shuffle([TEN, ones, ...nearOptions(ones, span(1, TEN - 1), OPTIONS - 1, rnd)], rnd)
-    : shuffle([TEN, ...nearOptions(TEN, span(1, TEN), OPTIONS - 1, rnd)], rnd);
+    ? shuffle([TEN, ones, ...nearOptions(ones, span(1, TEN - 1), optionCount() - 1, rnd)], rnd)
+    : shuffle([TEN, ...nearOptions(TEN, span(1, TEN), optionCount() - 1, rnd)], rnd);
   const symbol = { display: 'numeral', count: target, seed: next() };
   const check = { display: shape, count: target, seed: next(), split: Math.min(TEN, target) };
   const options = values.map((v) => ({ display: 'ten-frame', count: v, seed: next() }));
@@ -351,7 +354,7 @@ function readRound(station, rnd, { aided = false, target: given = null } = {}) {
   const target = given ?? targetOf(station, rnd);
   const shape = frameFor(f, target);
   const pool = span(f.min, f.numeral);
-  const values = shuffle([target, ...nearOptions(target, pool, OPTIONS - 1, rnd)], rnd);
+  const values = shuffle([target, ...nearOptions(target, pool, optionCount() - 1, rnd)], rnd);
   const fact = { display: shape, count: target, seed: next(), split: Math.min(TEN, target) };
   const options = values.map((v) => ({ display: 'numeral', count: v, seed: next() }));
 
@@ -398,10 +401,10 @@ function bridgeRound(station, rnd, { aided = false } = {}) {
     ? [{ display: 'numeral', count: start, seed: next() },
       { display: 'numeral', count: add, seed: next() }]
     : [];
-  const first = shuffle([need, ...nearOptions(need, span(1, TEN - 1), OPTIONS - 1, rnd)], rnd)
+  const first = shuffle([need, ...nearOptions(need, span(1, TEN - 1), optionCount() - 1, rnd)], rnd)
     .map((v) => ({ display: 'numeral', count: v, seed: next() }));
   const second = shuffle(
-    [total, ...nearOptions(total, span(f.min, f.numeral), OPTIONS - 1, rnd)], rnd)
+    [total, ...nearOptions(total, span(f.min, f.numeral), optionCount() - 1, rnd)], rnd)
     .map((v) => ({ display: 'numeral', count: v, seed: next() }));
 
   return {
@@ -436,7 +439,7 @@ function skipRound(station, rnd, { aided = false } = {}) {
   const shown = pick(span(2, stops.length - 1), rnd);
   const target = stops[shown];
   const spots = shuffle(
-    [target, ...nearOptions(target, span(f.min, f.max), OPTIONS - 1, rnd)], rnd);
+    [target, ...nearOptions(target, span(f.min, f.max), optionCount() - 1, rnd)], rnd);
   const rail = { display: 'line', count: f.max, seed: next() };
 
   return {

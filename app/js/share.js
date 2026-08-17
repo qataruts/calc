@@ -47,8 +47,11 @@ import {
   stationById, stationForReview, figureBox, numeralCard, markButton, touchLayer, countMarks,
   countAloud, clearCount, probeOf, registerExercise, stationScreen, roundGate,
 } from './station.js';
+import { optionCount } from './support.js';
 
-const OPTIONS = 3;
+/* **سَعةُ حوض الاختيار — من `support.js` لا ثابتاً هنا** (وضعُ الدعم، الجلسة د):
+   القائمُ ثلاثُ بطاقات (الجوابُ ومجاوراه — `METHOD.md §٣`)، ومقبضُ «حوضٌ أضيق» يردّها
+   بطاقتين. **وهو ممّا يمسّ القياس** فيعود إلى الثلاث داخل البوابات (`duringExam`). */
 const GUIDED = 2;
 const SOLO = 5;
 
@@ -138,8 +141,8 @@ function eachRound(station, rnd, { total, aided = false } = {}) {
   const boards = Array.from({ length: info.bowls },
     () => ({ display, count: each, seed: next(), room: total, glyph }));
   const pool = span(Math.max(f.min, 1), f.numeral);
-  const values = [each, total, ...nearOptions(each, pool, OPTIONS, rnd)];
-  const options = shuffle([...new Set(values)].slice(0, OPTIONS), rnd)
+  const values = [each, total, ...nearOptions(each, pool, optionCount(), rnd)];
+  const options = shuffle([...new Set(values)].slice(0, optionCount()), rnd)
     .map((n) => ({ display: 'numeral', count: n, seed: next() }));
 
   return {

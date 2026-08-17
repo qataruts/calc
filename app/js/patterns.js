@@ -52,8 +52,11 @@ import {
   stationById, stationForReview, figureBox, numeralCard, quantityCard, probeOf,
   registerExercise, stationScreen, roundGate,
 } from './station.js';
+import { optionCount } from './support.js';
 
-const OPTIONS = 3;
+/* **سَعةُ حوض الاختيار — من `support.js` لا ثابتاً هنا** (وضعُ الدعم، الجلسة د):
+   القائمُ ثلاثُ بطاقات (الجوابُ ومجاوراه — `METHOD.md §٣`)، ومقبضُ «حوضٌ أضيق» يردّها
+   بطاقتين. **وهو ممّا يمسّ القياس** فيعود إلى الثلاث داخل البوابات (`duringExam`). */
 const GUIDED = 2;
 const SOLO = 5;
 
@@ -166,7 +169,7 @@ function patternRound(station, rnd, { face, aided = false } = {}) {
   const strip = { display: 'pattern', count: length, seed: next(), items };
   // المشتّتاتُ من عناصر الشريط نفسِه، ويُكمَّل العددُ بعنصرٍ مجاورٍ إن ضاق الحوض
   const spare = shuffle(OBJECTS.map((o) => o.glyph).filter((g) => !glyphs.includes(g)), rnd);
-  const pool = [...glyphs, ...spare].slice(0, Math.max(OPTIONS, glyphs.length));
+  const pool = [...glyphs, ...spare].slice(0, Math.max(optionCount(), glyphs.length));
   const options = shuffle(pool, rnd)
     .map((glyph) => ({ display: 'objects', count: 1, seed: next(), glyph }));
 
@@ -204,7 +207,7 @@ function numberRound(station, rnd, { aided = false } = {}) {
   const answer = (length - 1) * step;
   const bar = { display: 'pattern', count: length, seed: next(), items };
   const options = shuffle(
-    [answer, ...nearOptions(answer, span(f.min, f.numeral), OPTIONS - 1, rnd)], rnd)
+    [answer, ...nearOptions(answer, span(f.min, f.numeral), optionCount() - 1, rnd)], rnd)
     .map((v) => ({ display: 'numeral', count: v, seed: next() }));
 
   return {

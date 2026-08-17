@@ -1,8 +1,9 @@
 // **حارسُ التباين** — «الحبرُ يُقاس على لونه، نهاراً وليلاً»:
 //   node tools/check_contrast.mjs              # القياسُ على اللوح الحيّ
 //   node tools/check_contrast.mjs --self-test  # فحصُ الفاحص: أيمسك المخالفات؟
-// يحرس: app/css/app.css
-//   (اللوحُ كلُّه: رموزُه النهارية والليلية، وقواعدُ الزرّين الطفليين)
+// يحرس: app/css/app.css app/welcome/welcome.css
+//   (اللوحُ كلُّه: رموزُه النهارية والليلية، وقواعدُ الزرّين الطفليين، والرموزُ الكبيرة
+//    فوق ألوان المراحل، وأرقامُ الصفحات التعريفية)
 //
 // ————— العيبُ الذي وُلد منه (بلاغ العائلة `2026-08-16-seed-defect-fff-on-star`) —————
 //
@@ -119,6 +120,14 @@ function ratio(fg, bg) {
 /** حبرٌ بشفافيةٍ يُركَّب على أرضيته — فالشفافُ لا يُقاس بقيمته المكتوبة. */
 const over = (fg, bg, alpha) => fg.map((c, i) => alpha * c + (1 - alpha) * bg[i]);
 
+/** نسبةُ قاعدةٍ بعينها: حبرُها على خلفيّتها، ورموزُها تُحلّ من لوحٍ يُمرَّر. */
+function ratioOf(css, selector, vars) {
+  const own = decls(css, selector);
+  const fg = rgb(resolve(own.color, vars));
+  const bg = rgb(resolve(own.background || own['background-color'], vars));
+  return fg && bg ? { fg, bg, ratio: ratio(fg, bg) } : { fg, bg, ratio: null };
+}
+
 // ————— الأزواجُ المقيسة: **بالمحدِّد لا بالقيمة** —————
 //
 // الزرّان اللذان يلمسهما طفلُ الرابعة: الفعلُ الرئيس في الشاشات، و«تابِعْ من هنا»
@@ -128,6 +137,34 @@ const PAIRS = [
   { name: 'بطاقةُ «تابِعْ من هنا» `.continue`', on: '.continue' },
   { name: 'سطرُها الثاني `.continue small`', on: '.continue small', surface: '.continue' },
   { name: 'شريطُ المعاينة `.preview-bar`', on: '.preview-bar', judged: false },
+];
+
+// ————— بابٌ ١ب: **الرموزُ الكبيرة فوق ألوان المراحل** (تتمةُ م١٠) —————
+//
+// **حكمُ المدير (١٦ أغسطس ٢٠٢٦)**: تُوسَّع الأزواجُ المقيسة إلى الرموز الكبيرة
+// **بعتبتها هي** — «فالحالُ اليومَ ممرَّرةٌ صدفةً لا قاعدةً، والقاعدةُ المكتوبة خيرٌ
+// من نجاحٍ صامت». **وعتبةُ ٣:١ عتبةُ WCAG للنصّ الكبير** (١٫٤·٣: ≥١٨٫٦٦بك عريضاً أو
+// ≥٢٤بك) — وحاملاها **وجهُ العقدة** (٢٫٤ريم = ٣٨٫٤بك) و**وجهُ الاحتفال** (٣٫٦ريم =
+// ٥٧٫٦بك)، وكلاهما رمزٌ واحد لا فقرةٌ تُقرأ.
+//
+// **واللونُ لا يُكتب هنا**: تُجرَد رموزُ `--accent-*` من اللوح نفسِه فيُقاس كلُّ لونِ
+// مرحلةٍ بحبره المعلَن (`--on-accent`) — فمرحلةٌ جديدة بلونها تدخل هذا الباب يومَ
+// يُكتب لونُها. **ويُتحقَّق أوّلاً أنّ الحاملَين يستعملان الزوجَ فعلاً**، وإلّا صار
+// الباب يقيس زوجاً لا يراه أحد.
+const LARGE_THRESHOLD = 3;
+const LARGE_ON = [
+  { name: 'وجهُ العقدة `.node--done .node-face` (٢٫٤ريم)', sel: '.node--done .node-face' },
+  { name: 'وجهُ الاحتفال `.celebrate-face` (٣٫٦ريم)', sel: '.celebrate-face' },
+];
+
+// ————— بابٌ ١ج: **أرقامُ الصفحات التعريفية** (تتمةُ م١٠، الشقُّ الثاني) —————
+//
+// **حكمُ المدير**: يُرفعان إلى ٤٫٥ — «قارئُهما والدٌ يقرأ نصاً، لا إعفاءَ بالجمهور».
+// وهما دائرتان صغيرتان (٠٫٩٥–١ريم) في `welcome.css`، **ورموزُ اللوح من `app.css`**
+// (الصفحةُ التعريفية لا تعرّف لوناً) — فتُقرأ الإعلاناتُ من ملفّها والرموزُ من اللوح.
+const WELCOME_PAIRS = [
+  { name: 'رقمُ بطاقة الأسس `.w-num`', on: '.w-num' },
+  { name: 'رقمُ سطر الدقائق `.w-time .w-time-n`', on: '.w-time .w-time-n' },
 ];
 
 /** يقيس زوجاً في وضعٍ واحد — ويقرأ خلفيّتَه من قاعدة سطحه إن لم يُعلنها. */
@@ -187,6 +224,41 @@ function main() {
     }
   }
 
+  // ————— ١ب) الرموزُ الكبيرة فوق ألوان المراحل (عتبةُ الكبير ٣:١) —————
+  console.log('\n— ١ب) الرموزُ الكبيرة فوق ألوان المراحل (العتبة '
+    + LARGE_THRESHOLD + ':1 — نصٌّ كبير، WCAG 1.4.3) —');
+  for (const carrier of LARGE_ON) {
+    const own = decls(day, carrier.sel);
+    ok(/var\(--accent\b/.test(own.background || '') && /var\(--on-accent\b/.test(own.color || ''),
+      `${carrier.name}: حبرُه \`--on-accent\` على \`--accent\` — الزوجُ مستعمَلٌ فعلاً`
+      + (own.background ? '' : ' — **لا قاعدةَ له في اللوح**'));
+  }
+  const accents = Object.keys(tokens(day)).filter((k) => /^--accent-/.test(k));
+  for (const [mode, isNight] of [['نهاراً', false], ['ليلاً', true]]) {
+    const vars = isNight ? { ...tokens(day), ...tokens(night) } : tokens(day);
+    const ink = rgb(resolve('var(--on-accent)', vars));
+    for (const key of accents) {
+      const bg = rgb(resolve(`var(${key})`, vars));
+      const r = ink && bg ? ratio(ink, bg) : null;
+      ok(r !== null && r >= LARGE_THRESHOLD,
+        `\`${key}\` ${mode}: ${hex(ink)} على ${hex(bg)} = ${fmt(r)}`);
+    }
+  }
+
+  // ————— ١ج) أرقامُ الصفحات التعريفية (نصٌّ عاديّ — عتبةُ ٤٫٥) —————
+  console.log('\n— ١ج) أرقامُ الصفحات التعريفية `welcome.css` (العتبة '
+    + THRESHOLD + ':1 — قارئُها والد) —');
+  const wcss = stripComments(readFileSync(new URL('app/welcome/welcome.css', ROOT), 'utf8'));
+  for (const pair of WELCOME_PAIRS) {
+    for (const [mode, isNight] of [['نهاراً', false], ['ليلاً', true]]) {
+      // الإعلاناتُ من ملفّ الصفحة، والرموزُ من لوح التطبيق (مصدرُ الألوان الوحيد)
+      const vars = isNight ? { ...tokens(day), ...tokens(night) } : tokens(day);
+      const m = ratioOf(wcss, pair.on, vars);
+      ok(m.ratio !== null && m.ratio >= THRESHOLD,
+        `${pair.name} ${mode}: ${hex(m.fg)} على ${hex(m.bg)} = ${fmt(m.ratio)}`);
+    }
+  }
+
   console.log('\n— ٢) لا بياضَ حرفياً خارج تعريفات الرموز —');
   const stray = strayWhites(readFileSync(new URL('app/css/app.css', ROOT), 'utf8'));
   ok(stray.length === 0, stray.length
@@ -240,6 +312,36 @@ function selfTest() {
   T(strayWhites('/* #fff في تعليقٍ يشرح لِمَ هُجرت */\n.a { color: var(--on-accent); }').length === 0,
     'وذكرُها في تعليقٍ ليس حِملاً — أثرُ قرارٍ لا بقيّةٌ منه');
   T(strayWhites('.a { white-space: nowrap; }').length === 0, 'و`white-space` ليست لوناً');
+
+  // ————— البابان الجديدان (تتمةُ م١٠): الكبيرُ بعتبته، وأرقامُ التعريفية بعتبتها —————
+  const PALETTE = ':root { --on-accent: #fff; --ink: #333B44; --paper-deep: #EDE7DC;'
+    + ' --accent-x: #2E8C86; --accent-pale: #C9C2A8; }';
+  const vars = tokens(PALETTE);
+  const ink = rgb(resolve('var(--on-accent)', vars));
+  T(ratio(ink, rgb(resolve('var(--accent-x)', vars))) >= LARGE_THRESHOLD,
+    `لونٌ يبلغ عتبةَ الكبير يمرّ: ${fmt(ratio(ink, rgb(resolve('var(--accent-x)', vars))))}`);
+  T(ratio(ink, rgb(resolve('var(--accent-pale)', vars))) < LARGE_THRESHOLD,
+    `**ولونٌ باهتٌ يسقط**: ${fmt(ratio(ink, rgb(resolve('var(--accent-pale)', vars))))} دون ${LARGE_THRESHOLD}:1`);
+  T(LARGE_THRESHOLD < THRESHOLD,
+    `وعتبةُ الكبير أدنى من عتبة النصّ العاديّ (${LARGE_THRESHOLD} < ${THRESHOLD}) — رسمٌ يُرى لا فقرةٌ تُقرأ`);
+
+  // حاملُ الزوج يُتحقَّق منه: قاعدةٌ تكتب حبرَها بيدها لا تُقاس بهذا الباب
+  const CARRIER = '.node--done .node-face { background: var(--accent); color: var(--on-accent); }';
+  const own = decls(CARRIER, '.node--done .node-face');
+  T(/var\(--accent\b/.test(own.background) && /var\(--on-accent\b/.test(own.color),
+    'وحاملُ الزوج يُجرَد من اللوح: `--on-accent` على `--accent`');
+  const STRAY = decls('.node--done .node-face { background: var(--accent); color: #fff; }',
+    '.node--done .node-face');
+  T(!/var\(--on-accent\b/.test(STRAY.color),
+    '**ومَن كتب حبرَه بيده يُمسَك** — فلا يُقاس زوجٌ لا يستعمله أحد');
+
+  // أرقامُ التعريفية: حالُها قبل الإصلاح تسقط، وبعده تمرّ (وكلاهما مقيسٌ لا مُصدَّق)
+  const WAS = '.w-num { background: var(--accent-x); color: var(--on-accent); }';
+  const NOW = '.w-num { background: var(--paper-deep); color: var(--ink); }';
+  T(ratioOf(WAS, '.w-num', vars).ratio < THRESHOLD,
+    `**وحالُ الرقم قبل الإصلاح تسقط**: ${fmt(ratioOf(WAS, '.w-num', vars).ratio)} دون ${THRESHOLD}:1`);
+  T(ratioOf(NOW, '.w-num', vars).ratio >= THRESHOLD,
+    `وبعده يمرّ: ${fmt(ratioOf(NOW, '.w-num', vars).ratio)}`);
 
   console.log(fails ? `\n✗ ${fails} إخفاقاً\n` : '\n✓ الفاحصُ يمسك ما وُضع له\n');
   return fails ? 1 : 0;
