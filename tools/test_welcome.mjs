@@ -130,10 +130,11 @@ for (const [name, text] of Object.entries(PAGES)) {
   ok(mails.length === 1 && mails[0] === 'info@mishkat.qa',
     `${name}: وبريدُها المرجع info@mishkat.qa وحدَه (${mails.join('، ') || 'لا بريد'})`);
 
-  // و`mailto:` ليس ملفّاً يُطلَب: فعلُ مراسلةٍ يفتحه المتصفّح إن نُقر
+  // و`mailto:` ليس ملفّاً يُطلَب: فعلُ مراسلةٍ يفتحه المتصفّح إن نُقر.
+  // **والوسمُ يُنزَع قبل الجرد**: `welcome.css?v=..` ملفٌّ واحدٌ بوسمِ نسخة (أدناه).
   const links = [...text.matchAll(/(?:href|src)="([^"#][^"]*)"/g)].map((m) => m[1])
     .filter((v) => !/^(?:https?:)?\/\//.test(v) && !/^(?:mailto|tel):/.test(v));
-  const missing = links.filter((v) => !existsSync(new URL(v, WELCOME)));
+  const missing = links.filter((v) => !existsSync(new URL(v.split('?')[0], WELCOME)));
   ok(missing.length === 0,
     `${name}: وكلُّ ملفٍّ تطلبه موجود (${links.length} مرجعاً)`
     + (missing.length ? ' — مفقود: ' + missing.join('، ') : ''));
@@ -156,6 +157,19 @@ for (const [name, text] of Object.entries(PAGES)) {
     + (loose.length ? ` — شذّت ${loose.length}` : ''));
 }
 ok(!/@import|url\(\s*["']?https?:/.test(css), 'والتنسيقُ لا يجلب من شبكة');
+
+/* **وسمُ نسخةِ اللوح** (بلاغُ المالك الثاني، ١٧ أغسطس ٢٠٢٦): الصفحةُ خارج قشرة
+   العامل **لكنّ متصفّحَ الزائر يمسك `welcome.css` أربعَ ساعات** (`max-age=14400`
+   يقيسه `curl -I` على المنشور) — فإصلاحُ تنسيقٍ لا يبلغ من زار قبله. **وقد وقع
+   فعلاً**: نُشر إصلاحُ زرّ الترويسة فبقي المالكُ يرى الحبرَ رمادياً، والعلّةُ في
+   **التوصيل** لا في القاعدة. فوسمُ النسخة في الرابط **مفتاحُ خزنٍ جديد** يصل خلال
+   دقائق (الصفحةُ نفسُها `max-age=600`)، **ووسمُه وسمُ القشرة نفسُه** فلا يُنسى:
+   من رفع `VERSION` رفعهما معاً — ومن نسي احمرّ هذا الباب باسمه. */
+const shellVersion = /const VERSION = '([^']+)'/.exec(sw)?.[1] || '';
+const sheetTags = PAGE_NAMES.map((n) => `v${/href="welcome\.css\?v=([^"]+)"/.exec(PAGES[n])?.[1]}`);
+ok(Boolean(shellVersion) && sheetTags.every((t) => t === shellVersion),
+  `ولوحُ الصفحات الأربع موسومٌ بوسم القشرة نفسِه (${shellVersion || 'لا وسم'})`
+  + (sheetTags.some((t) => t !== shellVersion) ? ` — خالف: ${sheetTags.join('، ')}` : ''));
 
 // ————— ٣. القشرة الواحدة وزرّ البدء —————
 
