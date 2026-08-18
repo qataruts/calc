@@ -25,6 +25,15 @@ const feedback = read('js/feedback.js');
 
 ok(feedback.includes("'97433882806'") && feedback.includes('wa.me/${WHATSAPP}'),
   'واتساب بالرقم المعتمد (+974 3388 2806)');
+/* **وشكلُ الرقم** (بلاغ `2026-08-17-teacher-kit-link-and-whatsapp-form.md` §٢ — أمرُ
+   المالك: «يُكتب **رابطاً** لا نصّاً، والرقمُ **بلا فراغات** كي لا ينقلب شكلُه في نصٍّ
+   من اليمين إلى اليسار»). **وجُرد يومَ جاء البلاغُ فوُجد مستوفىً فلم يُبدَّل شيء**:
+   الرقمُ أرقامٌ متّصلة في مسار `wa.me` وحدَه، **ولا يُعرَض حرفاً منه** — نصُّ الرابط
+   «عبر واتساب». وهذا البابُ يُبقيه كذلك: رقمٌ يُطبَع في متنٍ عربيّ يُقلب بالثنائية. */
+const waNum = (/const WHATSAPP = '([^']*)';/.exec(feedback) || [])[1] || '';
+ok(/^\d{8,15}$/.test(waNum) && feedback.split(waNum).length === 2
+  && /'عبر واتساب'/.test(feedback),
+  'وشكلُه رابطٌ لا نصّ: الرقمُ متّصلٌ بلا فراغاتٍ ولا رموز، ولا يُعرَض حرفاً منه');
 ok(feedback.includes("'info@mishkat.qa'") && feedback.includes('mailto:${EMAIL}'),
   'والبريدُ المرجع info@mishkat.qa');
 ok(/feedbackSection\(\)/.test(parent) && /from '\.\/feedback\.js'/.test(parent)

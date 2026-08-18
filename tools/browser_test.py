@@ -32,7 +32,9 @@
 # يحرس نطاق audio: app/audio/** app/js/audio.js app/js/station.js tools/audio_queue.json
 # وجولتاها الأخريان (مقاساتُ الجهاز والمرجعُ التعريفيّ) لهما مادّتاهما كذلك:
 # يحرس جولة device: app/css/** app/js/** app/index.html
-# يحرس جولة welcome: app/welcome/** app/js/curriculum.js app/js/main.js app/emoji/**
+# يحرس جولة welcome: app/welcome/** app/js/curriculum.js app/js/main.js app/emoji/** app/css/**
+# (و`app/css/**` مادّةٌ لها منذ الجلسة ط: بابُ «ما يبلغه النمط» يقيس سطحَي
+#  شريط الإنصاف والفعل الرئيس، ومتوقَّعُهما متغيّراتُ لوح التطبيق نفسِها.)
 
 import argparse
 import http.server

@@ -224,10 +224,13 @@
      يُطلِق `load`** — ينتقل المستندُ في مكانه فينتظر الفحصُ حدثاً لا يجيء، وتنتهي
      المهلةُ صامتة. فيُزاد وسمٌ في الاستعلام: تحميلٌ كاملٌ في كل مرة. */
   let visit = 0;
-  /** @param {string} extra استعلامٌ زائد (`&dev=1` لأدوات التجربة) — بلا تكرار مسار. */
-  const open = async (hash, extra = '') => {
+  /* @param {string} extra استعلامٌ زائد (`&dev=1` لأدوات التجربة) — بلا تكرار مسار.
+     @param {boolean} live بلا `preview=1`: **لمشهدٍ تُعفى فيه المعاينةُ من شيء**
+       (بطاقةُ أول تشغيل — الجلسة ط). فمن قاس مشهدَ أوّل فتحةٍ بالمعاينة قاس شاشةً
+       أُعفيت البطاقةُ منها عمداً. والافتراضُ المعاينةُ كما كان: هي التي تفتح المقفل. */
+  const open = async (hash, extra = '', live = false) => {
     closeOpen();           // مستندٌ يُغادَر: ما كان يعمل فيه انتهى بمغادرته
-    frame.src = `/?preview=1${extra}&v=${++visit}${hash}`;
+    frame.src = `/?v=${++visit}${live ? '' : '&preview=1'}${extra}${hash}`;
     await new Promise((r) => frame.addEventListener('load', r, { once: true }));
     hookAudio(frame.contentWindow);
     await new Promise((r) => setTimeout(r, 900));
@@ -356,6 +359,62 @@
     `وكلُّ زرٍّ ظاهرٍ يبلغ هدفَ اللمس${small.length
       ? ` — أصغرُها: ${small.map(({ el, r }) => `${el.className.split(' ')[0]} ${Math.round(r.width)}×${Math.round(r.height)}`).slice(0, 3).join('، ')}` : ''}`);
 
+  /* ————— ٦ب) ما يبلغه النمطُ لا ما يوجد (الجلسة ط) —————
+
+     **درسُ اِسْمَعْ** (بلاغ `2026-08-17-inferred-defect-and-style-guard.md`): حرفُ نقطةٍ
+     شاردٌ سبق محدِّدَ الزرّ الرئيس في لوحهم (نقطةٌ عارية، ثم تعليقٌ، ثم `.btn--primary`)
+     جعل المتصفّحَ يقرأ المقدِّمةَ `. .btn--primary` **فأسقط القاعدةَ كلَّها بصمت** —
+     فمضت أزرارُ التطبيق
+     الرئيسة بلا لونِه ولا ثِقَله، **وحرّاسُهم كلُّهم خضر**: يجردون **وجودَ** الزرّ
+     وصنفَه لا **ما بلغه من أنماط**.
+
+     **وهذا البابُ حصانةٌ لا إصلاح**: جُرد لوحُنا يومَ كُتب فلم توجد عندنا نقطةٌ شاردة
+     ولا قاعدةٌ ساقطة — **فما احمرّ منه حرفٌ يومَ جيء به**. وإنما يُكتب لأنّ الصنفَ
+     أعمُّ من مثاله: كلُّ ما يُرى ولا يُجرَد يحتاج **قياسَ المرسوم لا جردَ الشجرة**.
+     (وهو أخو مسطرة اللمس فوقه: تلك تقيس ما بلغه الحجمُ، وهذه ما بلغه اللونُ والثِّقَل.)
+
+     **والأزواجُ معلَنةٌ في جدول**، ومتوقَّعُ كلٍّ **عبارةُ اللوح نفسُها** لا قيمةٌ
+     منسوخة: تُحَلّ في مستند التطبيق بمِسبارٍ يُلحَق ثم يُرفَع، فتصير ما يصيره المتصفّح
+     (متغيّراتٍ ومزائجَ ووضعَ اللوح الحيّ)، ويُقابَل بها **ما رسمه على العنصر الحيّ**.
+     فقاعدةٌ تسقط ⇒ يرث العنصرُ سطحاً آخر ⇒ **يحمرّ الزوجُ باسمه**.
+
+     **ولكلِّ صفٍّ مشهدُه**: السطحُ يُقاس حيث يُرسَم — بطاقةُ أول تشغيل في الخريطة
+     (ولذلك تُقاس **قبل** أن تُساق الشاشاتُ بالمعاينة: هي معفاةٌ هناك)، والفعلُ الرئيس
+     على بوّابة اللوحة قبل حلّها. **وصفٌّ لا يجد عنصرَه يحمرّ** ولا يُتخطّى صامتاً. */
+  const STYLE_PAIRS = [
+    { at: 'map', name: 'أرضيةُ بطاقة أول تشغيل `.firstrun`', sel: '.firstrun',
+      prop: 'backgroundColor', want: 'var(--paper-deep)' },
+    { at: 'map', name: 'وزرُّها العاديُّ `.btn`', sel: '.firstrun .btn:not(.btn--primary)',
+      prop: 'backgroundColor', want: 'var(--card)' },
+    { at: 'gate', name: 'أرضيةُ الفعل الرئيس `.btn--primary`', sel: '.gate-go',
+      prop: 'backgroundColor', want: 'var(--star)' },
+    { at: 'gate', name: 'وحبرُه', sel: '.gate-go', prop: 'color', want: 'var(--on-accent)' },
+    { at: 'gate', name: 'وثِقَلُه المقرَّر', sel: '.gate-go', prop: 'fontWeight', want: '700' },
+  ];
+  const painted = new Map();
+  /** يَحُلّ عبارةَ اللوح في مستند التطبيق نفسِه — فتُقرأ متغيّراتُه كما يقرؤها المتصفّح. */
+  const resolveDecl = (d, expr) => {
+    if (!/^var\(|color-mix/.test(expr)) return expr;
+    const probe = d.createElement('span');
+    probe.style.color = expr;
+    d.body.appendChild(probe);
+    const value = d.defaultView.getComputedStyle(probe).color;
+    probe.remove();
+    return value;
+  };
+  const styleAt = (d, stage) => {
+    for (const row of STYLE_PAIRS.filter((r) => r.at === stage)) {
+      const el = d.querySelector(row.sel);
+      const got = el ? d.defaultView.getComputedStyle(el)[row.prop] : '';
+      const want = resolveDecl(d, row.want);
+      painted.set(row.name, got);
+      ok(!!el && got === want,
+        `${row.name}: ما رُسم = ما أعلنه اللوح «${row.want}»`
+        + (el ? ` (${got})` : ' — لا عنصرَ بهذا المحدِّد على الشاشة'));
+    }
+  };
+  styleAt(doc, 'map');
+
   // ————— ٧) الرحلةُ فارغةٌ اليوم — ويُقال ذلك صريحاً (الجلسة ٠) —————
   // **حارسُ الغياب**: خريطةٌ فارغةٌ صامتة تُقرأ عطباً. فإن كانت الرحلة صفراً وجب
   // أن تقول ذلك؛ وإن صارت لها محطاتٌ (الجلسة ١) وجب أن تختفي الرسالةُ وتظهرَ هي.
@@ -371,6 +430,15 @@
   await new Promise((r) => setTimeout(r, 500));
   ok(doc.querySelector('.gate .giant'), 'ولوحةُ وليّ الأمر خلف بوابةٍ حسابية');
   ok(!doc.querySelector('.audit'), 'ولا تُعرَض اللوحةُ قبل حلّها');
+
+  // **وأزواجُ النمط على البوّابة** (§٦ب) — قبل حلّها، فالفعلُ الرئيس زرُّها.
+  styleAt(doc, 'gate');
+  /* **وتمايزُه عن الزرّ العادي** (الحكمُ الذي سقط عندهم بصمت): لا يكفي أن يبلغ كلٌّ
+     منهما قيمةً — لو سقطت قاعدةُ الرئيس لَورث أرضيةَ `.btn` **فتساوى الزرّان**. */
+  const primaryBg = painted.get('أرضيةُ الفعل الرئيس `.btn--primary`');
+  const plainBg = painted.get('وزرُّها العاديُّ `.btn`');
+  ok(!!primaryBg && !!plainBg && primaryBg !== plainBg,
+    `والفعلُ الرئيس يفارق الزرَّ العاديَّ في أرضيته (${primaryBg} ≠ ${plainBg})`);
 
   /* **وسطرُ الأصوات المخزونة خلفها** (الجلسة ص): تُحَلّ البوابةُ بقراءة ضربها من
      الشاشة نفسِها — فيَظهر ما وراءها. وعلّةُ الفحص أنّ اللوحة صارت تقرأ من مخزن
@@ -499,8 +567,17 @@
   /** الزرُّ باسمه المعروض — فلا يُصدَّق صنفٌ في الشيفرة على نصٍّ لا يراه أحد. */
   const runBtn = (d, sel) => [...d.querySelectorAll(`.firstrun ${sel}`)][0] || null;
 
+  /* **ومشهدُ البطاقة يُفتَح حيّاً لا معاينة** (الجلسة ط): فهي **معفاةٌ في المعاينة**
+     بحكم المدير — والشرطُ يُقاس هنا قبل المشي، فلا يُقرأ غيابُها في المعاينة عطباً
+     ولا يُقرأ حضورُها في اللقطات صدقاً. */
   wipeRun();
-  const runDoc = await open('#/');
+  const runPreview = await open('#/');
+  ok(!cardOn(runPreview),
+    '**والبطاقةُ معفاةٌ في المعاينة** — رحلةُ المعاينة بكرٌ أبداً فلا تُخفى أبداً '
+    + '(ولولا الإعفاءُ لحملتها كلُّ لقطةٍ نولّدها)');
+
+  wipeRun();
+  const runDoc = await open('#/', '', true);
   const runCard = cardOn(runDoc);
   ok(!!runCard && shownIn(runCard).includes('ثبّته على الجهاز أولاً')
     && !runBtn(runDoc, '.firstrun-exam'),
@@ -549,18 +626,18 @@
   laterBtn?.click();
   ok(!!laterBtn && !cardOn(runDoc),
     '**و«لاحقاً» تُخفيها في مكانها** بلا إعادة رسم الخريطة');
-  const afterLater = await open('#/');
+  const afterLater = await open('#/', '', true);
   ok(!cardOn(afterLater), '**ولا تعود بعد إعادة الفتح** — مِذكرتُها في التخزين');
 
   frame.contentWindow.localStorage.removeItem(RUN_KEY);
   frame.contentWindow.localStorage.setItem(RUN_PROGRESS,
     JSON.stringify({ v: 1, stars: { [firstNodeId]: 1 } }));
-  const afterStar = await open('#/');
+  const afterStar = await open('#/', '', true);
   ok(!cardOn(afterStar),
     `**وتغيب بأوّل نجمةٍ يكسبها الطفل** (${firstNodeId}) — ولو مُحيت مِذكرةُ «لاحقاً»`);
 
   wipeRun();
-  const runBack = await open('#/');
+  const runBack = await open('#/', '', true);
   ok(!!cardOn(runBack),
     'وتعود على رحلةٍ بكرٍ بلا مِذكرة — **فالغيابان أعلاه حُكمُها لا عطبٌ فيها**');
   wipeRun();

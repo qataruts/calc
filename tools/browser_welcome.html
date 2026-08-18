@@ -181,6 +181,44 @@ frame.style.width = '820px';
 frame.contentWindow.scrollTo(0, 0);
 await sleep(140);
 
+/* ————— ٣ب) ما يبلغه النمطُ لا ما يوجد — سطحا الصفحة المصبوغان (الجلسة ط) —————
+
+   **أخو البابِ الذي في `browser_test.html` §٦ب، ومادّتُه سطوحُ هذه الصفحة**: الجدولُ
+   يُعلَن حيث تُفتَح الصفحةُ التي فيها سطحُه، فلا يُقاس سطحٌ من مستندٍ لا يحمله.
+   **وعلّتُه درسُ اِسْمَعْ** (بلاغ `2026-08-17-inferred-defect-and-style-guard.md`):
+   قاعدةٌ تسقط بصمتٍ من اللوح فيرث العنصرُ سطحاً آخر، **وحارسُ الوجود أخضر**.
+
+   **وهنا الخطرُ مقيسٌ لا مفترَض**: `a.btn` **أخصُّ** من `.btn--primary`، وقد سلب
+   `color: inherit` الحبرَ الأبيضَ من كلّ «ابدأ الآن» حتى بلّغ المالكُ عنه (١٧ أغسطس)
+   فاستُثني في `app.css` — **فهذا البابُ يمنع عودتَه**. وشريطُ الإنصاف سطحٌ ممزوج
+   (`color-mix`) زِيد في الجلسة ث٢، **ومتوقَّعُه عبارةُ اللوح نفسُها** تُحَلّ بمِسبار.
+
+   **وهو حصانةٌ لا إصلاح**: يومَ كُتب كانت الأربعةُ خضراء. */
+const WELCOME_STYLE = [
+  { name: 'أرضيةُ شريط الإنصاف `.w-band`', sel: '.w-band', prop: 'backgroundColor',
+    want: 'color-mix(in srgb, var(--accent-gate) 8%, var(--card))' },
+  { name: 'أرضيةُ الفعل الرئيس `a.btn--primary`', sel: 'a.w-start', prop: 'backgroundColor',
+    want: 'var(--star)' },
+  { name: 'وحبرُه (لا يسلبه `a.btn`)', sel: 'a.w-start', prop: 'color', want: 'var(--on-accent)' },
+  { name: 'وثِقَلُه المقرَّر', sel: 'a.w-start', prop: 'fontWeight', want: '700' },
+];
+const resolveDecl = (d, expr) => {
+  if (!/^var\(|color-mix/.test(expr)) return expr;
+  const probe = d.createElement('span');
+  probe.style.color = expr;
+  d.body.appendChild(probe);
+  const value = d.defaultView.getComputedStyle(probe).color;
+  probe.remove();
+  return value;
+};
+for (const row of WELCOME_STYLE) {
+  const el = doc.querySelector(row.sel);
+  const got = el ? doc.defaultView.getComputedStyle(el)[row.prop] : '';
+  ok(!!el && got === resolveDecl(doc, row.want),
+    `${row.name}: ما رُسم = ما أعلنه اللوح «${row.want}»`
+    + (el ? ` (${got})` : ' — لا عنصرَ بهذا المحدِّد على الصفحة'));
+}
+
 const start = [...doc.querySelectorAll('a.w-start')];
 ok(start.length >= 1 && start.every((a) => new URL(a.href).pathname === new URL('./', location.href).pathname),
   `زرُّ «ابدأ الآن» يشير إلى جذر التطبيق (${start.length} موضعاً)`);

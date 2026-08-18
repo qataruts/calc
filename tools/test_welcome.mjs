@@ -68,14 +68,17 @@ const emojiIndex = JSON.parse(read('emoji/index.json', APP));
 // فدفعةٌ جديدة تُسقِط الفحصَ يومَ تُصرَّف — وذاك الحارسُ يعمل لا عيبٌ فيه.
 const audioVersions = JSON.parse(read('audio/versions.json', APP));
 
-/* **استثناءان معلَنان لا أكثر** (أمرُ المالك عبر العائلة، ١٣ أغسطس ٢٠٢٦ —
+/* **ثلاثةُ استثناءاتٍ معلَنة لا أكثر** (أمرُ المالك عبر العائلة، ١٣ أغسطس ٢٠٢٦ —
    `2026-08-13-email-and-family-link.md`): كان الحارسُ يقول «إلا عنوانَ موقعنا» فحسب،
    فلمّا أُمر بسطر بوابة العائلة **صُحّح بقراره المعلَن ولم يُحوَّط حوله** (كذا فعلت
-   اقرأ). والفرقُ بين الاثنين وبين رابطٍ خارجيّ ثالث: هذان **بيتُنا**، ولا يُجلَب
-   منهما بايتٌ عند الفتح — يُفتحان إن نُقرا. */
+   اقرأ). **والثالثُ حقيبةُ المعلّم** (بلاغ `2026-08-17-teacher-kit-link-and-whatsapp-form.md`
+   — الجلسة ط): صفحةٌ عامّةٌ للأربعة يُحال إليها من صدر الدليل **ولا تُنسَخ**.
+   والفرقُ بين الثلاثة وبين رابطٍ خارجيّ رابع: هذه كلُّها **بيتُنا**، ولا يُجلَب
+   منها بايتٌ عند الفتح — تُفتح إن نُقرت. */
 const SITE = 'https://calc.mishkat.qa/';            // عنوانُنا في ترويسة المطبوع
 const FAMILY = 'https://learn.mishkat.qa/';         // بوابةُ العائلة في الفوتر
-const ALLOWED = [SITE, FAMILY];
+const KIT = 'https://learn.mishkat.qa/teacher.html'; // حقيبةُ المعلّم في صدر الدليل
+const ALLOWED = [SITE, FAMILY, KIT];
 
 // ————— ١. خارج التطبيق وخارج قشرة عامل الخدمة —————
 
@@ -114,8 +117,8 @@ for (const [name, text] of Object.entries(PAGES)) {
 
   const outward = [...text.matchAll(/<a[^>]*href="(https?:[^"]+)"/g)].map((m) => m[1]);
   const stray = outward.filter((v) => !ALLOWED.includes(v));
-  ok(stray.length === 0 && outward.length <= 2,
-    `${name}: ولا رابطَ خارجيّ إلا عنوانَنا وبوابةَ العائلة (${outward.length})`
+  ok(stray.length === 0 && outward.length <= ALLOWED.length,
+    `${name}: ولا رابطَ خارجيّ إلا عنوانَنا وبوابةَ العائلة والحقيبة (${outward.length})`
     + (stray.length ? ` — دخل: ${stray.join('، ')}` : ''));
 
   // **وسطرُ بوابة العائلة في الفوتر لا في متن الصفحة**: أمرُ المالك «في كل صفحة
@@ -614,6 +617,47 @@ ok(!/<img|<script|w-card/.test(band) && !flat(band).includes(flat(support.PROMIS
 const bandCss = css.slice(css.indexOf('.w-band {'), css.indexOf('}', css.indexOf('.w-band {')));
 ok(bandCss.includes('var(--accent-') && !/#[0-9a-fA-F]{3}/.test(bandCss),
   'ولونُه من لوح التطبيق لا قيمةٌ منسوخة');
+
+// ————— ١٠ج. بابُ حقيبة المعلّم في صدر الدليل: يُحال ولا يُنسَخ —————
+//
+// **بلاغُ العائلة** `2026-08-17-teacher-kit-link-and-whatsapp-form.md` (بسؤال المالك:
+// «من أين ينقر المعلّم ليطّلع على حقيبة المعلم؟»): كانت الحقيبةُ سطراً في فقرةٍ داخل
+// البوابة، **ولا بابَ إليها من صفحات التطبيقات أصلاً** — فمعلّمٌ يبلغ دليلَنا لا يعرف
+// بوجودها. **والمطلوبُ سطرٌ في الصدر**، وهذا البابُ يمنع سقوطَه في تحريرٍ لاحق.
+//
+// **وثلاثةُ أخطارٍ يقيسها**: يسقط السطرُ كلُّه (والصفحةُ تُرسَم فلا يشتكي أحد) ·
+// **يُزحزَح إلى العمق** فلا يراه من لا يمرّر · **أو يتضخّم فيصير نسخةً من الحقيبة**
+// — والقاعدةُ المعلَنة أنّ الحقيبةَ عامّةٌ للأربعة ودليلَنا خاصٌّ أعمق، **فيُحال
+// ولا يُنسَخ** (النسخُ يفترق نصفاه بعد شهر).
+
+console.log('\n١٠ج. بابُ حقيبة المعلّم في صدر الدليل');
+
+const kitAt = guide.indexOf(KIT);
+ok(kitAt >= 0, `وفي الدليل العملي بابٌ إلى حقيبة المعلّم (${KIT})`);
+
+const guideHeadEnds = guide.indexOf('</header>', guide.indexOf('class="w-head"'));
+const guideFirstSection = guide.indexOf('<section class="w-section"');
+ok(kitAt > guideHeadEnds && kitAt < guideFirstSection,
+  'وموضعُه صدرُ الصفحة — بعد الترويسة وقبل الأقسام كلِّها (فيراه من لا يمرّر)');
+
+const kitBlock = flat(guide.slice(guide.lastIndexOf('<aside', kitAt),
+  guide.indexOf('</aside>', kitAt)));
+ok(kitBlock.includes('حقيبةُ المعلّم') && /<a href="[^"]*teacher\.html">[^<]*حقيبة/.test(kitBlock),
+  'ويسمّي الحقيبةَ باسمها في نصّ الرابط نفسِه — لا رابطٌ أعمى');
+ok(!/<img|<h2|<h3|w-card|<script/.test(kitBlock) && kitBlock.length < 700,
+  'وهو **إحالةٌ لا نسخة**: سطرٌ واحد بلا ترويسةٍ ولا بطاقةٍ ولا صورة');
+ok(kitBlock.includes('أخصُّ') || kitBlock.includes('أعمق'),
+  'ويقول للقارئ لِمَ الاثنان معاً: الحقيبةُ عامّةٌ للأربعة، ودليلُنا أخصُّ وأعمق');
+
+const elsewhere = PAGE_NAMES.filter((n) => n !== 'guide.html' && PAGES[n].includes(KIT));
+ok(elsewhere.length === 0,
+  `وفي الدليل وحدَه — حيث يقرأ المعلّم${elsewhere.length ? ` (دخل: ${elsewhere.join('، ')})` : ''}`);
+
+// **وشكلُ واتساب مستوفىً سلفاً** (الشقُّ الثاني من البلاغ): لا رقمَ معروضاً نصّاً في
+// الصفحات الأربع — والقناةُ رابطُ `wa.me` في وحدة «بلِّغنا» وحدَها (يحرسه `test_feedback`).
+const bareNumbers = PAGE_NAMES.filter((n) => /\+?974[\s-]?\d{4}[\s-]?\d{4}|٩٧٤/.test(PAGES[n]));
+ok(bareNumbers.length === 0,
+  `ولا رقمَ هاتفٍ معروضٌ نصّاً في التعريفيات${bareNumbers.length ? ` — ${bareNumbers.join('، ')}` : ''}`);
 
 console.log(fails ? `\n${fails} فشل` : '\nكل اختبارات «المرجع التعريفي» ناجحة');
 process.exit(fails ? 1 : 0);
